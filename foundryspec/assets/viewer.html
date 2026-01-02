@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{categoryName}} - {{projectName}}</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;600;800&display=swap"
+        rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/svg-pan-zoom/dist/svg-pan-zoom.min.js"></script>
+    <style>
+        /* Premium Viewer Styles (Simplified for now) */
+        :root {
+            --bg-primary: #020617;
+            --bg-secondary: #0f172a;
+            --accent: #38bdf8;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --border: rgba(255, 255, 255, 0.08);
+            --transition: all 0.3s cubic-bezier(0.23, 1, 0.32, 1);
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            margin: 0;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        aside {
+            width: 360px;
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border);
+            overflow-y: auto;
+            padding: 2rem;
+        }
+
+        main {
+            flex-grow: 1;
+            position: relative;
+            background: #000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .diagram-item {
+            padding: 1rem;
+            border: 1px solid var(--border);
+            border-radius: 1rem;
+            margin-bottom: 1rem;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .diagram-item:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .diagram-item.active {
+            border-color: var(--accent);
+            background: rgba(56, 189, 248, 0.1);
+        }
+
+        #mermaid-container {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: white;
+            border-radius: 2rem;
+            margin: 1rem;
+        }
+    </style>
+</head>
+
+<body>
+    <aside>
+        <header>
+            <h2>{{categoryName}}</h2>
+        </header>
+        <div id="diagram-list"></div>
+    </aside>
+    <main>
+        <div id="mermaid-container">Select a diagram</div>
+    </main>
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const listContainer = document.getElementById('diagram-list');
+            const mermaidContainer = document.getElementById('mermaid-container');
+
+            try {
+                const response = await fetch('diagrams.json');
+                const diagrams = await response.json();
+
+                if (diagrams.length === 0) {
+                    listContainer.innerHTML = '<p>No diagrams found.</p>';
+                    return;
+                }
+
+                diagrams.forEach((diag, index) => {
+                    const item = document.createElement('div');
+                    item.className = 'diagram-item';
+                    item.innerHTML = `
+                        <strong>${diag.title}</strong>
+                        <p style="margin: 0.25rem 0 0; font-size: 0.8rem; color: var(--text-secondary);">${diag.description}</p>
+                    `;
+                    item.onclick = () => loadDiagram(diag, item);
+                    listContainer.appendChild(item);
+
+                    if (index === 0) loadDiagram(diag, item);
+                });
+            } catch (err) {
+                console.error('Failed to load diagrams:', err);
+                listContainer.innerHTML = '<p>Error loading diagrams.json</p>';
+            }
+
+            async function loadDiagram(diag, element) {
+                document.querySelectorAll('.diagram-item').forEach(el => el.classList.remove('active'));
+                element.classList.add('active');
+
+                mermaidContainer.innerHTML = '<p>Loading...</p>';
+                try {
+                    const response = await fetch(diag.file);
+                    const code = await response.text();
+
+                    mermaidContainer.innerHTML = `<pre class="mermaid">${code}</pre>`;
+                    await mermaid.run();
+
+                    const svg = mermaidContainer.querySelector('svg');
+                    if (svg) {
+                        svg.style.width = '100%';
+                        svg.style.height = '100%';
+                        svgPanZoom(svg, {
+                            zoomEnabled: true,
+                            controlIconsEnabled: true,
+                            fit: true,
+                            center: true
+                        });
+                    }
+                } catch (err) {
+                    mermaidContainer.innerHTML = `<p style="color:red">Error: ${err.message}</p>`;
+                }
+            }
+        });
+    </script>
+</body>
+
+</html>

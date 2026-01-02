@@ -1,0 +1,17 @@
+sequenceDiagram
+    participant U as User
+    participant C as CLI
+    participant B as BuildManager
+    participant H as Node HTTP Server
+    participant FS as FileSystem
+
+    U->>C: foundryspec serve
+    C->>B: serve()
+    B->>FS: Check if dist/ exists
+    opt dist/ missing
+        B->>B: build()
+    end
+    B->>H: Start Server on Port (default 3000)
+    U->>H: Request index.html
+    H->>FS: Read dist/index.html
+    H-->>U: Documentation Hub

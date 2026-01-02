@@ -1,0 +1,13 @@
+sequenceDiagram
+    participant U as User
+    participant C as CLI
+    participant S as ScaffoldManager
+    participant FS as FileSystem
+
+    U->>C: foundryspec upgrade
+    C->>S: upgrade()
+    S->>FS: Overwrite core workflows
+    S->>FS: Overwrite root index.html
+    S->>FS: Update static assets (viewer.html, css/js)
+    S->>FS: Ensure .gitignore & package.json scripts
+    C-->>U: Project Upgraded

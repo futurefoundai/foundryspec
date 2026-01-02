@@ -33,9 +33,7 @@ export class BuildManager {
         await this.generateHub(config, outputDir, activeCategories);
 
         console.log(chalk.gray(`Copying core assets...`));
-        await fs.copy(assetsDir, path.join(outputDir, 'assets'), {
-            filter: (src) => !src.endsWith('.mermaid') // Only copy static assets, diagrams are indexed
-        });
+        await fs.copy(assetsDir, path.join(outputDir, 'assets'));
 
         console.log(chalk.green(`\n✅ Build complete! Documentation is in: ${outputDir}`));
     }

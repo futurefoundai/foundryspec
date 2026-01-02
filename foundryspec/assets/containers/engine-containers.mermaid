@@ -1,0 +1,19 @@
+graph LR
+    User([User/Agent])
+    CLI[FoundrySpec CLI]
+    SM[ScaffoldManager]
+    BM[BuildManager]
+    GM[GitManager]
+    FS[(Local Filesystem)]
+    NPM[NPM Registry]
+
+    User -- "Commands" --> CLI
+    CLI -- "Scaffold" --> SM
+    CLI -- "Build/Serve" --> BM
+    CLI -- "Pull/Sync" --> GM
+    
+    SM -- "Write" --> FS
+    BM -- "Read/Write" --> FS
+    GM -- "Fetch/Clone" --> FS
+    
+    CLI -- "Publish/Install" --> NPM

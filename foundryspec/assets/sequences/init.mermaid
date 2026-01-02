@@ -4,9 +4,11 @@ sequenceDiagram
     participant S as Scaffold Engine
     participant A as AI Layer
 
-    U->>C: foundryspec init <project>
-    C->>S: Create basic structure
-    S->>S: Copy UI Templates
+    U->>C: foundryspec init [project-name]
+    C->>S: Create "foundryspec/" folder
+    S->>S: Populate exhaustive category assets
+    S->>S: Write foundry.config.json (commented categories)
+    S->>S: Auto-setup .gitignore & package.json
     C->>A: Generate Initial Instructions
     A->>A: Create .agent/workflows/
     C-->>U: Project Scaffolded Successfully

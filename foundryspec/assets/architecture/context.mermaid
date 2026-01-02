@@ -5,9 +5,9 @@ graph TD
     Repo[Remote Git Repo]
     Pages[GitHub Pages]
 
-    User -- "Commands" --> CLI
+    User -- "Commands (init, serve, upgrade)" --> CLI
     Agent -- "Collaborates/Generates" --> CLI
     CLI -- "Pull/Sync" --> Repo
     CLI -- "Build/Deploy" --> Pages
-    CLI -- "Scaffolds" --> LocalDocs[Local Project Docs]
+    CLI -- "Scaffolds" --> LocalDocs[Local Project Docs (foundryspec/)]
     LocalDocs -- "Mermaid/Specs" --> CLI

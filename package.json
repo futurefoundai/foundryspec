@@ -1,6 +1,6 @@
 {
   "name": "@futurefoundaihq/foundryspec",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Documentation engine for human-AI collaborative system design",
   "main": "index.js",
   "type": "module",
@@ -11,10 +11,20 @@
     "access": "public"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "docs:build": "cd foundryspec && foundryspec build",
+    "docs:serve": "cd foundryspec && foundryspec serve"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": [
+    "documentation",
+    "mermaid",
+    "architecture",
+    "ai-agent",
+    "c4-model",
+    "specification",
+    "scaffolding"
+  ],
+  "author": "Tega Sugaray",
   "license": "ISC",
   "dependencies": {
     "chalk": "^5.3.0",
