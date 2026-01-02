@@ -1,0 +1,17 @@
+sequenceDiagram
+    participant C as CLI
+    participant B as BuildManager
+    participant FS as FileSystem
+    participant T as TemplateEngine
+
+    C->>B: build()
+    B->>FS: Scan assets/** for .mermaid
+    loop For each Category
+        B->>B: Group diagrams by path
+        B->>FS: Write diagrams.json in category dir
+    end
+    B->>FS: Read index.html template
+    B->>T: Process Project Metadata
+    T->>FS: Write root index.html
+    B->>FS: Copy standard CSS/JS to dist/
+    C-->>C: Log "Build Complete"

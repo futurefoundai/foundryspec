@@ -1,0 +1,13 @@
+graph TD
+    User((User))
+    Agent((AI Agent))
+    CLI[FoundrySpec CLI]
+    Repo[Remote Git Repo]
+    Pages[GitHub Pages]
+
+    User -- "Commands" --> CLI
+    Agent -- "Collaborates/Generates" --> CLI
+    CLI -- "Pull/Sync" --> Repo
+    CLI -- "Build/Deploy" --> Pages
+    CLI -- "Scaffolds" --> LocalDocs[Local Project Docs]
+    LocalDocs -- "Mermaid/Specs" --> CLI

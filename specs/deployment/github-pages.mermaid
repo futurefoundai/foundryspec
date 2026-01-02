@@ -1,0 +1,17 @@
+graph LR
+    Local[Local Repo]
+    GH[GitHub Repo]
+    GA[GitHub Actions]
+    Pages[GitHub Pages]
+
+    Local -- "git push" --> GH
+    GH -- "Trigger" --> GA
+    
+    subgraph GA_Workflow [Action: deploy-docs.yml]
+        Install[npm install foundryspec]
+        RunBuild[foundryspec build]
+        Upload[Upload Artifacts]
+    end
+
+    GA -- "Build" --> RunBuild
+    RunBuild -- "Output" --> Pages

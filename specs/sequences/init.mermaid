@@ -1,0 +1,12 @@
+sequenceDiagram
+    participant U as User/Agent
+    participant C as CLI
+    participant S as Scaffold Engine
+    participant A as AI Layer
+
+    U->>C: foundryspec init <project>
+    C->>S: Create basic structure
+    S->>S: Copy UI Templates
+    C->>A: Generate Initial Instructions
+    A->>A: Create .agent/workflows/
+    C-->>U: Project Scaffolded Successfully

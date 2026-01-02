@@ -1,0 +1,27 @@
+graph TD
+    subgraph CLI_Package [NPM: foundryspec]
+        direction TB
+        Entry[cli.js]
+        
+        subgraph Logic_Layer [Business Logic]
+            Scaffold[ScaffoldManager]
+            GitMan[GitManager]
+            Builder[BuildManager]
+            TemplateProcessor[TemplateEngine]
+        end
+
+        subgraph Asset_Layer [Templates & Assets]
+            HubTemplate[index.html template]
+            ViewerTemplate[category index.html]
+            BaseStyles[CSS/JS Assets]
+        end
+    end
+
+    Entry --> Scaffold
+    Entry --> GitMan
+    Entry --> Builder
+
+    Scaffold -- "Copies" --> Asset_Layer
+    Builder -- "Parses" --> FileSystem[Local .mermaid files]
+    Builder -- "Injects" --> TemplateProcessor
+    GitMan -- "Executes" --> GitCLI[Binary: git]
