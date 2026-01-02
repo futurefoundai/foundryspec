@@ -23,21 +23,50 @@ program
 program
     .command('init')
     .description('Scaffold a new FoundrySpec documentation project')
-    .argument('<project-name>', 'Name of the project directory')
+    .argument('[project-name]', 'Name of the project', 'My Spec Project')
     .action(async (projectName) => {
         console.log(chalk.blue(`\n🚀 Initializing FoundrySpec project: ${projectName}...`));
         try {
-            // Implement init logic here or call ScaffoldManager
             const { ScaffoldManager } = await import('./src/ScaffoldManager.js');
             const scaffold = new ScaffoldManager(projectName);
             await scaffold.init();
-            console.log(chalk.green(`\n✅ Project ${projectName} scaffolded successfully!`));
+            console.log(chalk.green(`\n✅ Project "${projectName}" scaffolded successfully in "foundryspec/" folder!`));
             console.log(chalk.cyan(`\nNext steps:`));
-            console.log(`  cd ${projectName}`);
+            console.log(`  cd foundryspec`);
             console.log(`  foundryspec build`);
+            console.log(`  foundryspec serve`);
         } catch (err) {
             console.error(chalk.red('\n❌ Error during initialization:'), err.message);
             process.exit(1);
+        }
+    });
+
+program
+    .command('serve')
+    .description('Locally serve the generated documentation hub')
+    .option('-p, --port <number>', 'Port to use', '3000')
+    .action(async (options) => {
+        try {
+            const { BuildManager } = await import('./src/BuildManager.js');
+            const builder = new BuildManager();
+            await builder.serve(options.port);
+        } catch (err) {
+            console.error(chalk.red('\n❌ Serve failed:'), err.message);
+        }
+    });
+
+program
+    .command('upgrade')
+    .description('Update local project templates and workflows')
+    .action(async () => {
+        console.log(chalk.blue('\n🆙 Upgrading local FoundrySpec project...'));
+        try {
+            const { ScaffoldManager } = await import('./src/ScaffoldManager.js');
+            const scaffold = new ScaffoldManager();
+            await scaffold.upgrade();
+            console.log(chalk.green('\n✅ Project upgraded successfully!'));
+        } catch (err) {
+            console.error(chalk.red('\n❌ Upgrade failed:'), err.message);
         }
     });
 

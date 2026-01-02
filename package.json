@@ -1,6 +1,6 @@
 {
   "name": "@futurefoundaihq/foundryspec",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Documentation engine for human-AI collaborative system design",
   "main": "index.js",
   "type": "module",
@@ -8,7 +8,7 @@
     "foundryspec": "index.js"
   },
   "publishConfig": {
-    "access": "restricted"
+    "access": "public"
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"

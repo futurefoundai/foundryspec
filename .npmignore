@@ -1,0 +1,8 @@
+.personal_access_token
+.agent/
+todo.md
+specs/
+foundryspec/
+node_modules/
+.git/
+.github/

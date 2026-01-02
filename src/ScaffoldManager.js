@@ -7,62 +7,132 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export class ScaffoldManager {
     constructor(projectName) {
-        this.projectName = projectName;
-        this.targetDir = path.resolve(process.cwd(), projectName);
+        this.projectName = projectName || 'My Spec Project';
+        // The folder name init creates should be foundryspec folder by default
+        this.targetDir = path.resolve(process.cwd(), 'foundryspec');
         this.templateDir = path.resolve(__dirname, '../templates');
     }
 
     async init() {
         if (await fs.pathExists(this.targetDir)) {
-            throw new Error(`Directory ${this.projectName} already exists.`);
+            throw new Error(`Directory "foundryspec" already exists. Move it or use a different location.`);
         }
 
         console.log(chalk.gray(`Creating directory structure...`));
         await fs.ensureDir(this.targetDir);
 
-        // Initial folders
-        const folders = [
-            'assets/architecture',
-            'assets/containers',
-            'assets/components',
-            'assets/sequences',
-            'assets/states',
-            'assets/data',
-            'assets/security',
-            'assets/deployment',
-            'assets/integration',
-            '.agent/workflows'
+        const categories = [
+            { name: "Architecture", path: "architecture", description: "System context and high-level strategy", enabled: true },
+            { name: "Containers", path: "containers", description: "Technical boundaries and communication", enabled: true },
+            { name: "Components", path: "components", description: "Internal module structure", enabled: true },
+            { name: "Sequences", path: "sequences", description: "Interaction flows and logic progression", enabled: false },
+            { name: "States", path: "states", description: "State machine logic and data lifecycle", enabled: false },
+            { name: "Data", path: "data", description: "Schema, contracts, and persistence", enabled: false },
+            { name: "Security", path: "security", description: "Trust boundaries and threat models", enabled: false },
+            { name: "Deployment", path: "deployment", description: "Infrastructure and runtime orchestration", enabled: false },
+            { name: "Integration", path: "integration", description: "External APIs and ecosystem connectivity", enabled: false }
         ];
 
-        for (const folder of folders) {
-            await fs.ensureDir(path.join(this.targetDir, folder));
+        for (const cat of categories) {
+            await fs.ensureDir(path.join(this.targetDir, 'assets', cat.path));
         }
+        await fs.ensureDir(path.join(this.targetDir, '.agent/workflows'));
 
         console.log(chalk.gray(`Copying templates...`));
-        // Copy static assets
         await fs.copy(path.join(this.templateDir, 'assets'), path.join(this.targetDir, 'assets'));
-
-        // Copy workflows
         await fs.copy(path.join(this.templateDir, 'workflows'), path.join(this.targetDir, '.agent/workflows'));
+        await fs.copy(path.join(this.templateDir, 'index.html'), path.join(this.targetDir, 'index.html'));
 
-        // Create foundry.config.json
+        // All categories should be included in the config but commented out (using // prefix)
+        const configCategories = categories.map(cat => {
+            if (cat.enabled) return { name: cat.name, path: cat.path, description: cat.description };
+            return {
+                "//": "Uncomment to enable this category",
+                "//name": cat.name,
+                "//path": cat.path,
+                "//description": cat.description
+            };
+        });
+
         const config = {
             projectName: this.projectName,
             version: "1.0.0",
-            categories: [
-                { name: "Architecture", path: "architecture", description: "System context and high-level strategy" },
-                { name: "Containers", path: "containers", description: "Technical boundaries and communication" },
-                { name: "Components", path: "components", description: "Internal module structure" }
-            ],
+            categories: configCategories,
             external: [],
             build: {
                 outputDir: "dist",
                 assetsDir: "assets"
             }
         };
+
         await fs.writeJson(path.join(this.targetDir, 'foundry.config.json'), config, { spaces: 2 });
 
-        // Copy index.html base
-        await fs.copy(path.join(this.templateDir, 'index.html'), path.join(this.targetDir, 'index.html'));
+        await this.ensureGitignore(this.targetDir);
+        await this.ensurePackageJson(this.targetDir);
+    }
+
+    async upgrade() {
+        const projectDir = process.cwd();
+        const configPath = path.join(projectDir, 'foundry.config.json');
+
+        if (!await fs.pathExists(configPath)) {
+            throw new Error('Not in a FoundrySpec project. Please run from the root of your project.');
+        }
+
+        console.log(chalk.gray(`Updating templates and workflows...`));
+        // Overwrite workflows and core templates
+        await fs.copy(path.join(this.templateDir, 'workflows'), path.join(projectDir, '.agent/workflows'), { overwrite: true });
+        await fs.copy(path.join(this.templateDir, 'index.html'), path.join(projectDir, 'index.html'), { overwrite: true });
+
+        // Update viewer and other assets without touching user diagrams
+        const assetTemplateDir = path.join(this.templateDir, 'assets');
+        const projectAssetDir = path.join(projectDir, 'assets');
+
+        const assetFiles = await fs.readdir(assetTemplateDir);
+        for (const file of assetFiles) {
+            const src = path.join(assetTemplateDir, file);
+            const stats = await fs.stat(src);
+            if (!stats.isDirectory()) {
+                await fs.copy(src, path.join(projectAssetDir, file), { overwrite: true });
+            }
+        }
+
+        await this.ensureGitignore(projectDir);
+        await this.ensurePackageJson(projectDir);
+    }
+
+    async ensureGitignore(dir) {
+        const gitignorePath = path.join(dir, '.gitignore');
+        let content = '';
+        if (await fs.pathExists(gitignorePath)) {
+            content = await fs.readFile(gitignorePath, 'utf8');
+        }
+
+        if (!content.includes('dist')) {
+            console.log(chalk.gray(`Adding "dist" to .gitignore...`));
+            content += content.endsWith('\n') ? 'dist\n' : '\ndist\n';
+            await fs.writeFile(gitignorePath, content);
+        }
+    }
+
+    async ensurePackageJson(dir) {
+        const pkgPath = path.join(dir, 'package.json');
+        let pkg = { scripts: {} };
+
+        if (await fs.pathExists(pkgPath)) {
+            pkg = await fs.readJson(pkgPath);
+        } else {
+            pkg.name = path.basename(dir);
+            pkg.version = "1.0.0";
+            pkg.type = "module";
+        }
+
+        if (!pkg.scripts) pkg.scripts = {};
+
+        if (!pkg.scripts['docs:serve']) {
+            console.log(chalk.gray(`Adding "docs:serve" script to package.json...`));
+            pkg.scripts['docs:serve'] = "foundryspec serve";
+            await fs.writeJson(pkgPath, pkg, { spaces: 2 });
+        }
     }
 }
