@@ -3,3 +3,4 @@
 /my-test-docs
 .DS_Store
 *.log
+.personal_access_token
