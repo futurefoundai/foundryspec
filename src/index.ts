@@ -18,7 +18,7 @@ const program = new Command();
 
 program
     .name('foundryspec')
-    .description('Documentation engine for human-AI collaborative system design')
+    .description('Documentation engine for human-AI collaborative system analysis and design')
     .version(packageJson.version);
 
 program
@@ -173,6 +173,31 @@ program
         } catch (err: any) {
             console.error(chalk.red('\n❌ Build failed:'), err.message);
             process.exit(1);
+        }
+    });
+
+program
+    .command('help')
+    .description('Display the AI Agent Guide for using FoundrySpec')
+    .action(async () => {
+        try {
+            // Try to find the guide in the current directory first
+            const localGuidePath = path.join(process.cwd(), 'FOUNDRYSPEC_AGENT_GUIDE.md');
+            if (await fs.pathExists(localGuidePath)) {
+                console.log(await fs.readFile(localGuidePath, 'utf8'));
+                return;
+            }
+
+            // Fallback to the template directory
+            const templateGuidePath = path.join(__dirname, '../templates/FOUNDRYSPEC_AGENT_GUIDE.md');
+            if (await fs.pathExists(templateGuidePath)) {
+                console.log(await fs.readFile(templateGuidePath, 'utf8'));
+                return;
+            }
+
+            console.log(chalk.yellow('FOUNDRYSPEC_AGENT_GUIDE.md not found.'));
+        } catch (err: any) {
+            console.error(chalk.red('\n❌ Failed to display help:'), err.message);
         }
     });
 

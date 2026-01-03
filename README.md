@@ -1,6 +1,6 @@
 # FoundrySpec 🚀
 
-**FoundrySpec** is a powerful CLI-driven documentation engine designed for **Human-AI Collaborative System Design**. It scaffolds, builds, and deploys premium, interactive architectural documentation that aims for **Zero-Question Implementation readiness**.
+**FoundrySpec** is a powerful CLI-driven documentation engine designed for **Human-AI Collaborative System Analysis & Design**. It scaffolds, builds, and deploys premium, interactive architectural documentation that aims for **Zero-Question Implementation readiness**.
 
 ## ✨ Features
 

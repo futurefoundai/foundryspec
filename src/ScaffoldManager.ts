@@ -64,6 +64,12 @@ export class ScaffoldManager {
         if (await fs.pathExists(path.join(this.templateDir, 'workflows'))) {
             await fs.copy(path.join(this.templateDir, 'workflows'), path.join(this.targetDir, '.agent/workflows'));
         }
+
+        const contentGuidePath = path.join(this.templateDir, 'FOUNDRYSPEC_AGENT_GUIDE.md');
+        if (await fs.pathExists(contentGuidePath)) {
+            await fs.copy(contentGuidePath, path.join(this.targetDir, 'FOUNDRYSPEC_AGENT_GUIDE.md'));
+        }
+
         const indexHtmlPath = path.join(this.templateDir, 'index.html');
         if (await fs.pathExists(indexHtmlPath)) {
             await fs.copy(indexHtmlPath, path.join(this.targetDir, 'index.html'));
@@ -113,6 +119,11 @@ export class ScaffoldManager {
         }
         if (await fs.pathExists(path.join(this.templateDir, 'index.html'))) {
             await fs.copy(path.join(this.templateDir, 'index.html'), path.join(projectDir, 'index.html'), { overwrite: true });
+        }
+
+        const contentGuidePath = path.join(this.templateDir, 'FOUNDRYSPEC_AGENT_GUIDE.md');
+        if (await fs.pathExists(contentGuidePath)) {
+            await fs.copy(contentGuidePath, path.join(projectDir, 'FOUNDRYSPEC_AGENT_GUIDE.md'), { overwrite: true });
         }
 
         // Update viewer and other assets without touching user diagrams
