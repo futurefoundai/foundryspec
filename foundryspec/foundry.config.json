@@ -23,10 +23,9 @@
       "description": "Interaction flows and logic progression"
     },
     {
-      "//": "Uncomment to enable this category",
-      "//name": "States",
-      "//path": "states",
-      "//description": "State machine logic and data lifecycle"
+      "name": "States",
+      "path": "states",
+      "description": "State machine logic and data lifecycle"
     },
     {
       "name": "Data",
@@ -39,10 +38,9 @@
       "description": "Trust boundaries and threat models"
     },
     {
-      "//": "Uncomment to enable this category",
-      "//name": "Deployment",
-      "//path": "deployment",
-      "//description": "Infrastructure and runtime orchestration"
+      "name": "Deployment",
+      "path": "deployment",
+      "description": "Infrastructure and runtime orchestration"
     },
     {
       "//": "Uncomment to enable this category",

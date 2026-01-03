@@ -1,0 +1,12 @@
+graph TD
+    DEV[Dev Environment]
+    LINK[Local Global Link]
+    NPM[NPM Registry]
+    USER[End User Machine]
+
+    DEV -- "npm link" --> LINK
+    LINK -- "foundryspec command" --> DEV
+    
+    DEV -- "npm publish" --> NPM
+    NPM -- "npm install -g" --> USER
+    USER -- "foundryspec command" --> USER

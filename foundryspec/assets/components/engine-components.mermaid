@@ -1,0 +1,20 @@
+graph TD
+    subgraph BuildManager
+        BM[build method]
+        PC[processCategory]
+        GH[generateHub]
+        S[serve method]
+    end
+
+    subgraph ScaffoldManager
+        SM[init method]
+        UP[upgrade method]
+        EG[ensureGitignore]
+        EP[ensurePackageJson]
+    end
+
+    BM --> PC
+    BM --> GH
+    S --> BM
+    SM --> EG
+    SM --> EP

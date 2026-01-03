@@ -6,3 +6,5 @@ foundryspec/
 node_modules/
 .git/
 .github/
+src/
+tsconfig.json

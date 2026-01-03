@@ -1,0 +1,12 @@
+stateDiagram-v2
+    [*] --> Uninitialized: Project created
+    Uninitialized --> Scaffolded: foundryspec init
+    Scaffolded --> Building: foundryspec build
+    Building --> Ready: dist/ generated
+    Ready --> Serving: foundryspec serve
+    Ready --> Deploying: foundryspec deploy
+    Deploying --> Ready
+    Serving --> Ready: Stop server
+    
+    Scaffolded --> Upgrading: foundryspec upgrade
+    Upgrading --> Scaffolded

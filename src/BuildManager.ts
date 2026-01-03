@@ -2,19 +2,59 @@ import fs from 'fs-extra';
 import path from 'path';
 import chalk from 'chalk';
 import { glob } from 'glob';
+import * as http from 'http';
+import * as os from 'os';
+import { exec } from 'child_process';
+import util from 'util';
+
+import { fileURLToPath } from 'url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+const execPromise = util.promisify(exec);
+
+interface Category {
+    name: string;
+    path: string;
+    description: string;
+    '//path'?: string; // For handling commented out categories
+}
+
+interface BuildConfig {
+    outputDir: string;
+    assetsDir: string;
+}
+
+interface FoundryConfig {
+    projectName: string;
+    version: string;
+    categories: Category[];
+    external: any[];
+    build: BuildConfig;
+}
+
+interface Diagram {
+    title: string;
+    description: string;
+    file: string;
+    updatedAt: string;
+}
 
 export class BuildManager {
-    constructor(projectDir = process.cwd()) {
+    private projectDir: string;
+    private configPath: string;
+
+    constructor(projectDir: string = process.cwd()) {
         this.projectDir = projectDir;
         this.configPath = path.join(this.projectDir, 'foundry.config.json');
     }
 
-    async build() {
+    async build(): Promise<void> {
         if (!await fs.pathExists(this.configPath)) {
             throw new Error('foundry.config.json not found. Are you in a FoundrySpec project?');
         }
 
-        const config = await fs.readJson(this.configPath);
+        const config: FoundryConfig = await fs.readJson(this.configPath);
         const outputDir = path.resolve(this.projectDir, config.build.outputDir || 'dist');
         const assetsDir = path.resolve(this.projectDir, config.build.assetsDir || 'assets');
 
@@ -38,15 +78,39 @@ export class BuildManager {
         console.log(chalk.green(`\n✅ Build complete! Documentation is in: ${outputDir}`));
     }
 
-    async processCategory(category, assetsDir, outputDir) {
+    async processCategory(category: Category, assetsDir: string, outputDir: string): Promise<void> {
         const categoryPath = path.join(assetsDir, category.path);
         if (!await fs.pathExists(categoryPath)) return;
 
         const mermaidFiles = await glob('**/*.mermaid', { cwd: categoryPath });
-        const diagrams = [];
+        const diagrams: Diagram[] = [];
 
         for (const file of mermaidFiles) {
-            const content = await fs.readFile(path.join(categoryPath, file), 'utf8');
+            const filePath = path.join(categoryPath, file);
+            const content = await fs.readFile(filePath, 'utf8');
+
+            try {
+                // Robust validation using Mermaid CLI (headless browser)
+                // We use a temporary config file for puppeteer args to run in restricted environments
+                const puppeteerConfig = { args: ["--no-sandbox"] };
+                const tempConfigPath = path.join(os.tmpdir(), `puppeteer-config-${Date.now()}.json`);
+                await fs.writeJson(tempConfigPath, puppeteerConfig);
+
+                const mmdcPath = path.resolve(__dirname, '../node_modules/.bin/mmdc');
+                const tempOutputPath = path.join(os.tmpdir(), `temp-${Date.now()}.svg`);
+                const cmd = `"${mmdcPath}" -p "${tempConfigPath}" -i "${filePath}" -o "${tempOutputPath}"`;
+
+                await execPromise(cmd);
+                await fs.remove(tempConfigPath);
+                await fs.remove(tempOutputPath);
+            } catch (err: any) {
+                console.error(chalk.red(`\n❌ Syntax error in ${file}:`));
+                // Clean up error message to be more readable
+                const cleanError = err.message.split('\n').filter((l: string) => !l.includes('Puppeteer') && !l.includes('sandbox')).join('\n');
+                console.error(chalk.yellow(cleanError));
+                throw new Error(`Build failed due to Mermaid syntax errors.`);
+            }
+
             // Basic title/desc extraction from frontmatter or comments
             const titleMatch = content.match(/title:\s*(.*)/i) || content.match(/%% title:\s*(.*)/i);
             const descMatch = content.match(/description:\s*(.*)/i) || content.match(/%% description:\s*(.*)/i);
@@ -64,7 +128,7 @@ export class BuildManager {
         await fs.writeJson(path.join(categoryOutputDir, 'diagrams.json'), diagrams, { spaces: 2 });
     }
 
-    async generateHub(config, outputDir, activeCategories) {
+    async generateHub(config: FoundryConfig, outputDir: string, activeCategories: Category[]): Promise<void> {
         const templatePath = path.join(this.projectDir, 'index.html');
         if (!await fs.pathExists(templatePath)) {
             throw new Error('Hub template (index.html) not found in project root.');
@@ -103,12 +167,12 @@ export class BuildManager {
         }
     }
 
-    async serve(port = 3000) {
+    async serve(port: number | string = 3000): Promise<void> {
         if (!await fs.pathExists(this.configPath)) {
             throw new Error('foundry.config.json not found.');
         }
 
-        const config = await fs.readJson(this.configPath);
+        const config: FoundryConfig = await fs.readJson(this.configPath);
         const outputDir = path.resolve(this.projectDir, config.build.outputDir || 'dist');
 
         if (!await fs.pathExists(outputDir)) {
@@ -116,12 +180,15 @@ export class BuildManager {
             await this.build();
         }
 
-        const http = await import('http');
+        // Use standard import for http since it's a built-in node module
+        // But we are in an async function, we can keep it dynamic or move to top.
+        // Moved to top for TS consistency.
+
         const server = http.createServer((req, res) => {
-            let url = req.url.split('?')[0];
+            let url = (req.url || '/').split('?')[0];
             let filePath = path.join(outputDir, url === '/' ? 'index.html' : url);
 
-            fs.readFile(filePath, (err, data) => {
+            fs.readFile(filePath, (err: NodeJS.ErrnoException | null, data: Buffer) => {
                 if (err) {
                     res.writeHead(404);
                     res.end("Not Found");
@@ -129,7 +196,7 @@ export class BuildManager {
                 }
 
                 const ext = path.extname(filePath);
-                const contentTypes = {
+                const contentTypes: Record<string, string> = {
                     '.html': 'text/html',
                     '.js': 'text/javascript',
                     '.css': 'text/css',
@@ -144,8 +211,9 @@ export class BuildManager {
             });
         });
 
-        server.listen(port, () => {
-            console.log(chalk.green(`\n🚀 Documentation Hub live at: http://localhost:${port}`));
+        const portNum = typeof port === 'string' ? parseInt(port, 10) : port;
+        server.listen(portNum, () => {
+            console.log(chalk.green(`\n🚀 Documentation Hub live at: http://localhost:${portNum}`));
             console.log(chalk.gray(`Press Ctrl+C to stop.`));
         });
     }

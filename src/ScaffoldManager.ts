@@ -5,15 +5,33 @@ import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
+interface CategoryTemplate {
+    name: string;
+    path: string;
+    description: string;
+    enabled: boolean;
+}
+
+interface PackageJson {
+    name?: string;
+    version?: string;
+    type?: string;
+    scripts?: Record<string, string>;
+}
+
 export class ScaffoldManager {
-    constructor(projectName) {
+    private projectName: string;
+    private targetDir: string;
+    private templateDir: string;
+
+    constructor(projectName?: string) {
         this.projectName = projectName || 'My Spec Project';
         // The folder name init creates should be foundryspec folder by default
         this.targetDir = path.resolve(process.cwd(), 'foundryspec');
         this.templateDir = path.resolve(__dirname, '../templates');
     }
 
-    async init() {
+    async init(): Promise<void> {
         if (await fs.pathExists(this.targetDir)) {
             throw new Error(`Directory "foundryspec" already exists. Move it or use a different location.`);
         }
@@ -21,7 +39,7 @@ export class ScaffoldManager {
         console.log(chalk.gray(`Creating directory structure...`));
         await fs.ensureDir(this.targetDir);
 
-        const categories = [
+        const categories: CategoryTemplate[] = [
             { name: "Architecture", path: "architecture", description: "System context and high-level strategy", enabled: true },
             { name: "Containers", path: "containers", description: "Technical boundaries and communication", enabled: true },
             { name: "Components", path: "components", description: "Internal module structure", enabled: true },
@@ -39,9 +57,17 @@ export class ScaffoldManager {
         await fs.ensureDir(path.join(this.targetDir, '.agent/workflows'));
 
         console.log(chalk.gray(`Copying templates...`));
-        await fs.copy(path.join(this.templateDir, 'assets'), path.join(this.targetDir, 'assets'));
-        await fs.copy(path.join(this.templateDir, 'workflows'), path.join(this.targetDir, '.agent/workflows'));
-        await fs.copy(path.join(this.templateDir, 'index.html'), path.join(this.targetDir, 'index.html'));
+        // Check if templates exist before copying to avoid errors in dev environment vs prod
+        if (await fs.pathExists(path.join(this.templateDir, 'assets'))) {
+            await fs.copy(path.join(this.templateDir, 'assets'), path.join(this.targetDir, 'assets'));
+        }
+        if (await fs.pathExists(path.join(this.templateDir, 'workflows'))) {
+            await fs.copy(path.join(this.templateDir, 'workflows'), path.join(this.targetDir, '.agent/workflows'));
+        }
+        const indexHtmlPath = path.join(this.templateDir, 'index.html');
+        if (await fs.pathExists(indexHtmlPath)) {
+            await fs.copy(indexHtmlPath, path.join(this.targetDir, 'index.html'));
+        }
 
         // All categories should be included in the config but commented out (using // prefix)
         const configCategories = categories.map(cat => {
@@ -71,7 +97,7 @@ export class ScaffoldManager {
         await this.ensurePackageJson(this.targetDir);
     }
 
-    async upgrade() {
+    async upgrade(): Promise<void> {
         const projectDir = process.cwd();
         const configPath = path.join(projectDir, 'foundry.config.json');
 
@@ -80,20 +106,27 @@ export class ScaffoldManager {
         }
 
         console.log(chalk.gray(`Updating templates and workflows...`));
-        // Overwrite workflows and core templates
-        await fs.copy(path.join(this.templateDir, 'workflows'), path.join(projectDir, '.agent/workflows'), { overwrite: true });
-        await fs.copy(path.join(this.templateDir, 'index.html'), path.join(projectDir, 'index.html'), { overwrite: true });
+
+        // Overwrite workflows and core templates if they exist in source
+        if (await fs.pathExists(path.join(this.templateDir, 'workflows'))) {
+            await fs.copy(path.join(this.templateDir, 'workflows'), path.join(projectDir, '.agent/workflows'), { overwrite: true });
+        }
+        if (await fs.pathExists(path.join(this.templateDir, 'index.html'))) {
+            await fs.copy(path.join(this.templateDir, 'index.html'), path.join(projectDir, 'index.html'), { overwrite: true });
+        }
 
         // Update viewer and other assets without touching user diagrams
         const assetTemplateDir = path.join(this.templateDir, 'assets');
         const projectAssetDir = path.join(projectDir, 'assets');
 
-        const assetFiles = await fs.readdir(assetTemplateDir);
-        for (const file of assetFiles) {
-            const src = path.join(assetTemplateDir, file);
-            const stats = await fs.stat(src);
-            if (!stats.isDirectory()) {
-                await fs.copy(src, path.join(projectAssetDir, file), { overwrite: true });
+        if (await fs.pathExists(assetTemplateDir)) {
+            const assetFiles = await fs.readdir(assetTemplateDir);
+            for (const file of assetFiles) {
+                const src = path.join(assetTemplateDir, file);
+                const stats = await fs.stat(src);
+                if (!stats.isDirectory()) {
+                    await fs.copy(src, path.join(projectAssetDir, file), { overwrite: true });
+                }
             }
         }
 
@@ -101,7 +134,7 @@ export class ScaffoldManager {
         await this.ensurePackageJson(projectDir);
     }
 
-    async ensureGitignore(dir) {
+    async ensureGitignore(dir: string): Promise<void> {
         const gitignorePath = path.join(dir, '.gitignore');
         let content = '';
         if (await fs.pathExists(gitignorePath)) {
@@ -115,9 +148,9 @@ export class ScaffoldManager {
         }
     }
 
-    async ensurePackageJson(dir) {
+    async ensurePackageJson(dir: string): Promise<void> {
         const pkgPath = path.join(dir, 'package.json');
-        let pkg = { scripts: {} };
+        let pkg: PackageJson = { scripts: {} };
 
         if (await fs.pathExists(pkgPath)) {
             pkg = await fs.readJson(pkgPath);
