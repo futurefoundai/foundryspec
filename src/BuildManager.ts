@@ -259,6 +259,7 @@ export class BuildManager {
         }
     }
 
+
     async serve(port: number | string = 3000): Promise<void> {
         if (!await fs.pathExists(this.configPath)) {
             throw new Error('foundry.config.json not found.');
@@ -299,10 +300,37 @@ export class BuildManager {
             });
         });
 
-        const portNum = typeof port === 'string' ? parseInt(port, 10) : port;
-        server.listen(portNum, () => {
-            console.log(chalk.green(`\n🚀 Documentation Hub live at: http://localhost:${portNum}`));
-            console.log(chalk.gray(`Press Ctrl+C to stop.`));
-        });
+        let portNum = typeof port === 'string' ? parseInt(port, 10) : port;
+        const maxAttempts = 10;
+        let attempts = 0;
+
+        const tryListen = (currentPort: number): Promise<void> => {
+            return new Promise((resolve, reject) => {
+                server.once('error', (err: NodeJS.ErrnoException) => {
+                    if (err.code === 'EADDRINUSE') {
+                        attempts++;
+                        if (attempts >= maxAttempts) {
+                            reject(new Error(`Unable to find an available port after ${maxAttempts} attempts (tried ${portNum}-${currentPort})`));
+                            return;
+                        }
+                        console.log(chalk.yellow(`⚠️  Port ${currentPort} is busy, trying ${currentPort + 1}...`));
+                        tryListen(currentPort + 1).then(resolve).catch(reject);
+                    } else {
+                        reject(err);
+                    }
+                });
+
+                server.listen(currentPort, () => {
+                    if (currentPort !== portNum) {
+                        console.log(chalk.yellow(`ℹ️  Originally requested port ${portNum} was busy.`));
+                    }
+                    console.log(chalk.green(`\n🚀 Documentation Hub live at: http://localhost:${currentPort}`));
+                    console.log(chalk.gray(`Press Ctrl+C to stop.`));
+                    resolve();
+                });
+            });
+        };
+
+        await tryListen(portNum);
     }
 }
