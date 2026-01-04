@@ -155,9 +155,10 @@ export class BuildManager {
     }
 
     async generateHub(config: FoundryConfig, outputDir: string, activeCategories: Category[]): Promise<void> {
-        const templatePath = path.join(this.projectDir, 'index.html');
+        // Read hub template from CLI templates, not user project
+        const templatePath = path.resolve(__dirname, '../templates/index.html');
         if (!await fs.pathExists(templatePath)) {
-            throw new Error('Hub template (index.html) not found in project root.');
+            throw new Error('Hub template not found in CLI templates. Please reinstall FoundrySpec.');
         }
 
         const templateContent = await fs.readFile(templatePath, 'utf8');
@@ -179,17 +180,19 @@ export class BuildManager {
 
         await fs.writeFile(path.join(outputDir, 'index.html'), rendered);
 
-        // For each category, ensure we have an index.html (the viewer)
-        const viewerTemplate = path.join(this.projectDir, 'assets', 'viewer.html');
-        if (await fs.pathExists(viewerTemplate)) {
-            const viewerContent = await fs.readFile(viewerTemplate, 'utf8');
-            for (const category of activeCategories) {
-                let catViewer = viewerContent
-                    .replace(/{{categoryName}}/g, category.name)
-                    .replace(/{{projectName}}/g, config.projectName);
+        // Read viewer template from CLI templates, not user project
+        const viewerTemplate = path.resolve(__dirname, '../templates/assets/viewer.html');
+        if (!await fs.pathExists(viewerTemplate)) {
+            throw new Error('Viewer template not found in CLI templates. Please reinstall FoundrySpec.');
+        }
 
-                await fs.writeFile(path.join(outputDir, 'assets', category.path, 'index.html'), catViewer);
-            }
+        const viewerContent = await fs.readFile(viewerTemplate, 'utf8');
+        for (const category of activeCategories) {
+            let catViewer = viewerContent
+                .replace(/{{categoryName}}/g, category.name)
+                .replace(/{{projectName}}/g, config.projectName);
+
+            await fs.writeFile(path.join(outputDir, 'assets', category.path, 'index.html'), catViewer);
         }
     }
 

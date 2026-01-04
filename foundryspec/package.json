@@ -1,8 +1,0 @@
-{
-  "scripts": {
-    "docs:serve": "foundryspec serve"
-  },
-  "name": "foundryspec",
-  "version": "1.0.0",
-  "type": "module"
-}

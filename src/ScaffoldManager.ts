@@ -112,7 +112,7 @@ export class ScaffoldManager {
         await fs.writeJson(path.join(this.targetDir, 'foundry.config.json'), config, { spaces: 2 });
 
         await this.ensureGitignore(this.targetDir);
-        await this.ensurePackageJson(this.targetDir);
+        await this.ensureParentGitignore();
     }
 
     async upgrade(): Promise<void> {
@@ -154,7 +154,6 @@ export class ScaffoldManager {
         }
 
         await this.ensureGitignore(projectDir);
-        await this.ensurePackageJson(projectDir);
     }
 
     async ensureGitignore(dir: string): Promise<void> {
@@ -171,24 +170,30 @@ export class ScaffoldManager {
         }
     }
 
-    async ensurePackageJson(dir: string): Promise<void> {
-        const pkgPath = path.join(dir, 'package.json');
-        let pkg: PackageJson = { scripts: {} };
+    async ensureParentGitignore(): Promise<void> {
+        const parentDir = path.dirname(this.targetDir);
+        const gitignorePath = path.join(parentDir, '.gitignore');
 
-        if (await fs.pathExists(pkgPath)) {
-            pkg = await fs.readJson(pkgPath);
-        } else {
-            pkg.name = path.basename(dir);
-            pkg.version = "1.0.0";
-            pkg.type = "module";
+        let content = '';
+        if (await fs.pathExists(gitignorePath)) {
+            content = await fs.readFile(gitignorePath, 'utf8');
         }
 
-        if (!pkg.scripts) pkg.scripts = {};
+        const foundryspecRules = [
+            '# FoundrySpec self-documentation build artifacts',
+            '/foundryspec/dist',
+            '/foundryspec/*.log',
+            '/foundryspec/build-info.txt'
+        ].join('\n');
 
-        if (!pkg.scripts['docs:serve']) {
-            console.log(chalk.gray(`Adding "docs:serve" script to package.json...`));
-            pkg.scripts['docs:serve'] = "foundryspec serve";
-            await fs.writeJson(pkgPath, pkg, { spaces: 2 });
+        // Check if foundryspec rules are already present
+        if (!content.includes('FoundrySpec self-documentation build artifacts')) {
+            console.log(chalk.gray(`Adding FoundrySpec rules to parent .gitignore...`));
+            content += content.endsWith('\n') ? '\n' : '\n\n';
+            content += foundryspecRules + '\n';
+            await fs.writeFile(gitignorePath, content);
         }
     }
+
+
 }

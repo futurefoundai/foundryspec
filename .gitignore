@@ -4,3 +4,8 @@
 .DS_Store
 *.log
 .personal_access_token
+
+# FoundrySpec self-documentation build artifacts
+/foundryspec/dist
+/foundryspec/*.log
+/foundryspec/build-info.txt
