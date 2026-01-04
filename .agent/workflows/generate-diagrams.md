@@ -11,5 +11,8 @@ As an AI agent, use this workflow to create or refine technical visualizations:
     - `sequenceDiagram` for logic flows.
     - `stateDiagram-v2` for state machines.
 4.  **Draft Mermaid Code**: Write clear, well-commented Mermaid syntax.
-5.  **Robustness Check**: Ask: "Does this diagram raise more questions than it answers?". If yes, ask those questions to the user and refine.
-6.  **Save File**: Write the `.mermaid` file (e.g., `specs/architecture/context.mermaid`).
+5.  **Link to Footnotes**: For complex nodes that require detailed logic or state descriptions, use `click NodeID "/footnotes/CATEGORY/NodeId.md"`.
+    - `CATEGORY` should be the folder name (e.g., `architecture`).
+    - Create individual markdown files in `assets/CATEGORY/footnotes/NodeId.md`.
+6.  **Robustness Check**: Ask: "Does this diagram raise more questions than it answers?". If yes, ask those questions to the user and refine.
+7.  **Save File**: Write the `.mermaid` file (e.g., `specs/architecture/context.mermaid`).

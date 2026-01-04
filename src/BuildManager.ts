@@ -126,6 +126,16 @@ export class BuildManager {
         const categoryOutputDir = path.join(outputDir, 'assets', category.path);
         await fs.ensureDir(categoryOutputDir);
         await fs.writeJson(path.join(categoryOutputDir, 'diagrams.json'), diagrams, { spaces: 2 });
+
+        // Copy footnotes directory to centralized footnotes directory
+        const footnotesDirPath = path.join(categoryPath, 'footnotes');
+        if (await fs.pathExists(footnotesDirPath)) {
+            // category.path is something like 'architecture'
+            const centralizedCategoryFootnotesDir = path.join(outputDir, 'footnotes', category.path);
+            console.log(chalk.gray(`Found footnotes directory for ${category.name}, copying to /footnotes/${category.path}...`));
+            await fs.ensureDir(centralizedCategoryFootnotesDir);
+            await fs.copy(footnotesDirPath, centralizedCategoryFootnotesDir);
+        }
     }
 
     async generateHub(config: FoundryConfig, outputDir: string, activeCategories: Category[]): Promise<void> {
