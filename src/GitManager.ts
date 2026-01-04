@@ -86,4 +86,62 @@ export class GitManager {
         }
         console.log(chalk.green(`✅ All external specs synchronized.`));
     }
+
+    async getSpecChanges(days: number = 7): Promise<any[]> {
+        try {
+            // Check if directory is a git repo
+            const isRepo = await this.git.checkIsRepo();
+            if (!isRepo) {
+                console.log(chalk.yellow('Not a git repository. Change tracking disabled.'));
+                return [];
+            }
+
+            // Get names of changed files in assets directory over last N days
+            // Get names of changed files in assets directory over last N days
+            const sinceDate = new Date();
+            sinceDate.setDate(sinceDate.getDate() - days);
+
+            const logOptions = [
+                `--since=${sinceDate.toISOString()}`,
+                '--',
+                'assets'
+            ];
+
+            const logs = await this.git.log(logOptions);
+            const fileChanges: Record<string, any> = {};
+
+            for (const entry of logs.all) {
+                // For each commit, find which files in assets were changed
+                const showResult = await this.git.show(['--name-only', '--format=', entry.hash]);
+                const files = showResult.split('\n');
+
+                const gitRoot = await this.git.revparse(['--show-toplevel']);
+
+                for (const file of files) {
+                    const fileAbsolutePath = path.join(gitRoot, file);
+                    const reportPath = path.relative(this.projectDir, fileAbsolutePath);
+
+                    if (!reportPath.startsWith('assets')) continue;
+
+                    if (!fileChanges[reportPath]) {
+                        fileChanges[reportPath] = {
+                            file: reportPath,
+                            commits: []
+                        };
+                    }
+                    fileChanges[reportPath].commits.push({
+                        hash: entry.hash,
+                        date: entry.date,
+                        message: entry.message,
+                        author: entry.author_name
+                    });
+                }
+            }
+
+            return Object.values(fileChanges);
+        } catch (err) {
+            console.error(chalk.red('Error fetching git changes:'), err);
+            return [];
+        }
+    }
 }

@@ -177,6 +177,56 @@ program
     });
 
 program
+    .command('changes')
+    .description('Generate a report of recent spec changes and implementation tasks')
+    .option('-d, --days <number>', 'Number of days to look back', '7')
+    .action(async (options: { days: string }) => {
+        console.log(chalk.blue(`\n🔍 Analyzing spec changes over the last ${options.days} days...`));
+        try {
+            const gitMan = new GitManager();
+            const days = parseInt(options.days, 10);
+            const changes = await gitMan.getSpecChanges(days);
+
+            if (changes.length === 0) {
+                console.log(chalk.yellow('\nNo changes found in the assets/ directory.'));
+                return;
+            }
+
+            let report = `# FoundrySpec Change Report (Last ${days} days)\n\n`;
+            report += `This report identifies design changes that may require implementation updates in the codebase.\n\n`;
+
+            for (const item of changes as any[]) {
+                const fileName = path.basename(item.file);
+                const isMermaid = fileName.endsWith('.mermaid');
+                const catName = item.file.split('/')[1] || 'General';
+
+                report += `## [${isMermaid ? 'DIAGRAM' : 'DETAIL'}] ${item.file}\n`;
+                report += `- **Latest Intent**: ${item.commits[0].message}\n`;
+                report += `- **Last Modified**: ${new Date(item.commits[0].date).toLocaleDateString()}\n`;
+
+                if (isMermaid) {
+                    report += `- **Implementation Suggestion**: Review the architectural changes in \`${fileName}\` and ensure the corresponding services/logic in the codebase are synchronized with these updates.\n`;
+                } else {
+                    report += `- **Implementation Suggestion**: The detail file \`${fileName}\` has been updated. Verify if the business logic or contract described matches the current implementation.\n`;
+                }
+                report += `\n`;
+            }
+
+            console.log(chalk.cyan('--- BEGIN REPORT ---\n'));
+            console.log(report);
+            console.log(chalk.cyan('--- END REPORT ---'));
+
+            // Optionally write to a file for agents to read easily
+            const reportPath = path.join(process.cwd(), '.foundryspec_changes.md');
+            await fs.writeFile(reportPath, report);
+            console.log(chalk.gray(`\nReport also saved to: ${reportPath}`));
+
+        } catch (err: any) {
+            console.error(chalk.red('\n❌ Failed to generate changes report:'), err.message);
+        }
+    });
+
+program
     .command('help')
     .description('Display the AI Agent Guide for using FoundrySpec')
     .action(async () => {

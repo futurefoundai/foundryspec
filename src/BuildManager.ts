@@ -111,6 +111,9 @@ export class BuildManager {
                 throw new Error(`Build failed due to Mermaid syntax errors.`);
             }
 
+            // Path Integrity Validation
+            await this.validateDiagramLinks(content, filePath, categoryPath);
+
             // Basic title/desc extraction from frontmatter or comments
             const titleMatch = content.match(/title:\s*(.*)/i) || content.match(/%% title:\s*(.*)/i);
             const descMatch = content.match(/description:\s*(.*)/i) || content.match(/%% description:\s*(.*)/i);
@@ -173,6 +176,40 @@ export class BuildManager {
                     .replace(/{{projectName}}/g, config.projectName);
 
                 await fs.writeFile(path.join(outputDir, 'assets', category.path, 'index.html'), catViewer);
+            }
+        }
+    }
+
+    private async validateDiagramLinks(content: string, filePath: string, categoryPath: string): Promise<void> {
+        // Match click commands: click NodeID "/footnotes/category/file.md"
+        // Also handles relative links like "footnotes/file.md"
+        const clickRegex = /click\s+\w+\s+"([^"]+)"/g;
+        let match;
+
+        while ((match = clickRegex.exec(content)) !== null) {
+            const targetUrl = match[1];
+
+            // We only care about footnote links for internal validation
+            if (targetUrl.includes('footnotes/')) {
+                // Determine source path. Link is usually /footnotes/category/file.md or footnotes/file.md
+                const parts = targetUrl.split('footnotes/');
+                const relativeFootnotePath = parts[1]; // e.g. "architecture/CLI.md" or "CLI.md"
+
+                // Construct the absolute path to the source markdown file
+                // If it's "architecture/CLI.md", it's in the category's footnotes folder? 
+                // Wait, the source structure is assets/category/footnotes/file.md
+                // If the link is /footnotes/architecture/CLI.md, and we are in architecture category, 
+                // the file is architecture/footnotes/CLI.md
+
+                const footnoteFileName = path.basename(relativeFootnotePath);
+                const sourceFootnotePath = path.join(categoryPath, 'footnotes', footnoteFileName);
+
+                if (!await fs.pathExists(sourceFootnotePath)) {
+                    console.error(chalk.red(`\n❌ Path Integrity Error in ${path.basename(filePath)}:`));
+                    console.error(chalk.yellow(`   Linked footnote "${targetUrl}" does not exist at source:`));
+                    console.error(chalk.gray(`   Expected: ${sourceFootnotePath}`));
+                    throw new Error(`Build failed due to broken diagram links.`);
+                }
             }
         }
     }

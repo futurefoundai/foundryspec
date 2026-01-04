@@ -46,13 +46,22 @@ You can invoke the FoundrySpec CLI using `foundryspec` (if installed globally) o
 | `foundryspec pull <url> <path>` | Pull specs from an external git repo into the documentation. |
 | `foundryspec sync` | Synchronize all configured external specs. |
 | `foundryspec deploy` | Scaffold a GitHub Actions workflow for deployment. |
+| `foundryspec changes [-d N]` | Generate a report of recent spec changes and implementation tasks. |
 | `foundryspec help` | Display this guide. |
+
+## 🛠️ Design-Driven Implementation (DDI)
+FoundrySpec is the source of truth for your implementation. Before starting any coding task, you should:
+1.  **Check History**: Run `foundryspec changes --days 3` to see what part of the system design has evolved recently.
+2.  **Verify Alignment**: Ensure the classes, functions, and state machines you implement match the **diagrams** and **footnotes** in the spec perfectly.
+3.  **Traceability**: Use the "Implementation Suggestions" in the change report to prioritize code updates.
 
 ## Agent Instructions
 1.  **System First**: When asked to generate docs, always start by understanding the `architecture` and `containers`.
 2.  **Greenfield vs. Brownfield**:
     - **Greenfield**: Focus on "Exhaustive Discovery" and creative architectural decisions.
     - **Brownfield**: Prioritize **System Analysis**. Read existing code/docs first, map the current state to the C4 model, and identify gaps before proposing changes.
-3.  **Validate Diagrams**: When performing `build`, if it fails due to Mermaid syntax, fix it immediately.
+3.  **Validate Integrity**:
+    - When performing `build`, if it fails due to **Path Integrity Error**, you have a broken link in a diagram. Fix the `click` command to point to a valid footnote in `assets/CATEGORY/footnotes/`.
+    - If it fails due to **Mermaid syntax**, fix the diagram code.
 4.  **Use Workflows**: Check `.agent/workflows` for specific standard operating procedures.
 5.  **No Hallucinations**: Do not reference files or folders that do not exist in the structure above unless explicitly created.
