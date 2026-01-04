@@ -83,4 +83,16 @@ FoundrySpec projects are designed to cover:
 
 ## 📄 License
 
-ISC
+FoundrySpec is dual-licensed under the **GNU General Public License v3.0 (GPLv3)** and a **Commercial License**.
+
+### Open Source (GPLv3)
+The GPLv3 is a "copyleft" license that ensures FoundrySpec remains free and open-source for the community. You are free to use, modify, and distribute the work under these terms, provided that all derivative works are also released under the GPLv3.
+
+### Commercial
+For enterprises that wish to integrate FoundrySpec into proprietary or closed-source environments without the GPLv3 obligations, a separate **Commercial License** is available.
+
+For more details, please see [LICENSE](LICENSE) and [LICENSE-COMMERCIAL.md](LICENSE-COMMERCIAL.md), or contact **license@futurefound.ai**.
+
+---
+
+© 2026 FutureFoundAI.

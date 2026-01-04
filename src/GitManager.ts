@@ -1,3 +1,15 @@
+/**
+ * © 2026 FutureFoundAI. All rights reserved.
+ *
+ * This software is distributed under the GNU General Public License v3.0 (GPLv3).
+ * For the full license text, see the LICENSE file in the root directory.
+ *
+ * COMMERCIAL USE:
+ * Companies wishing to use this software in proprietary/closed-source environments
+ * must obtain a separate license from FutureFoundAI.
+ * See LICENSE-COMMERCIAL.md for details.
+ */
+
 import { simpleGit, SimpleGit } from 'simple-git';
 import fs from 'fs-extra';
 import path from 'path';
