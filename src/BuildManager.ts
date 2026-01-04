@@ -70,13 +70,13 @@ export class BuildManager {
         const outputDir = path.resolve(this.projectDir, config.build.outputDir || 'dist');
         const assetsDir = path.resolve(this.projectDir, config.build.assetsDir || 'assets');
 
-        // Filter out "commented out" categories
-        const activeCategories = config.categories.filter(c => c.path && !c['//path']);
+        console.log(chalk.gray(`Discovering categories in ${assetsDir}...`));
+        const activeCategories = await this.discoverCategories(config, assetsDir);
 
         console.log(chalk.gray(`Cleaning output directory: ${outputDir}...`));
         await fs.emptyDir(outputDir);
 
-        console.log(chalk.gray(`Indexing diagrams...`));
+        console.log(chalk.gray(`Indexing diagrams for ${activeCategories.length} categories...`));
         for (const category of activeCategories) {
             await this.processCategory(category, assetsDir, outputDir);
         }
@@ -116,7 +116,8 @@ export class BuildManager {
                 await fs.remove(tempConfigPath);
                 await fs.remove(tempOutputPath);
             } catch (err: any) {
-                console.error(chalk.red(`\n❌ Syntax error in ${file}:`));
+                console.error(chalk.red(`\n❌ Syntax error in ${category.name} > ${file}:`));
+                console.error(chalk.gray(`   Full path: ${filePath}`));
                 // Clean up error message to be more readable
                 const cleanError = err.message.split('\n').filter((l: string) => !l.includes('Puppeteer') && !l.includes('sandbox')).join('\n');
                 console.error(chalk.yellow(cleanError));
@@ -192,6 +193,44 @@ export class BuildManager {
         }
     }
 
+    private async discoverCategories(config: FoundryConfig, assetsDir: string): Promise<Category[]> {
+        const discoveredPaths = await fs.readdir(assetsDir);
+        const categories: Category[] = [];
+
+        for (const p of discoveredPaths) {
+            const fullPath = path.join(assetsDir, p);
+            const stat = await fs.stat(fullPath);
+
+            // Only process directories
+            if (!stat.isDirectory()) continue;
+
+            // Check for mermaid files in this directory
+            const mermaidFiles = await glob('**/*.mermaid', { cwd: fullPath });
+            if (mermaidFiles.length === 0) continue;
+
+            // See if we have metadata in config
+            const existing = config.categories.find(c => c.path === p);
+
+            if (existing) {
+                // Preserve explicit metadata but ensure path is correct
+                categories.push({
+                    name: existing.name || p,
+                    path: p,
+                    description: existing.description || `Specifications for ${p}`
+                });
+            } else {
+                // Auto-generate basic metadata
+                categories.push({
+                    name: p.charAt(0).toUpperCase() + p.slice(1),
+                    path: p,
+                    description: `Automatically discovered specifications in ${p}`
+                });
+            }
+        }
+
+        return categories;
+    }
+
     private async validateDiagramLinks(content: string, filePath: string, categoryPath: string): Promise<void> {
         // Match click commands: click NodeID "/footnotes/category/file.md"
         // Also handles relative links like "footnotes/file.md"
@@ -206,12 +245,6 @@ export class BuildManager {
                 // Determine source path. Link is usually /footnotes/category/file.md or footnotes/file.md
                 const parts = targetUrl.split('footnotes/');
                 const relativeFootnotePath = parts[1]; // e.g. "architecture/CLI.md" or "CLI.md"
-
-                // Construct the absolute path to the source markdown file
-                // If it's "architecture/CLI.md", it's in the category's footnotes folder? 
-                // Wait, the source structure is assets/category/footnotes/file.md
-                // If the link is /footnotes/architecture/CLI.md, and we are in architecture category, 
-                // the file is architecture/footnotes/CLI.md
 
                 const footnoteFileName = path.basename(relativeFootnotePath);
                 const sourceFootnotePath = path.join(categoryPath, 'footnotes', footnoteFileName);
@@ -238,10 +271,6 @@ export class BuildManager {
             console.log(chalk.yellow(`\n⚠️  Output folder "dist" not found. Building first...`));
             await this.build();
         }
-
-        // Use standard import for http since it's a built-in node module
-        // But we are in an async function, we can keep it dynamic or move to top.
-        // Moved to top for TS consistency.
 
         const server = http.createServer((req, res) => {
             let url = (req.url || '/').split('?')[0];

@@ -3,50 +3,9 @@
   "version": "1.0.0",
   "categories": [
     {
-      "name": "Architecture",
+      "name": "Architecture (L1)",
       "path": "architecture",
-      "description": "System context and high-level strategy"
-    },
-    {
-      "name": "Containers",
-      "path": "containers",
-      "description": "Technical boundaries and communication"
-    },
-    {
-      "name": "Components",
-      "path": "components",
-      "description": "Internal module structure"
-    },
-    {
-      "name": "Sequences",
-      "path": "sequences",
-      "description": "Interaction flows and logic progression"
-    },
-    {
-      "name": "States",
-      "path": "states",
-      "description": "State machine logic and data lifecycle"
-    },
-    {
-      "name": "Data",
-      "path": "data",
-      "description": "Schema, contracts, and persistence"
-    },
-    {
-      "name": "Security",
-      "path": "security",
-      "description": "Trust boundaries and threat models"
-    },
-    {
-      "name": "Deployment",
-      "path": "deployment",
-      "description": "Infrastructure and runtime orchestration"
-    },
-    {
-      "//": "Uncomment to enable this category",
-      "//name": "Integration",
-      "//path": "integration",
-      "//description": "External APIs and ecosystem connectivity"
+      "description": "System context and high-level strategy. This name and description are provided by config metadata."
     }
   ],
   "external": [],
