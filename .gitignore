@@ -4,6 +4,7 @@
 .DS_Store
 *.log
 .personal_access_token
+.vscode
 
 # FoundrySpec self-documentation build artifacts
 /foundryspec/dist

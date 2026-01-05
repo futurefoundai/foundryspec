@@ -239,24 +239,52 @@ program
 
 program
     .command('help')
-    .description('Display the AI Agent Guide for using FoundrySpec')
-    .action(async () => {
+    .description('Display the AI Agent Guide or Workflows. Usage: help [topic] (topic: agent, workflows, or <workflow-name>)')
+    .argument('[topic]', 'Topic to display: "agent" (default), "workflows", or a specific workflow filename', 'agent')
+    .action(async (topic: string) => {
         try {
-            // Try to find the guide in the current directory first
-            const localGuidePath = path.join(process.cwd(), 'FOUNDRYSPEC_AGENT_GUIDE.md');
-            if (await fs.pathExists(localGuidePath)) {
-                console.log(await fs.readFile(localGuidePath, 'utf8'));
+            const templateDir = path.join(__dirname, '../templates');
+            
+            if (topic === 'workflows') {
+                const workflowsDir = path.join(templateDir, 'workflows');
+                if (await fs.pathExists(workflowsDir)) {
+                    const files = await fs.readdir(workflowsDir);
+                    console.log(chalk.blue('\nAvailable Workflows:'));
+                    files.forEach(f => console.log(`- ${f}`));
+                    console.log(chalk.gray('\nRun "foundryspec help <workflow-name>" to view a specific workflow.'));
+                } else {
+                    console.log(chalk.yellow('No workflows found in templates.'));
+                }
                 return;
             }
 
-            // Fallback to the template directory
-            const templateGuidePath = path.join(__dirname, '../templates/FOUNDRYSPEC_AGENT_GUIDE.md');
-            if (await fs.pathExists(templateGuidePath)) {
-                console.log(await fs.readFile(templateGuidePath, 'utf8'));
+            if (topic === 'agent') {
+                const guidePath = path.join(templateDir, 'FOUNDRYSPEC_AGENT_GUIDE.md');
+                if (await fs.pathExists(guidePath)) {
+                    console.log(await fs.readFile(guidePath, 'utf8'));
+                } else {
+                    console.log(chalk.yellow('FOUNDRYSPEC_AGENT_GUIDE.md not found in templates.'));
+                }
                 return;
             }
 
-            console.log(chalk.yellow('FOUNDRYSPEC_AGENT_GUIDE.md not found.'));
+            // Check if it matches a workflow file
+            const workflowPath = path.join(templateDir, 'workflows', topic);
+            // Try exact match or with .md extension
+            let finalPath = '';
+            if (await fs.pathExists(workflowPath)) {
+                finalPath = workflowPath;
+            } else if (await fs.pathExists(workflowPath + '.md')) {
+                finalPath = workflowPath + '.md';
+            }
+
+            if (finalPath) {
+                console.log(await fs.readFile(finalPath, 'utf8'));
+            } else {
+                console.log(chalk.red(`\n❌ Topic "${topic}" not found.`));
+                console.log(chalk.gray('Available topics: agent, workflows'));
+            }
+
         } catch (err: any) {
             console.error(chalk.red('\n❌ Failed to display help:'), err.message);
         }

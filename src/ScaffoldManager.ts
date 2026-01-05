@@ -52,6 +52,7 @@ export class ScaffoldManager {
         await fs.ensureDir(this.targetDir);
 
         const categories: CategoryTemplate[] = [
+            { name: "Discovery", path: "discovery", description: "User personas, journey maps, and requirements analysis", enabled: true },
             { name: "Architecture", path: "architecture", description: "System context and high-level strategy", enabled: true },
             { name: "Containers", path: "containers", description: "Technical boundaries and communication", enabled: true },
             { name: "Components", path: "components", description: "Internal module structure", enabled: true },
@@ -66,20 +67,56 @@ export class ScaffoldManager {
         for (const cat of categories) {
             await fs.ensureDir(path.join(this.targetDir, 'assets', cat.path));
         }
-        await fs.ensureDir(path.join(this.targetDir, '.agent/workflows'));
+
+        // Programmatically generate Discovery assets (Mermaid only)
+        const discoveryPath = path.join(this.targetDir, 'assets', 'discovery');
+        
+        const personasContent = `classDiagram
+    note "Personas & Actors Definition"
+    
+    class User {
+        +String role "General User"
+        +List goals
+        +List painPoints
+    }
+
+    class Administrator {
+        +String role "System Admin"
+        +maintainSystem()
+        +manageAccess()
+    }
+    
+    User <|-- Administrator`;
+
+        const requirementsContent = `mindmap
+  root((Requirements))
+    Functional
+      User Management
+        [REQ-001] Registration
+        [REQ-002] Login / SSO
+    Non-Functional
+      Performance
+        [NFR-001] < 200ms API Response
+      Security
+        [NFR-002] Data Encryption`;
+
+        const journeyContent = `journey
+    title User Journey: Core Workflow
+    section Onboarding
+      Sign Up: 5: User
+      Verify Email: 3: User
+    section Usage
+      Login: 5: User
+      Dashboard: 5: User`;
+
+        await fs.writeFile(path.join(discoveryPath, 'personas.mermaid'), personasContent);
+        await fs.writeFile(path.join(discoveryPath, 'requirements.mermaid'), requirementsContent);
+        await fs.writeFile(path.join(discoveryPath, 'journeys.mermaid'), journeyContent);
 
         console.log(chalk.gray(`Copying templates...`));
         // Check if templates exist before copying to avoid errors in dev environment vs prod
         if (await fs.pathExists(path.join(this.templateDir, 'assets'))) {
             await fs.copy(path.join(this.templateDir, 'assets'), path.join(this.targetDir, 'assets'));
-        }
-        if (await fs.pathExists(path.join(this.templateDir, 'workflows'))) {
-            await fs.copy(path.join(this.templateDir, 'workflows'), path.join(this.targetDir, '.agent/workflows'));
-        }
-
-        const contentGuidePath = path.join(this.templateDir, 'FOUNDRYSPEC_AGENT_GUIDE.md');
-        if (await fs.pathExists(contentGuidePath)) {
-            await fs.copy(contentGuidePath, path.join(this.targetDir, 'FOUNDRYSPEC_AGENT_GUIDE.md'));
         }
 
         const indexHtmlPath = path.join(this.templateDir, 'index.html');
@@ -125,17 +162,9 @@ export class ScaffoldManager {
 
         console.log(chalk.gray(`Updating templates and workflows...`));
 
-        // Overwrite workflows and core templates if they exist in source
-        if (await fs.pathExists(path.join(this.templateDir, 'workflows'))) {
-            await fs.copy(path.join(this.templateDir, 'workflows'), path.join(projectDir, '.agent/workflows'), { overwrite: true });
-        }
+        // Overwrite core templates if they exist in source
         if (await fs.pathExists(path.join(this.templateDir, 'index.html'))) {
             await fs.copy(path.join(this.templateDir, 'index.html'), path.join(projectDir, 'index.html'), { overwrite: true });
-        }
-
-        const contentGuidePath = path.join(this.templateDir, 'FOUNDRYSPEC_AGENT_GUIDE.md');
-        if (await fs.pathExists(contentGuidePath)) {
-            await fs.copy(contentGuidePath, path.join(projectDir, 'FOUNDRYSPEC_AGENT_GUIDE.md'), { overwrite: true });
         }
 
         // Update viewer and other assets without touching user diagrams

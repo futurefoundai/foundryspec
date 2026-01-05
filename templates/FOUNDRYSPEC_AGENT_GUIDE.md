@@ -21,7 +21,6 @@ A standard FoundrySpec project (initialized with `init`) looks like this:
     - `security/`: Threat models and trust boundaries.
     - `deployment/`: Infrastructure and deployment diagrams.
     - `integration/`: External API specs.
-- `.agent/workflows/`: Instructions and workflows for YOU (the agent) to follow.
 - `foundry.config.json`: Configuration for the project structure.
 - `package.json`: Project dependencies and scripts.
 - `dist/`: Generated static site (do not edit manually).
@@ -48,6 +47,8 @@ You can invoke the FoundrySpec CLI using `foundryspec` (if installed globally) o
 | `foundryspec deploy` | Scaffold a GitHub Actions workflow for deployment. |
 | `foundryspec changes [-d N]` | Generate a report of recent spec changes and implementation tasks. |
 | `foundryspec help` | Display this guide. |
+| `foundryspec help workflows` | List available AI agent workflows. |
+| `foundryspec help <workflow>` | Display a specific workflow (e.g., `foundryspec help design-feature`). |
 
 ## 🛠️ Design-Driven Implementation (DDI)
 FoundrySpec is the source of truth for your implementation. Before starting any coding task, you should:
@@ -63,5 +64,7 @@ FoundrySpec is the source of truth for your implementation. Before starting any 
 3.  **Validate Integrity**:
     - When performing `build`, if it fails due to **Path Integrity Error**, you have a broken link in a diagram. Fix the `click` command to point to a valid footnote in `assets/CATEGORY/footnotes/`.
     - If it fails due to **Mermaid syntax**, fix the diagram code.
-4.  **Use Workflows**: Check `.agent/workflows` for specific standard operating procedures.
+4.  **Use Workflows**: Do NOT look for a local `.agent` folder. Instead:
+    - Run `foundryspec help workflows` to see available standard operating procedures.
+    - Run `foundryspec help <workflow-name>` (e.g., `foundryspec help design-feature`) to read the specific instructions for a task.
 5.  **No Hallucinations**: Do not reference files or folders that do not exist in the structure above unless explicitly created.
