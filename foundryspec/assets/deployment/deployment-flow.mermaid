@@ -1,12 +1,13 @@
-graph TD
-    DEV[Dev Environment]
-    LINK[Local Global Link]
-    NPM[NPM Registry]
-    USER[End User Machine]
-
-    DEV -- "npm link" --> LINK
-    LINK -- "foundryspec command" --> DEV
-    
-    DEV -- "npm publish" --> NPM
-    NPM -- "npm install -g" --> USER
-    USER -- "foundryspec command" --> USER
+journey
+    title User Journey: Automatic Deployment (CI/CD)
+    section Preparation
+      Run "foundryspec deploy": 5: Architect
+      Commit workflow file: 5: Architect
+    section Automation
+      Push to Main: 5: Git
+      Trigger GH Action: 5: GitHub
+      Install Node & FoundrySpec: 4: GitHub
+      Run "foundryspec build": 5: GitHub
+      Deploy to GH Pages: 5: GitHub
+    section Verification
+      View Live Docs: 5: HumanArchitect

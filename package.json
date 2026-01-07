@@ -30,6 +30,7 @@
   "license": "GPL-3.0-only",
   "dependencies": {
     "@a24z/mermaid-parser": "^1.0.0",
+    "@mermaid-js/mermaid-cli": "^11.12.0",
     "chalk": "^5.3.0",
     "commander": "^11.1.0",
     "ejs": "^3.1.9",
@@ -39,7 +40,6 @@
     "typescript": "^5.9.3"
   },
   "devDependencies": {
-    "@mermaid-js/mermaid-cli": "^11.12.0",
     "@types/fs-extra": "^11.0.4"
   }
 }

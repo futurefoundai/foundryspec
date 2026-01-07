@@ -1,0 +1,25 @@
+sequenceDiagram
+    participant Agent as AI Agent
+    participant CLI
+    participant GitManager
+    participant Git as Simple-Git
+    participant FS as Local Filesystem
+
+    Agent->>CLI: foundryspec changes --days 7
+    CLI->>GitManager: getSpecChanges(7)
+    
+    GitManager->>Git: checkIsRepo()
+    GitManager->>Git: log(["--since=7 days ago", "--", "assets"])
+    
+    loop For each Log Entry
+        GitManager->>Git: show(["--name-only", hash])
+        Git-->>GitManager: List of changed files
+        GitManager->>GitManager: Filter for "assets/" files
+        GitManager->>GitManager: Map file to commits
+    end
+    
+    GitManager-->>CLI: Array of changes
+    
+    CLI->>CLI: Generate Markdown Report
+    CLI->>FS: Write ".foundryspec_changes.md"
+    CLI-->>Agent: Display Report in Terminal

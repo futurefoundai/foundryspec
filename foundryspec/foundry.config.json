@@ -1,13 +1,6 @@
 {
-  "projectName": "FoundrySpec Engine",
+  "projectName": "FoundrySpec Self-Docs",
   "version": "1.0.0",
-  "categories": [
-    {
-      "name": "Architecture (L1)",
-      "path": "architecture",
-      "description": "System context and high-level strategy. This name and description are provided by config metadata."
-    }
-  ],
   "external": [],
   "build": {
     "outputDir": "dist",

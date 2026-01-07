@@ -1,12 +1,29 @@
 stateDiagram-v2
-    [*] --> Uninitialized: Project created
-    Uninitialized --> Scaffolded: foundryspec init
-    Scaffolded --> Building: foundryspec build
-    Building --> Ready: dist/ generated
-    Ready --> Serving: foundryspec serve
-    Ready --> Deploying: foundryspec deploy
-    Deploying --> Ready
-    Serving --> Ready: Stop server
+    [*] --> NonProject: Start
     
-    Scaffolded --> Upgrading: foundryspec upgrade
-    Upgrading --> Scaffolded
+    NonProject --> Scaffolded: foundryspec init
+    
+    state Scaffolded {
+        [*] --> Idle
+        Idle --> CategoryAdded: foundryspec add <cat>
+        CategoryAdded --> Idle
+        
+        Idle --> Upgraded: foundryspec upgrade
+        Upgraded --> Idle
+    }
+    
+    Scaffolded --> Building: foundryspec build
+    Building --> Built: Success
+    Building --> Scaffolded: Error (Syntax/Path)
+    
+    Built --> Serving: foundryspec serve
+    Serving --> Built: Stop (Ctrl+C)
+    
+    Built --> Building: asset change + build
+    
+    state SyncStatus <<choice>>
+    Scaffolded --> SyncStatus: External Specs?
+    SyncStatus --> Synchronized: foundryspec pull/sync
+    Synchronized --> Scaffolded: changes in local assets
+    
+    Built --> [*]: Deployment

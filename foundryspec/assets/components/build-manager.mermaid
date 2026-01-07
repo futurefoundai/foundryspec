@@ -1,0 +1,29 @@
+C4Component
+    title Component Diagram: Build Manager
+
+    Container_Boundary(build_manager, "Build Manager") {
+        Component(orchestrator, "build()", "Method", "Orchestrates the entire build process.")
+        Component(scanner, "discoverCategories()", "Method", "Scans assets/ directory for diagram folders.")
+        Component(processor, "processCategory()", "Method", "Compiles diagrams in a folder to SVG.")
+        Component(validator, "validateDiagramLinks()", "Method", "Parses diagrams to ensure linked footnotes exist.")
+        Component(generator, "generateHub()", "Method", "Injects metadata into HTML templates.")
+        Component(server, "serve()", "Method", "Starts local HTTP server and watches assets/ for hot-reloading.")
+    }
+
+    System_Ext(mermaid_cli, "Mermaid CLI (mmdc)", "Headless browser process for SVG generation.")
+    System_Ext(fs, "fs-extra", "File system operations.")
+
+    Rel(orchestrator, scanner, "Calls")
+    Rel(orchestrator, processor, "Iterates through categories")
+    Rel(orchestrator, generator, "Calls after processing")
+    
+    Rel(processor, mermaid_cli, "Spawns child process")
+    Rel(processor, validator, "Calls before compilation")
+    Rel(processor, fs, "Reads .mermaid / Writes .svg")
+
+    Rel(validator, fs, "Checks file existence")
+
+    Rel(generator, fs, "Writes index.html")
+    Rel(server, fs, "Reads dist/ files")
+
+    UpdateLayoutConfig($c4ShapeInRow="3", $c4BoundaryInRow="1")

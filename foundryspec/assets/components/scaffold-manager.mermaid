@@ -1,0 +1,22 @@
+C4Component
+    title Component Diagram: Scaffold Manager
+
+    Container_Boundary(scaffold_manager, "Scaffold Manager") {
+        Component(initializer, "init()", "Method", "Creates folder structure and default assets.")
+        Component(upgrader, "upgrade()", "Method", "Updates local templates from the latest CLI version.")
+        Component(git_config, "ensureGitignore()", "Method", "Ensures build artifacts are ignored.")
+    }
+
+    System_Ext(templates, "Templates Dir", "Source of truth for default files.")
+    System_Ext(fs, "fs-extra", "File system operations.")
+
+    Rel(initializer, fs, "Creates dirs & files")
+    Rel(initializer, templates, "Copies from")
+    
+    Rel(upgrader, fs, "Overwrites templates")
+    Rel(upgrader, templates, "Reads from")
+
+    Rel(initializer, git_config, "Calls")
+    Rel(upgrader, git_config, "Calls")
+
+    UpdateLayoutConfig($c4ShapeInRow="3", $c4BoundaryInRow="1")

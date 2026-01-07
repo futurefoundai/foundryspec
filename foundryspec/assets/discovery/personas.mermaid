@@ -1,0 +1,39 @@
+classDiagram
+    note "FoundrySpec: AI-First Collaboration"
+    
+    class AIAgent {
+        +String role "Primary Operator"
+        +scaffoldProject()
+        +createInitialSpecs()
+        +readCodebase()
+        +generateAsIsSpecs()
+        +identifyAmbiguity()
+        +implementFeatures()
+    }
+
+    class HumanArchitect {
+        +String role "Strategic Visionary"
+        +initializeGreenfield()
+        +defineIntent()
+        +resolveAmbiguity()
+        +approveSpecs()
+    }
+
+    class FoundrySpecCLI {
+        +String role "The Enabler"
+        +scaffold(init)
+        +build()
+        +serve()
+        +addCategory()
+        +upgradeTemplates()
+        +pullExternalSpecs()
+        +syncExternalSpecs()
+        +scaffoldDeployment()
+        +reportChanges()
+        +displayHelp()
+        +validateIntegrity()
+    }
+
+    FoundrySpecCLI <.. AIAgent : Operates
+    FoundrySpecCLI <.. HumanArchitect : Reviews Output
+    AIAgent -- HumanArchitect : Collaborates

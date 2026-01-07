@@ -212,7 +212,7 @@ export class BuildManager {
             if (mermaidFiles.length === 0) continue;
 
             // See if we have metadata in config
-            const existing = config.categories.find(c => c.path === p);
+            const existing = (config.categories || []).find(c => c.path === p);
 
             if (existing) {
                 // Preserve explicit metadata but ensure path is correct
@@ -237,25 +237,24 @@ export class BuildManager {
     private async validateDiagramLinks(content: string, filePath: string, categoryPath: string): Promise<void> {
         // Match click commands: click NodeID "/footnotes/category/file.md"
         // Also handles relative links like "footnotes/file.md"
-        const clickRegex = /click\s+\w+\s+"([^"]+)"/g;
+        // Regex refined to capture various quote styles and paths
+        const clickRegex = /click\s+\w+\s+["']?([^"'\s>]+)["']?/g;
         let match;
 
         while ((match = clickRegex.exec(content)) !== null) {
             const targetUrl = match[1];
 
-            // We only care about footnote links for internal validation
+            // We only care about internal footnote links for validation
             if (targetUrl.includes('footnotes/')) {
-                // Determine source path. Link is usually /footnotes/category/file.md or footnotes/file.md
-                const parts = targetUrl.split('footnotes/');
-                const relativeFootnotePath = parts[1]; // e.g. "architecture/CLI.md" or "CLI.md"
-
-                const footnoteFileName = path.basename(relativeFootnotePath);
+                const footnoteFileName = path.basename(targetUrl);
+                
+                // Search for the footnote file in the category's footnotes directory
                 const sourceFootnotePath = path.join(categoryPath, 'footnotes', footnoteFileName);
 
                 if (!await fs.pathExists(sourceFootnotePath)) {
-                    console.error(chalk.red(`\n❌ Path Integrity Error in ${path.basename(filePath)}:`));
-                    console.error(chalk.yellow(`   Linked footnote "${targetUrl}" does not exist at source:`));
-                    console.error(chalk.gray(`   Expected: ${sourceFootnotePath}`));
+                    console.error(chalk.red(`\n❌ Path Integrity Error in ${path.relative(this.projectDir, filePath)}:`));
+                    console.error(chalk.yellow(`   Broken link: "${targetUrl}"`));
+                    console.error(chalk.gray(`   Looking for file at: ${path.relative(this.projectDir, sourceFootnotePath)}`));
                     throw new Error(`Build failed due to broken diagram links.`);
                 }
             }
@@ -270,11 +269,29 @@ export class BuildManager {
 
         const config: FoundryConfig = await fs.readJson(this.configPath);
         const outputDir = path.resolve(this.projectDir, config.build.outputDir || 'dist');
+        const assetsDir = path.resolve(this.projectDir, config.build.assetsDir || 'assets');
 
         if (!await fs.pathExists(outputDir)) {
             console.log(chalk.yellow(`\n⚠️  Output folder "dist" not found. Building first...`));
             await this.build();
         }
+
+        // Setup File Watcher for Hot-Reloading
+        console.log(chalk.cyan(`👀 Watching for changes in ${assetsDir}...`));
+        let isBuilding = false;
+        fs.watch(assetsDir, { recursive: true }, async (eventType, filename) => {
+            if (filename && !isBuilding && (filename.endsWith('.mermaid') || filename.endsWith('.md'))) {
+                isBuilding = true;
+                console.log(chalk.blue(`\n🔄 Change detected in ${filename}. Rebuilding...`));
+                try {
+                    await this.build();
+                } catch (err: any) {
+                    console.error(chalk.red(`\n❌ Rebuild failed: ${err.message}`));
+                } finally {
+                    isBuilding = false;
+                }
+            }
+        });
 
         const server = http.createServer((req, res) => {
             let url = (req.url || '/').split('?')[0];

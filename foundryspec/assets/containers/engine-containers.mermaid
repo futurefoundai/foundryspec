@@ -1,19 +1,34 @@
-graph LR
-    User([User/Agent])
-    CLI[FoundrySpec CLI]
-    SM[ScaffoldManager]
-    BM[BuildManager]
-    GM[GitManager]
-    FS[(Local Filesystem)]
-    NPM[NPM Registry]
+C4Container
+    title Container Diagram: FoundrySpec Engine
 
-    User -- "Commands" --> CLI
-    CLI -- "Scaffold" --> SM
-    CLI -- "Build/Serve" --> BM
-    CLI -- "Pull/Sync" --> GM
+    Person(agent, "AI Agent", "Interacts via CLI commands.")
+    Person(architect, "Human Architect", "Interacts via CLI and Browser.")
+
+    System_Boundary(foundry, "FoundrySpec CLI Application") {
+        Container(cli, "CLI Entry Point", "Commander.js", "Parses arguments and routes to appropriate managers.")
+        Container(scaffold, "Scaffold Manager", "TypeScript / FS-Extra", "Handles project initialization, folder creation, and template distribution.")
+        Container(builder, "Build Manager", "TypeScript / EJS / Mermaid-CLI", "Orchestrates diagram validation, HTML generation, local serving, and asset watching (Hot-Reload).")
+        Container(git, "Git Manager", "Simple-Git", "Manages external repository synchronization and change reporting.")
+    }
+
+    System_Ext(templates, "Templates Directory", "Source of base HTML and default assets.")
+    System_Ext(filesystem, "Local Filesystem", "Stores user assets and generated distribution.")
+    System_Ext(github, "Remote Git Repos", "External sources for spec synchronization.")
+
+    Rel(agent, cli, "Executes commands", "shell")
+    Rel(architect, cli, "Executes commands", "shell")
+
+    Rel(cli, scaffold, "Delegates init/upgrade/add")
+    Rel(cli, builder, "Delegates build/serve")
+    Rel(cli, git, "Delegates pull/sync/changes")
+
+    Rel(scaffold, templates, "Reads core templates")
+    Rel(scaffold, filesystem, "Creates structure & files")
     
-    SM -- "Write" --> FS
-    BM -- "Read/Write" --> FS
-    GM -- "Fetch/Clone" --> FS
+    Rel(builder, templates, "Injects metadata into HTML")
+    Rel(builder, filesystem, "Reads assets / Writes dist")
     
-    CLI -- "Publish/Install" --> NPM
+    Rel(git, github, "Clones / Pulls / Diff")
+    Rel(git, filesystem, "Writes external assets")
+
+    UpdateLayoutConfig($c4ShapeInRow="2", $c4BoundaryInRow="1")

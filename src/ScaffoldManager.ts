@@ -35,10 +35,23 @@ export class ScaffoldManager {
     private projectName: string;
     private targetDir: string;
     private templateDir: string;
+    
+    // Centralized source of truth for standard project categories
+    private standardCategories: CategoryTemplate[] = [
+        { name: "Discovery", path: "discovery", description: "User personas, journey maps, and requirements analysis", enabled: true },
+        { name: "Architecture", path: "architecture", description: "System context and high-level strategy", enabled: true },
+        { name: "Containers", path: "containers", description: "Technical boundaries and communication", enabled: true },
+        { name: "Components", path: "components", description: "Internal module structure", enabled: true },
+        { name: "Sequences", path: "sequences", description: "Interaction flows and logic progression", enabled: false },
+        { name: "States", path: "states", description: "State machine logic and data lifecycle", enabled: false },
+        { name: "Data", path: "data", description: "Schema, contracts, and persistence", enabled: false },
+        { name: "Security", path: "security", description: "Trust boundaries and threat models", enabled: false },
+        { name: "Deployment", path: "deployment", description: "Infrastructure and runtime orchestration", enabled: false },
+        { name: "Integration", path: "integration", description: "External APIs and ecosystem connectivity", enabled: false }
+    ];
 
     constructor(projectName?: string) {
         this.projectName = projectName || 'My Spec Project';
-        // The folder name init creates should be foundryspec folder by default
         this.targetDir = path.resolve(process.cwd(), 'foundryspec');
         this.templateDir = path.resolve(__dirname, '../templates');
     }
@@ -51,20 +64,7 @@ export class ScaffoldManager {
         console.log(chalk.gray(`Creating directory structure...`));
         await fs.ensureDir(this.targetDir);
 
-        const categories: CategoryTemplate[] = [
-            { name: "Discovery", path: "discovery", description: "User personas, journey maps, and requirements analysis", enabled: true },
-            { name: "Architecture", path: "architecture", description: "System context and high-level strategy", enabled: true },
-            { name: "Containers", path: "containers", description: "Technical boundaries and communication", enabled: true },
-            { name: "Components", path: "components", description: "Internal module structure", enabled: true },
-            { name: "Sequences", path: "sequences", description: "Interaction flows and logic progression", enabled: false },
-            { name: "States", path: "states", description: "State machine logic and data lifecycle", enabled: false },
-            { name: "Data", path: "data", description: "Schema, contracts, and persistence", enabled: false },
-            { name: "Security", path: "security", description: "Trust boundaries and threat models", enabled: false },
-            { name: "Deployment", path: "deployment", description: "Infrastructure and runtime orchestration", enabled: false },
-            { name: "Integration", path: "integration", description: "External APIs and ecosystem connectivity", enabled: false }
-        ];
-
-        for (const cat of categories) {
+        for (const cat of this.standardCategories) {
             await fs.ensureDir(path.join(this.targetDir, 'assets', cat.path));
         }
 
@@ -72,73 +72,65 @@ export class ScaffoldManager {
         const discoveryPath = path.join(this.targetDir, 'assets', 'discovery');
         
         const personasContent = `classDiagram
-    note "Personas & Actors Definition"
-    
-    class User {
-        +String role "General User"
-        +List goals
-        +List painPoints
+    note "Define your actors and personas here"
+    %% class User {
+    %%    +String role
+    %%    +List goals
+    %% }`;
+
+        const requirementsContent = `requirementDiagram
+
+    requirement Functional {
+        id: "1"
+        text: "Functional Requirements"
+        risk: Low
+        verifymethod: Test
     }
 
-    class Administrator {
-        +String role "System Admin"
-        +maintainSystem()
-        +manageAccess()
+    requirement Feature_A {
+        id: "1.1"
+        text: "Description of specific feature"
+        risk: Low
+        verifymethod: Test
     }
-    
-    User <|-- Administrator`;
 
-        const requirementsContent = `mindmap
-  root((Requirements))
-    Functional
-      User Management
-        [REQ-001] Registration
-        [REQ-002] Login / SSO
-    Non-Functional
-      Performance
-        [NFR-001] < 200ms API Response
-      Security
-        [NFR-002] Data Encryption`;
+    requirement Non_Functional {
+        id: "2"
+        text: "Non-Functional Requirements"
+        risk: Low
+        verifymethod: Test
+    }
+
+    Functional -contains-> Feature_A`;
 
         const journeyContent = `journey
-    title User Journey: Core Workflow
-    section Onboarding
-      Sign Up: 5: User
-      Verify Email: 3: User
-    section Usage
-      Login: 5: User
-      Dashboard: 5: User`;
+    title User Journey: [Workflow Name]
+    section [Phase Name]
+      [Action]: 5: [Actor]
+      [System Response]: 3: System`;
+
+        const traceabilityContent = `requirementDiagram
+    %% Traceability Matrix: Links Requirements to Components
+    
+    requirement Req_Sample {
+        id: "REQ-001"
+        text: "Sample Functional Requirement"
+    }
+
+    requirement Comp_Sample {
+        id: "COMP-001"
+        text: "Source Code / Component Reference"
+    }
+
+    Comp_Sample -satisfies-> Req_Sample`;
 
         await fs.writeFile(path.join(discoveryPath, 'personas.mermaid'), personasContent);
         await fs.writeFile(path.join(discoveryPath, 'requirements.mermaid'), requirementsContent);
         await fs.writeFile(path.join(discoveryPath, 'journeys.mermaid'), journeyContent);
 
-        console.log(chalk.gray(`Copying templates...`));
-        // Check if templates exist before copying to avoid errors in dev environment vs prod
-        if (await fs.pathExists(path.join(this.templateDir, 'assets'))) {
-            await fs.copy(path.join(this.templateDir, 'assets'), path.join(this.targetDir, 'assets'));
-        }
-
-        const indexHtmlPath = path.join(this.templateDir, 'index.html');
-        if (await fs.pathExists(indexHtmlPath)) {
-            await fs.copy(indexHtmlPath, path.join(this.targetDir, 'index.html'));
-        }
-
-        // All categories should be included in the config but commented out (using // prefix)
-        const configCategories = categories.map(cat => {
-            if (cat.enabled) return { name: cat.name, path: cat.path, description: cat.description };
-            return {
-                "//": "Uncomment to enable this category",
-                "//name": cat.name,
-                "//path": cat.path,
-                "//description": cat.description
-            };
-        });
-
         const config = {
             projectName: this.projectName,
             version: "1.0.0",
-            categories: configCategories,
             external: [],
             build: {
                 outputDir: "dist",
@@ -160,29 +152,42 @@ export class ScaffoldManager {
             throw new Error('Not in a FoundrySpec project. Please run from the root of your project.');
         }
 
-        console.log(chalk.gray(`Updating templates and workflows...`));
+        console.log(chalk.gray(`Checking for structural updates...`));
 
-        // Overwrite core templates if they exist in source
-        if (await fs.pathExists(path.join(this.templateDir, 'index.html'))) {
-            await fs.copy(path.join(this.templateDir, 'index.html'), path.join(projectDir, 'index.html'), { overwrite: true });
-        }
-
-        // Update viewer and other assets without touching user diagrams
-        const assetTemplateDir = path.join(this.templateDir, 'assets');
-        const projectAssetDir = path.join(projectDir, 'assets');
-
-        if (await fs.pathExists(assetTemplateDir)) {
-            const assetFiles = await fs.readdir(assetTemplateDir);
-            for (const file of assetFiles) {
-                const src = path.join(assetTemplateDir, file);
-                const stats = await fs.stat(src);
-                if (!stats.isDirectory()) {
-                    await fs.copy(src, path.join(projectAssetDir, file), { overwrite: true });
-                }
+        // 1. Ensure all standard category folders exist
+        for (const cat of this.standardCategories) {
+            const catPath = path.join(projectDir, 'assets', cat.path);
+            if (!await fs.pathExists(catPath)) {
+                console.log(chalk.gray(`Creating missing category folder: assets/${cat.path}`));
+                await fs.ensureDir(catPath);
             }
         }
 
+        // 2. Ensure Discovery assets exist (onboarding old projects)
+        const discoveryPath = path.join(projectDir, 'assets', 'discovery');
+
+        const personasPath = path.join(discoveryPath, 'personas.mermaid');
+        if (!await fs.pathExists(personasPath)) {
+            console.log(chalk.gray(`Adding missing Discovery asset: personas.mermaid`));
+            await fs.writeFile(personasPath, `classDiagram\n    note "Define your actors and personas here"\n    %% class User { ... }`);
+        }
+
+        const requirementsPath = path.join(discoveryPath, 'requirements.mermaid');
+        if (!await fs.pathExists(requirementsPath)) {
+            console.log(chalk.gray(`Adding missing Discovery asset: requirements.mermaid`));
+            await fs.writeFile(requirementsPath, `requirementDiagram\n    requirement R1 {\n        id: "1"\n        text: "Describe the requirement here"\n        risk: Low\n        verifymethod: Test\n    }`);
+        }
+
+        const journeysPath = path.join(discoveryPath, 'journeys.mermaid');
+        if (!await fs.pathExists(journeysPath)) {
+            console.log(chalk.gray(`Adding missing Discovery asset: journeys.mermaid`));
+            await fs.writeFile(journeysPath, `journey\n    title User Journey: [Name]\n    section [Phase]\n      [Action]: 5: [Actor]`);
+        }
+
+        // 2. Ensure .gitignore rules
         await this.ensureGitignore(projectDir);
+        
+        console.log(chalk.green(`\n✅ Project structure is up to date with the latest FoundrySpec standards.`));
     }
 
     async ensureGitignore(dir: string): Promise<void> {

@@ -1,14 +1,20 @@
 sequenceDiagram
-    participant U as User/Agent
-    participant C as CLI
-    participant S as Scaffold Engine
-    participant A as AI Layer
+    participant Architect
+    participant CLI
+    participant ScaffoldManager
+    participant FS as Local Filesystem
 
-    U->>C: foundryspec init [project-name]
-    C->>S: Create "foundryspec/" folder
-    S->>S: Populate exhaustive category assets
-    S->>S: Write foundry.config.json (commented categories)
-    S->>S: Auto-setup .gitignore & package.json
-    C->>A: Generate Initial Instructions
-    A->>A: Create .agent/workflows/
-    C-->>U: Project Scaffolded Successfully
+    Architect->>CLI: foundryspec init "My Project"
+    CLI->>ScaffoldManager: new ScaffoldManager("My Project")
+    CLI->>ScaffoldManager: init()
+    
+    ScaffoldManager->>FS: ensureDir("foundryspec")
+    ScaffoldManager->>FS: create asset folders (discovery, architecture, etc.)
+    ScaffoldManager->>FS: write "personas.mermaid" (Minimal)
+    ScaffoldManager->>FS: write "requirements.mermaid" (Hierarchical)
+    ScaffoldManager->>FS: write "journeys.mermaid" (Minimal)
+    ScaffoldManager->>FS: write "foundry.config.json"
+    ScaffoldManager->>FS: ensure .gitignore rules
+    
+    ScaffoldManager-->>CLI: Success
+    CLI-->>Architect: ✅ Project scaffolded!

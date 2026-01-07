@@ -7,7 +7,7 @@ As an AI agent, follow this "Exhaustive Discovery" cycle to reach **Zero-Questio
 1.  **Discovery Phase (Mandatory First Step)**
     *   **Identify Actors:** Check `assets/discovery/personas.mermaid`. If the relevant actor is missing, add them using the Mermaid Class Diagram syntax.
     *   **Map the Journey:** Update or create `assets/discovery/journeys.mermaid` to visualize the user's flow for this specific feature. Use Mermaid's `journey` syntax.
-    *   **Define Requirements:** Update `assets/discovery/requirements.mermaid` (Mindmap) to include the new Functional and Non-Functional requirements for this feature.
+    *   **Define Requirements:** Update `assets/discovery/requirements.mermaid` (Requirement Diagram) to include the new Functional and Non-Functional requirements for this feature.
     *   *Goal:* Ensure we understand "Who", "What", and "Why" before we define "How".
 
 2.  **Architecture Phase (L1 - Context)**

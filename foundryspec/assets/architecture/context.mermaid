@@ -1,17 +1,24 @@
-%% title: FoundrySpec System Context
-graph TD
-    User((User))
-    Agent((AI Agent))
-    CLI[FoundrySpec CLI]
-    Repo[Remote Git Repo]
-    Pages[GitHub Pages]
+C4Context
+    title System Context: FoundrySpec Engine
 
-    User -- "Commands (init, serve, upgrade)" --> CLI
-    Agent -- "Collaborates/Generates" --> CLI
-    CLI -- "Pull/Sync" --> Repo
-    CLI -- "Build/Deploy" --> Pages
-    CLI -- "Scaffolds" --> LocalDocs["Local Project Docs (foundryspec/)"]
-    LocalDocs -- "Mermaid/Specs" --> CLI
+    Person(architect, "Human Architect", "Defines strategic intent and reviews specs.")
+    Person(agent, "AI Agent", "Operates CLI, writes specs, implements code.")
+    
+    System_Boundary(foundry, "FoundrySpec Ecosystem") {
+        System(engine, "FoundrySpec Engine", "CLI tool for scaffolding, building, and serving specs.")
+    }
 
-    click CLI "/footnotes/architecture/CLI.md"
-    click Agent "/footnotes/architecture/Agent.md"
+    System_Ext(filesystem, "Local Filesystem", "Stores .mermaid assets and generated HTML.")
+    System_Ext(git, "Git & GitHub", "Version control and remote spec storage.")
+    System_Ext(browser, "Web Browser", "Renders the static documentation hub.")
+
+    Rel(architect, engine, "Initializes project")
+    Rel(agent, engine, "Builds, Validates, Syncs")
+    
+    Rel(engine, filesystem, "Reads Assets / Writes Dist")
+    Rel(engine, git, "Pulls external specs")
+    
+    Rel(architect, browser, "Views Documentation")
+    Rel(browser, filesystem, "Loads HTML/JS")
+
+    UpdateLayoutConfig($c4ShapeInRow="3", $c4BoundaryInRow="1")

@@ -1,17 +1,32 @@
 sequenceDiagram
-    participant U as User
-    participant C as CLI
-    participant B as BuildManager
-    participant H as Node HTTP Server
-    participant FS as FileSystem
+    participant Architect
+    participant CLI
+    participant BuildManager
+    participant FS as Local Filesystem
+    participant HTTP as Node HTTP Server
 
-    U->>C: foundryspec serve
-    C->>B: serve()
-    B->>FS: Check if dist/ exists
-    opt dist/ missing
-        B->>B: build()
+    Architect->>CLI: foundryspec serve -p 3000
+    CLI->>BuildManager: serve(3000)
+    
+    BuildManager->>FS: Check if "dist/" exists
+    alt Dist missing
+        BuildManager->>BuildManager: build()
     end
-    B->>H: Start Server on Port (default 3000)
-    U->>H: Request index.html
-    H->>FS: Read dist/index.html
-    H-->>U: Documentation Hub
+    
+    BuildManager->>HTTP: createServer()
+    BuildManager->>HTTP: listen(3000)
+    
+    rect rgb(200, 220, 240)
+        Note over BuildManager, FS: Hot-Reload Loop
+        FS-->>BuildManager: File Change Event
+        BuildManager->>BuildManager: build()
+    end
+
+    loop On Request
+        Architect->>HTTP: GET /index.html
+        HTTP->>FS: Read dist/index.html
+        FS-->>HTTP: Data
+        HTTP-->>Architect: 200 OK (HTML Content)
+    end
+    
+    Note over Architect, HTTP: Architect presses Ctrl+C to stop

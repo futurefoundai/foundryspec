@@ -1,0 +1,21 @@
+C4Component
+    title Component Diagram: CLI Entry Point
+
+    Container_Boundary(cli, "CLI Entry Point (index.ts)") {
+        Component(parser, "Commander.js", "Library", "Parses command line arguments.")
+        Component(router, "Command Definitions", "Setup", "Maps commands (init, build, etc.) to handlers.")
+        Component(handlers, "Action Handlers", "Functions", "Instantiates Managers and executes logic.")
+    }
+
+    Container(scaffold, "Scaffold Manager", "Container", "Handles init/upgrade logic.")
+    Container(builder, "Build Manager", "Container", "Handles build/serve logic.")
+    Container(git, "Git Manager", "Container", "Handles git logic.")
+
+    Rel(parser, router, "Parsed Args")
+    Rel(router, handlers, "Invokes")
+    
+    Rel(handlers, scaffold, "Instantiates & Calls")
+    Rel(handlers, builder, "Instantiates & Calls")
+    Rel(handlers, git, "Instantiates & Calls")
+
+    UpdateLayoutConfig($c4ShapeInRow="3", $c4BoundaryInRow="1")

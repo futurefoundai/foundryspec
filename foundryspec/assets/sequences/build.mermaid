@@ -1,18 +1,32 @@
 sequenceDiagram
-    participant C as CLI
-    participant B as BuildManager
-    participant FS as FileSystem
-    participant T as TemplateEngine
+    participant Agent as AI Agent
+    participant CLI
+    participant BuildManager
+    participant FS as Local Filesystem
+    participant MCLI as Mermaid CLI
 
-    C->>B: build()
-    B->>B: Filter Active Categories (ignore // keys)
-    B->>FS: Scan assets/** for .mermaid
-    loop For each Active Category
-        B->>B: Group diagrams by path
-        B->>FS: Write diagrams.json in category dir
+    Agent->>CLI: foundryspec build
+    CLI->>BuildManager: new BuildManager()
+    CLI->>BuildManager: build()
+    
+    BuildManager->>FS: Read "foundry.config.json" (Project Name/Version)
+    BuildManager->>FS: Scan "assets/" directory for subfolders
+    BuildManager->>BuildManager: discoverCategories() (Auto-Discovery)
+    
+    loop For each Discovered Category Folder
+        BuildManager->>FS: Scan for .mermaid files
+        loop For each Diagram
+            BuildManager->>FS: Read content
+            BuildManager->>BuildManager: validateDiagramLinks()
+            BuildManager->>MCLI: Compile to SVG
+            MCLI-->>BuildManager: SVG Output
+        end
     end
-    B->>FS: Read index.html template
-    B->>T: Process Project Metadata
-    T->>FS: Write root index.html
-    B->>FS: Copy standard CSS/JS/Viewer to dist/
-    C-->>C: Log "Build Complete"
+    
+    BuildManager->>BuildManager: generateHub()
+    BuildManager->>FS: Write "index.html" (Hub)
+    BuildManager->>FS: Write "assets/CAT/index.html" (Viewer)
+    BuildManager->>FS: Copy core assets to dist/
+    
+    BuildManager-->>CLI: Build Success
+    CLI-->>Agent: ✅ Build complete!

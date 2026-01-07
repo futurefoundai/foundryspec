@@ -1,98 +1,89 @@
-# FoundrySpec 🚀
+# FoundrySpec 🛠️
 
-**FoundrySpec** is a powerful CLI-driven documentation engine designed for **Human-AI Collaborative System Analysis & Design**. It scaffolds, builds, and deploys premium, interactive architectural documentation that aims for **Zero-Question Implementation readiness**.
+**The Documentation Engine for AI-Human Collaborative System Design.**
 
-## ✨ Features
-
-- **AI-First Workflows**: Bundled instructions for AI agents to follow "Exhaustive Discovery" cycles.
-- **C4-Derived Scaffolding**: Automatically creates an exhaustive directory structure based on C4 modeling.
-- **Interactive Hub**: Generates a stunning static documentation hub with Mermaid.js panning and zooming.
-- **Built-in Server**: Locally serve your documentation hub with a single command.
-- **Versioning Management**: Effortlessly upgrade local project templates and workflows as the engine evolves.
-- **Distributed Specs**: Support for `pull` and `sync` commands to manage documentation across multiple repositories.
-- **Auto-Deployment**: Built-in command to scaffold GitHub Actions for GitHub Pages deployment.
-
-## 🛠️ Installation & Usage
-
-### Option 1: Global Installation
-```bash
-npm install -g @futurefoundaihq/foundryspec
-foundryspec init
-```
-
-### Option 2: Run via npx (No install required)
-```bash
-npx @futurefoundaihq/foundryspec init
-```
-
-## 🚀 Getting Started
-
-### 1. Initialize a new project
-```bash
-foundryspec init "My Project Name"
-cd foundryspec
-```
-
-### 2. Add a new category
-```bash
-foundryspec add "Security Audit"
-```
-
-### 3. Build & Serve the documentation
-```bash
-foundryspec build
-foundryspec serve
-```
-
-### 4. Upgrade local project
-If you've updated the global tool, you can refresh your project's core files:
-```bash
-foundryspec upgrade
-```
-
-### 5. Deploy to GitHub Pages
-```bash
-foundryspec deploy
-```
-
-## 🤖 Commands
-
-| Command | Description |
-| :--- | :--- |
-| `init [name]` | Scaffold a new project. Defaults to `foundryspec/` folder. |
-| `add <category>` | Add a new documentation category (creates folder and updates config). |
-| `build` | Generate the static documentation hub in the `dist/` folder. |
-| `serve` | Run a local static server to view your documentation hub. |
-| `upgrade` | Refresh local project templates and workflows from latest engine. |
-| `pull <url> <path>` | Incorporate external specs from a remote Git repository. |
-| `sync` | Synchronize all configured external specs. |
-| `deploy` | Scaffold GitHub Actions for automatic deployment. |
-
-## 📐 Exhaustive Categories
-
-FoundrySpec projects are designed to cover:
-- **Architecture** (Context)
-- **Containers** (L2)
-- **Components** (L3)
-- **Sequences** (Dynamic)
-- **States** (Behavior)
-- **Data** (Schema)
-- **Security** (Trust)
-- **Deployment** (Infra)
-- **Integration** (Contracts)
-
-## 📄 License
-
-FoundrySpec is dual-licensed under the **GNU General Public License v3.0 (GPLv3)** and a **Commercial License**.
-
-### Open Source (GPLv3)
-The GPLv3 is a "copyleft" license that ensures FoundrySpec remains free and open-source for the community. You are free to use, modify, and distribute the work under these terms, provided that all derivative works are also released under the GPLv3.
-
-### Commercial
-For enterprises that wish to integrate FoundrySpec into proprietary or closed-source environments without the GPLv3 obligations, a separate **Commercial License** is available.
-
-For more details, please see [LICENSE](LICENSE) and [LICENSE-COMMERCIAL.md](LICENSE-COMMERCIAL.md), or contact **license@futurefound.ai**.
+FoundrySpec is not just a documentation tool; it is a **Living Digital Twin** of your system's architectural intent. Designed for the era of AI-assisted engineering, FoundrySpec ensures that your documentation remains the **Single Source of Truth (SSoT)**—a centralized, authoritative reference point that both humans and AI Agents can trust to avoid data fragmentation and drift.
 
 ---
 
-© 2026 FutureFoundAI.
+## 🚀 Why FoundrySpec?
+
+In a world of rapid AI development, traditional documentation fails because it is **unstructured, ambiguous, and stale**. This leads to AI hallucinations, context fragmentation, and architectural decay.
+
+FoundrySpec solves this by providing:
+
+*   🤖 **AI-First Design:** Optimized for LLM context windows. No prose-heavy fluff—just structured, machine-readable specifications (Mermaid + Markdown).
+*   🗺️ **Discovery-First Workflow:** Mandates a "Discovery Phase" (Personas, Journeys, Requirements) before a single line of code is written.
+*   🔗 **Zero-Question Traceability:** Link high-level requirements directly to code components. Achieve "Zero-Question Implementation" readiness.
+*   ⚡ **Zero-Config Auto-Discovery:** Simply create a folder in `assets/`, and the engine handles the rest. No configuration bloat.
+*   👀 **Hot-Reload Dev Experience:** Real-time feedback loop. Edit your diagrams and see the changes instantly in the Documentation Hub.
+
+---
+
+## 🛠️ Core Features
+
+### 1. The Discovery Layer (L0)
+Define the **Who, What, and Why** before the **How**.
+*   **Personas:** Identify your system's actors using Mermaid Class Diagrams.
+*   **User Journeys:** Map workflows with visual journey maps.
+*   **Requirement Diagrams:** Rigorous SysML-style requirement tracking.
+
+### 2. The C4 Architectural Hub (L1-L3)
+A layered approach to system understanding:
+*   **L1 (Context):** High-level system landscape.
+*   **L2 (Containers):** Technical boundaries and services.
+*   **L3 (Components):** Internal module logic and method-level detail.
+
+### 3. Dynamic Sequences & States (L4)
+Capture the behavior of your system:
+*   **Sequences:** Visualize complex logic flows across components.
+*   **State Machines:** Document data lifecycles and project states.
+
+### 4. Deep-Link Footnotes
+Bridge the gap between diagrams and detail. Click any node in a diagram to jump into a deep-dive Markdown specification.
+
+---
+
+## 🚦 Getting Started
+
+### Installation
+```bash
+npm install -g @futurefoundaihq/foundryspec
+```
+
+### Initialize a New Project (Greenfield)
+```bash
+foundryspec init "My Awesome Project"
+cd foundryspec
+foundryspec serve
+```
+
+### Onboard an Existing Project (Brownfield)
+```bash
+foundryspec upgrade
+foundryspec build
+```
+
+### 🤖 Onboarding your AI Agent
+The best way to get an AI Agent (like Gemini, Jules, or Claude) started is to simply tell it:
+> "Run `foundryspec help` to understand the system architecture and our design-driven workflow."
+
+---
+
+## 🤖 For AI Agents (Jules, Gemini, etc.)
+
+FoundrySpec provides you with a **Structured Context Layer**. When working in a FoundrySpec-enabled repository:
+1.  **Consult Discovery:** Understand the user's intent and personas.
+2.  **Verify Traceability:** Check which requirements your task satisfies.
+3.  **Align with Architecture:** Ensure your implementation matches the Container and Component diagrams perfectly.
+4.  **Build & Validate:** Use `foundryspec build` to check for broken links or syntax errors before committing.
+
+---
+
+## 📜 License
+Distributed under the GNU General Public License v3.0 (GPLv3).
+Commercial use requires a separate license from **FutureFoundAI**.
+
+---
+
+**Build the future. Document with Intent. Use FoundrySpec.**
