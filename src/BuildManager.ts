@@ -17,6 +17,7 @@ import { glob } from 'glob';
 import * as http from 'http';
 import puppeteer from 'puppeteer';
 import { createRequire } from 'module';
+import matter from 'gray-matter';
 
 import { fileURLToPath } from 'url';
 
@@ -115,7 +116,23 @@ export class BuildManager {
 
             for (const file of mermaidFiles) {
                 const filePath = path.join(categoryPath, file);
-                const content = await fs.readFile(filePath, 'utf8');
+                const rawContent = await fs.readFile(filePath, 'utf8');
+                const { data, content } = matter(rawContent);
+
+                // --- Frontmatter Validation ---
+                if (!data || Object.keys(data).length === 0) {
+                    const errorMsg = `\n❌ Metadata error in ${category.name} > ${file}:\n   Missing frontmatter. Please add a YAML block with 'title' and 'description'.\n   Example:\n     ---\n     title: My Diagram\n     description: A brief overview.\n     ---`;
+                    throw new Error(chalk.red(errorMsg));
+                }
+                if (!data.title) {
+                    const errorMsg = `\n❌ Metadata error in ${category.name} > ${file}:\n   Frontmatter is missing the required 'title' field.`;
+                    throw new Error(chalk.red(errorMsg));
+                }
+                if (!data.description) {
+                    const errorMsg = `\n❌ Metadata error in ${category.name} > ${file}:\n   Frontmatter is missing the required 'description' field.`;
+                    throw new Error(chalk.red(errorMsg));
+                }
+                // --- End Validation ---
 
                 try {
                     await page.evaluate((diagram) => {
@@ -132,13 +149,9 @@ export class BuildManager {
                 // Path Integrity Validation
                 await this.validateDiagramLinks(content, filePath, categoryPath);
 
-            // Basic title/desc extraction from frontmatter or comments
-            const titleMatch = content.match(/title:\s*(.*)/i) || content.match(/%% title:\s*(.*)/i);
-            const descMatch = content.match(/description:\s*(.*)/i) || content.match(/%% description:\s*(.*)/i);
-
             diagrams.push({
-                title: titleMatch ? titleMatch[1].trim() : file,
-                description: descMatch ? descMatch[1].trim() : "No description provided.",
+                title: data.title,
+                description: data.description,
                 file: file,
                 updatedAt: new Date().toISOString()
             });
