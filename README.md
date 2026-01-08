@@ -81,7 +81,7 @@ FoundrySpec provides you with a **Structured Context Layer**. When working in a 
 ---
 
 ## 📜 License
-Distributed under the GNU General Public License v3.0 (GPLv3).
+Distributed under the GNU Affero General Public License v3.0 (AGPLv3).
 Commercial use requires a separate license from **FutureFoundAI**.
 
 ---
