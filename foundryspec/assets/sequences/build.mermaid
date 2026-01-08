@@ -3,26 +3,32 @@ sequenceDiagram
     participant CLI
     participant BuildManager
     participant FS as Local Filesystem
-    participant MCLI as Mermaid CLI
+    participant Puppeteer as Headless Browser
+    participant MermaidJS as Mermaid.js Library
 
     Agent->>CLI: foundryspec build
     CLI->>BuildManager: new BuildManager()
     CLI->>BuildManager: build()
     
-    BuildManager->>FS: Read "foundry.config.json" (Project Name/Version)
-    BuildManager->>FS: Scan "assets/" directory for subfolders
-    BuildManager->>BuildManager: discoverCategories() (Auto-Discovery)
+    BuildManager->>FS: Read "foundry.config.json"
+    BuildManager->>FS: Scan "assets/" for categories
     
-    loop For each Discovered Category Folder
+    BuildManager->>Puppeteer: launch()
+    activate Puppeteer
+
+    loop For each Category
         BuildManager->>FS: Scan for .mermaid files
         loop For each Diagram
             BuildManager->>FS: Read content
             BuildManager->>BuildManager: validateDiagramLinks()
-            BuildManager->>MCLI: Compile to SVG
-            MCLI-->>BuildManager: SVG Output
+            BuildManager->>Puppeteer: newPage()
+            Puppeteer->>MermaidJS: parse(content)
         end
     end
     
+    deactivate Puppeteer
+    BuildManager->>Puppeteer: close()
+
     BuildManager->>BuildManager: generateHub()
     BuildManager->>FS: Write "index.html" (Hub)
     BuildManager->>FS: Write "assets/CAT/index.html" (Viewer)
