@@ -15,15 +15,12 @@ import path from 'path';
 import chalk from 'chalk';
 import { glob } from 'glob';
 import * as http from 'http';
-import * as os from 'os';
-import { exec } from 'child_process';
-import util from 'util';
+import puppeteer from 'puppeteer';
+import { createRequire } from 'module';
 
 import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-
-const execPromise = util.promisify(exec);
 
 interface Category {
     name: string;
@@ -62,6 +59,7 @@ export class BuildManager {
     }
 
     async build(): Promise<void> {
+        console.time('Build process');
         if (!await fs.pathExists(this.configPath)) {
             throw new Error('foundry.config.json not found. Are you in a FoundrySpec project?');
         }
@@ -77,8 +75,14 @@ export class BuildManager {
         await fs.emptyDir(outputDir);
 
         console.log(chalk.gray(`Indexing diagrams for ${activeCategories.length} categories...`));
-        for (const category of activeCategories) {
-            await this.processCategory(category, assetsDir, outputDir);
+
+        const browser = await puppeteer.launch({ args: ['--no-sandbox'] });
+        try {
+            for (const category of activeCategories) {
+                await this.processCategory(category, assetsDir, outputDir, browser);
+            }
+        } finally {
+            await browser.close();
         }
 
         console.log(chalk.gray(`Generating Documentation Hub...`));
@@ -88,44 +92,45 @@ export class BuildManager {
         await fs.copy(assetsDir, path.join(outputDir, 'assets'));
 
         console.log(chalk.green(`\n✅ Build complete! Documentation is in: ${outputDir}`));
+        console.timeEnd('Build process');
     }
 
-    async processCategory(category: Category, assetsDir: string, outputDir: string): Promise<void> {
+    async processCategory(category: Category, assetsDir: string, outputDir: string, browser: puppeteer.Browser): Promise<void> {
         const categoryPath = path.join(assetsDir, category.path);
         if (!await fs.pathExists(categoryPath)) return;
 
         const mermaidFiles = await glob('**/*.mermaid', { cwd: categoryPath });
         const diagrams: Diagram[] = [];
 
-        for (const file of mermaidFiles) {
-            const filePath = path.join(categoryPath, file);
-            const content = await fs.readFile(filePath, 'utf8');
+        const page = await browser.newPage();
+        try {
+            await page.setContent('<!DOCTYPE html><html><body><div id="container"></div></body></html>');
+            const require = createRequire(import.meta.url);
+            const mermaidPath = require.resolve('mermaid/dist/mermaid.min.js');
+            await page.addScriptTag({ path: mermaidPath });
+            await page.evaluate(() => {
+                // @ts-ignore
+                mermaid.initialize({ startOnLoad: false });
+            });
 
-            try {
-                // Robust validation using Mermaid CLI (headless browser)
-                // We use a temporary config file for puppeteer args to run in restricted environments
-                const puppeteerConfig = { args: ["--no-sandbox"] };
-                const tempConfigPath = path.join(os.tmpdir(), `puppeteer-config-${Date.now()}.json`);
-                await fs.writeJson(tempConfigPath, puppeteerConfig);
+            for (const file of mermaidFiles) {
+                const filePath = path.join(categoryPath, file);
+                const content = await fs.readFile(filePath, 'utf8');
 
-                const mmdcPath = path.resolve(__dirname, '../node_modules/.bin/mmdc');
-                const tempOutputPath = path.join(os.tmpdir(), `temp-${Date.now()}.svg`);
-                const cmd = `"${mmdcPath}" -p "${tempConfigPath}" -i "${filePath}" -o "${tempOutputPath}"`;
+                try {
+                    await page.evaluate((diagram) => {
+                        // @ts-ignore
+                        return mermaid.parse(diagram);
+                    }, content);
+                } catch (err: any) {
+                    console.error(chalk.red(`\n❌ Syntax error in ${category.name} > ${file}:`));
+                    console.error(chalk.gray(`   Full path: ${filePath}`));
+                    console.error(chalk.yellow(err.message));
+                    throw new Error(`Build failed due to Mermaid syntax errors.`);
+                }
 
-                await execPromise(cmd);
-                await fs.remove(tempConfigPath);
-                await fs.remove(tempOutputPath);
-            } catch (err: any) {
-                console.error(chalk.red(`\n❌ Syntax error in ${category.name} > ${file}:`));
-                console.error(chalk.gray(`   Full path: ${filePath}`));
-                // Clean up error message to be more readable
-                const cleanError = err.message.split('\n').filter((l: string) => !l.includes('Puppeteer') && !l.includes('sandbox')).join('\n');
-                console.error(chalk.yellow(cleanError));
-                throw new Error(`Build failed due to Mermaid syntax errors.`);
-            }
-
-            // Path Integrity Validation
-            await this.validateDiagramLinks(content, filePath, categoryPath);
+                // Path Integrity Validation
+                await this.validateDiagramLinks(content, filePath, categoryPath);
 
             // Basic title/desc extraction from frontmatter or comments
             const titleMatch = content.match(/title:\s*(.*)/i) || content.match(/%% title:\s*(.*)/i);
@@ -151,6 +156,9 @@ export class BuildManager {
             console.log(chalk.gray(`Found footnotes directory for ${category.name}, copying to /footnotes/${category.path}...`));
             await fs.ensureDir(centralizedCategoryFootnotesDir);
             await fs.copy(footnotesDirPath, centralizedCategoryFootnotesDir);
+        }
+        } finally {
+            await page.close();
         }
     }
 

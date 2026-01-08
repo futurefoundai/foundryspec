@@ -27,11 +27,12 @@
     "scaffolding"
   ],
   "author": "FutureFoundAI",
-  "license": "GPL-3.0-only",
+  "license": "AGPL-3.0-only",
   "dependencies": {
     "@a24z/mermaid-parser": "^1.0.0",
-    "@mermaid-js/mermaid-cli": "^11.12.0",
     "chalk": "^5.3.0",
+    "puppeteer": "^24.3.0",
+    "mermaid": "^10.8.0",
     "commander": "^11.1.0",
     "ejs": "^3.1.9",
     "fs-extra": "^11.2.0",
