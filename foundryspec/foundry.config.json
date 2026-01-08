@@ -1,9 +1,0 @@
-{
-  "projectName": "FoundrySpec Self-Docs",
-  "version": "1.0.0",
-  "external": [],
-  "build": {
-    "outputDir": "dist",
-    "assetsDir": "assets"
-  }
-}

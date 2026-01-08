@@ -17,6 +17,7 @@ import { glob } from 'glob';
 import * as http from 'http';
 import puppeteer from 'puppeteer';
 import { createRequire } from 'module';
+import serveHandler from 'serve-handler';
 
 import { fileURLToPath } from 'url';
 
@@ -68,205 +69,148 @@ export class BuildManager {
         const outputDir = path.resolve(this.projectDir, config.build.outputDir || 'dist');
         const assetsDir = path.resolve(this.projectDir, config.build.assetsDir || 'assets');
 
-        console.log(chalk.gray(`Discovering categories in ${assetsDir}...`));
-        const activeCategories = await this.discoverCategories(config, assetsDir);
-
         console.log(chalk.gray(`Cleaning output directory: ${outputDir}...`));
         await fs.emptyDir(outputDir);
 
-        console.log(chalk.gray(`Indexing diagrams for ${activeCategories.length} categories...`));
+        // New validation logic
+        await this.validateProjectGraph(assetsDir);
+
+        console.log(chalk.gray('Project graph is valid. Generating documentation hub...'));
 
         const browser = await puppeteer.launch({ args: ['--no-sandbox'] });
         try {
-            for (const category of activeCategories) {
-                await this.processCategory(category, assetsDir, outputDir, browser);
-            }
-        } finally {
-            await browser.close();
-        }
-
-        console.log(chalk.gray(`Generating Documentation Hub...`));
-        await this.generateHub(config, outputDir, activeCategories);
-
-        console.log(chalk.gray(`Copying core assets...`));
-        await fs.copy(assetsDir, path.join(outputDir, 'assets'));
-
-        console.log(chalk.green(`\n✅ Build complete! Documentation is in: ${outputDir}`));
-        console.timeEnd('Build process');
-    }
-
-    async processCategory(category: Category, assetsDir: string, outputDir: string, browser: puppeteer.Browser): Promise<void> {
-        const categoryPath = path.join(assetsDir, category.path);
-        if (!await fs.pathExists(categoryPath)) return;
-
-        const mermaidFiles = await glob('**/*.mermaid', { cwd: categoryPath });
-        const diagrams: Diagram[] = [];
-
-        const page = await browser.newPage();
-        try {
-            await page.setContent('<!DOCTYPE html><html><body><div id="container"></div></body></html>');
-            const require = createRequire(import.meta.url);
-            const mermaidPath = require.resolve('mermaid/dist/mermaid.min.js');
-            await page.addScriptTag({ path: mermaidPath });
-            await page.evaluate(() => {
-                // @ts-ignore
-                mermaid.initialize({ startOnLoad: false });
-            });
-
-            for (const file of mermaidFiles) {
-                const filePath = path.join(categoryPath, file);
+            const allMermaidFiles = await glob('**/*.mermaid', { cwd: assetsDir });
+            for (const file of allMermaidFiles) {
+                const filePath = path.join(assetsDir, file);
                 const content = await fs.readFile(filePath, 'utf8');
-
+                const page = await browser.newPage();
                 try {
+                    await page.setContent('<!DOCTYPE html><html><body><div id="container"></div></body></html>');
+                    const require = createRequire(import.meta.url);
+                    const mermaidPath = require.resolve('mermaid/dist/mermaid.min.js');
+                    await page.addScriptTag({ path: mermaidPath });
+                    await page.evaluate(() => {
+                        // @ts-ignore
+                        mermaid.initialize({ startOnLoad: false });
+                    });
                     await page.evaluate((diagram) => {
                         // @ts-ignore
                         return mermaid.parse(diagram);
                     }, content);
                 } catch (err: any) {
-                    console.error(chalk.red(`\n❌ Syntax error in ${category.name} > ${file}:`));
+                    console.error(chalk.red(`\n❌ Syntax error in ${file}:`));
                     console.error(chalk.gray(`   Full path: ${filePath}`));
                     console.error(chalk.yellow(err.message));
                     throw new Error(`Build failed due to Mermaid syntax errors.`);
+                } finally {
+                    await page.close();
                 }
-
-                // Path Integrity Validation
-                await this.validateDiagramLinks(content, filePath, categoryPath);
-
-            // Basic title/desc extraction from frontmatter or comments
-            const titleMatch = content.match(/title:\s*(.*)/i) || content.match(/%% title:\s*(.*)/i);
-            const descMatch = content.match(/description:\s*(.*)/i) || content.match(/%% description:\s*(.*)/i);
-
-            diagrams.push({
-                title: titleMatch ? titleMatch[1].trim() : file,
-                description: descMatch ? descMatch[1].trim() : "No description provided.",
-                file: file,
-                updatedAt: new Date().toISOString()
-            });
-        }
-
-        const categoryOutputDir = path.join(outputDir, 'assets', category.path);
-        await fs.ensureDir(categoryOutputDir);
-        await fs.writeJson(path.join(categoryOutputDir, 'diagrams.json'), diagrams, { spaces: 2 });
-
-        // Copy footnotes directory to centralized footnotes directory
-        const footnotesDirPath = path.join(categoryPath, 'footnotes');
-        if (await fs.pathExists(footnotesDirPath)) {
-            // category.path is something like 'architecture'
-            const centralizedCategoryFootnotesDir = path.join(outputDir, 'footnotes', category.path);
-            console.log(chalk.gray(`Found footnotes directory for ${category.name}, copying to /footnotes/${category.path}...`));
-            await fs.ensureDir(centralizedCategoryFootnotesDir);
-            await fs.copy(footnotesDirPath, centralizedCategoryFootnotesDir);
-        }
+            }
         } finally {
-            await page.close();
+            await browser.close();
         }
+
+        await this.generateHub(config, outputDir);
+
+        console.log(chalk.gray(`Copying assets to ${outputDir}...`));
+        const rootMermaidPath = path.join(this.projectDir, 'root.mermaid');
+        await fs.copy(assetsDir, path.join(outputDir, 'assets'));
+        await fs.copy(rootMermaidPath, path.join(outputDir, 'root.mermaid'));
+
+        console.log(chalk.green(`\n✅ Build complete! Documentation is in: ${outputDir}`));
+        console.timeEnd('Build process');
     }
 
-    async generateHub(config: FoundryConfig, outputDir: string, activeCategories: Category[]): Promise<void> {
-        // Read hub template from CLI templates, not user project
+    async generateHub(config: FoundryConfig, outputDir: string): Promise<void> {
         const templatePath = path.resolve(__dirname, '../templates/index.html');
         if (!await fs.pathExists(templatePath)) {
-            throw new Error('Hub template not found in CLI templates. Please reinstall FoundrySpec.');
+            throw new Error('Hub template not found. Please reinstall FoundrySpec.');
         }
-
         const templateContent = await fs.readFile(templatePath, 'utf8');
-
-        // Simple replacement for basic variables
-        let rendered = templateContent
+        const rendered = templateContent
             .replace(/{{projectName}}/g, config.projectName)
             .replace(/{{version}}/g, config.version);
 
-        // Inject categories into the grid
-        const categoryHtml = activeCategories.map(c => `
-            <a href="assets/${c.path}/index.html" class="dir-card">
-                <h2>${c.name}</h2>
-                <p>${c.description}</p>
-            </a>
-        `).join('');
-
-        rendered = rendered.replace('<!-- Categories will be injected here or statically generated -->', categoryHtml);
-
         await fs.writeFile(path.join(outputDir, 'index.html'), rendered);
-
-        // Read viewer template from CLI templates, not user project
-        const viewerTemplate = path.resolve(__dirname, '../templates/assets/viewer.html');
-        if (!await fs.pathExists(viewerTemplate)) {
-            throw new Error('Viewer template not found in CLI templates. Please reinstall FoundrySpec.');
-        }
-
-        const viewerContent = await fs.readFile(viewerTemplate, 'utf8');
-        for (const category of activeCategories) {
-            let catViewer = viewerContent
-                .replace(/{{categoryName}}/g, category.name)
-                .replace(/{{projectName}}/g, config.projectName);
-
-            await fs.writeFile(path.join(outputDir, 'assets', category.path, 'index.html'), catViewer);
-        }
     }
 
-    private async discoverCategories(config: FoundryConfig, assetsDir: string): Promise<Category[]> {
-        const discoveredPaths = await fs.readdir(assetsDir);
-        const categories: Category[] = [];
+    private async validateProjectGraph(assetsDir: string): Promise<void> {
+        console.log(chalk.blue('🔍 Validating project structure and links...'));
+        const rootMermaidPath = path.join(this.projectDir, 'root.mermaid');
 
-        for (const p of discoveredPaths) {
-            const fullPath = path.join(assetsDir, p);
-            const stat = await fs.stat(fullPath);
-
-            // Only process directories
-            if (!stat.isDirectory()) continue;
-
-            // Check for mermaid files in this directory
-            const mermaidFiles = await glob('**/*.mermaid', { cwd: fullPath });
-            if (mermaidFiles.length === 0) continue;
-
-            // See if we have metadata in config
-            const existing = (config.categories || []).find(c => c.path === p);
-
-            if (existing) {
-                // Preserve explicit metadata but ensure path is correct
-                categories.push({
-                    name: existing.name || p,
-                    path: p,
-                    description: existing.description || `Specifications for ${p}`
-                });
-            } else {
-                // Auto-generate basic metadata
-                categories.push({
-                    name: p.charAt(0).toUpperCase() + p.slice(1),
-                    path: p,
-                    description: `Automatically discovered specifications in ${p}`
-                });
-            }
+        if (!await fs.pathExists(rootMermaidPath)) {
+            throw new Error(chalk.red(`❌ Critical: root.mermaid not found at ${rootMermaidPath}. This file is the required entry point.`));
         }
 
-        return categories;
-    }
+        const assetsDirName = path.basename(assetsDir);
+        const assetFiles = (await glob('**/*.{mermaid,md}', { cwd: assetsDir, nodir: true }))
+            .map(file => path.join(assetsDirName, file).replace(/\\/g, '/'));
 
-    private async validateDiagramLinks(content: string, filePath: string, categoryPath: string): Promise<void> {
-        // Match click commands: click NodeID "/footnotes/category/file.md"
-        // Also handles relative links like "footnotes/file.md"
-        // Regex refined to capture various quote styles and paths
-        const clickRegex = /click\s+\w+\s+["']?([^"'\s>]+)["']?/g;
-        let match;
+        const rootRelativePath = 'root.mermaid';
+        const allFiles = [rootRelativePath, ...assetFiles];
 
-        while ((match = clickRegex.exec(content)) !== null) {
-            const targetUrl = match[1];
+        const adjList: Map<string, string[]> = new Map();
+        allFiles.forEach(file => adjList.set(file, []));
 
-            // We only care about internal footnote links for validation
-            if (targetUrl.includes('footnotes/')) {
-                const footnoteFileName = path.basename(targetUrl);
-                
-                // Search for the footnote file in the category's footnotes directory
-                const sourceFootnotePath = path.join(categoryPath, 'footnotes', footnoteFileName);
+        const mermaidLinkRegex = /click\s+\w+\s+"([^"]+\.(?:mermaid|md))"/g;
+        const markdownLinkRegex = /\[[^\]]+\]\(([^)]+\.(?:mermaid|md))\)/g;
 
-                if (!await fs.pathExists(sourceFootnotePath)) {
-                    console.error(chalk.red(`\n❌ Path Integrity Error in ${path.relative(this.projectDir, filePath)}:`));
-                    console.error(chalk.yellow(`   Broken link: "${targetUrl}"`));
-                    console.error(chalk.gray(`   Looking for file at: ${path.relative(this.projectDir, sourceFootnotePath)}`));
-                    throw new Error(`Build failed due to broken diagram links.`);
+        for (const file of allFiles) {
+            const filePath = path.join(this.projectDir, file);
+            const content = await fs.readFile(filePath, 'utf8');
+            const fileDir = path.dirname(file);
+
+            const regex = file.endsWith('.mermaid') ? mermaidLinkRegex : markdownLinkRegex;
+            let match;
+            regex.lastIndex = 0;
+            while ((match = regex.exec(content)) !== null) {
+                const linkTarget = match[1];
+                if (file.endsWith('.md') && /^(https?:|mailto:)/.test(linkTarget)) continue;
+
+                const linkedFile = path.normalize(path.join(fileDir, linkTarget)).replace(/\\/g, '/');
+                if (allFiles.includes(linkedFile)) {
+                    adjList.get(file)?.push(linkedFile);
                 }
             }
         }
+
+        const connectedGraph = new Set<string>();
+        const queue: string[] = [rootRelativePath];
+        connectedGraph.add(rootRelativePath);
+
+        let head = 0;
+        while(head < queue.length) {
+            const currentFile = queue[head++];
+
+            // Check for files that link TO the current file (A -> current)
+            for(const [node, links] of adjList.entries()) {
+                if(links.includes(currentFile) && !connectedGraph.has(node)) {
+                    connectedGraph.add(node);
+                    queue.push(node);
+                }
+            }
+
+            // Check for files that the current file links TO (current -> B)
+            const outgoingLinks = adjList.get(currentFile) || [];
+            for(const linkedFile of outgoingLinks) {
+                if(!connectedGraph.has(linkedFile)) {
+                    connectedGraph.add(linkedFile);
+                    queue.push(linkedFile);
+                }
+            }
+        }
+
+        if (connectedGraph.size !== allFiles.length) {
+            const orphans = allFiles.filter(file => !connectedGraph.has(file));
+            let errorMessage = chalk.red('❌ Build failed: Orphaned files detected (No Orphan Policy).\n');
+            errorMessage += chalk.yellow('   The following files are not connected to the project graph originating from root.mermaid:\n');
+            orphans.forEach(orphan => {
+                errorMessage += chalk.gray(`   - ${orphan}\n`);
+            });
+            throw new Error(errorMessage);
+        }
+
+        console.log(chalk.green('✅ Project graph is valid. No orphaned files found.'));
     }
 
 
@@ -279,21 +223,28 @@ export class BuildManager {
         const outputDir = path.resolve(this.projectDir, config.build.outputDir || 'dist');
         const assetsDir = path.resolve(this.projectDir, config.build.assetsDir || 'assets');
 
-        if (!await fs.pathExists(outputDir)) {
-            console.log(chalk.yellow(`\n⚠️  Output folder "dist" not found. Building first...`));
+        if (!await fs.pathExists(outputDir) || !await fs.pathExists(path.join(outputDir, 'index.html'))) {
+            console.log(chalk.yellow(`\n⚠️  Output folder not found or incomplete. Building first...`));
             await this.build();
         }
 
-        // Setup File Watcher for Hot-Reloading
-        console.log(chalk.cyan(`👀 Watching for changes in ${assetsDir}...`));
+        // Watch for changes in the entire project directory for simplicity,
+        // especially since root.mermaid is now at the top level.
+        console.log(chalk.cyan(`👀 Watching for changes in ${this.projectDir}...`));
         let isBuilding = false;
-        fs.watch(assetsDir, { recursive: true }, async (eventType, filename) => {
+        fs.watch(this.projectDir, { recursive: true }, async (eventType, filename) => {
+            // Ignore changes in dist and node_modules
+            if (filename && (filename.includes('dist') || filename.includes('node_modules'))) {
+                return;
+            }
+
             if (filename && !isBuilding && (filename.endsWith('.mermaid') || filename.endsWith('.md'))) {
                 isBuilding = true;
                 console.log(chalk.blue(`\n🔄 Change detected in ${filename}. Rebuilding...`));
                 try {
                     await this.build();
                 } catch (err: any) {
+                    // Don't exit, just log the error
                     console.error(chalk.red(`\n❌ Rebuild failed: ${err.message}`));
                 } finally {
                     isBuilding = false;
@@ -302,63 +253,38 @@ export class BuildManager {
         });
 
         const server = http.createServer((req, res) => {
-            let url = (req.url || '/').split('?')[0];
-            let filePath = path.join(outputDir, url === '/' ? 'index.html' : url);
-
-            fs.readFile(filePath, (err: NodeJS.ErrnoException | null, data: Buffer) => {
-                if (err) {
-                    res.writeHead(404);
-                    res.end("Not Found");
-                    return;
-                }
-
-                const ext = path.extname(filePath);
-                const contentTypes: Record<string, string> = {
-                    '.html': 'text/html',
-                    '.js': 'text/javascript',
-                    '.css': 'text/css',
-                    '.json': 'application/json',
-                    '.png': 'image/png',
-                    '.jpg': 'image/jpg',
-                    '.svg': 'image/svg+xml'
-                };
-
-                res.writeHead(200, { 'Content-Type': contentTypes[ext] || 'text/plain' });
-                res.end(data);
+            serveHandler(req, res, {
+                public: outputDir,
+                rewrites: [
+                    // Serve root.mermaid from the top-level
+                    { source: 'root.mermaid', destination: '/root.mermaid' },
+                    // Serve assets correctly
+                    { source: 'assets/**', destination: '/assets/**' }
+                ]
             });
         });
 
         let portNum = typeof port === 'string' ? parseInt(port, 10) : port;
-        const maxAttempts = 10;
-        let attempts = 0;
 
-        const tryListen = (currentPort: number): Promise<void> => {
+        const listen = (p: number): Promise<number> => {
             return new Promise((resolve, reject) => {
                 server.once('error', (err: NodeJS.ErrnoException) => {
                     if (err.code === 'EADDRINUSE') {
-                        attempts++;
-                        if (attempts >= maxAttempts) {
-                            reject(new Error(`Unable to find an available port after ${maxAttempts} attempts (tried ${portNum}-${currentPort})`));
-                            return;
-                        }
-                        console.log(chalk.yellow(`⚠️  Port ${currentPort} is busy, trying ${currentPort + 1}...`));
-                        tryListen(currentPort + 1).then(resolve).catch(reject);
+                        console.log(chalk.yellow(`⚠️  Port ${p} is busy, trying ${p + 1}...`));
+                        resolve(listen(p + 1));
                     } else {
                         reject(err);
                     }
                 });
-
-                server.listen(currentPort, () => {
-                    if (currentPort !== portNum) {
-                        console.log(chalk.yellow(`ℹ️  Originally requested port ${portNum} was busy.`));
-                    }
-                    console.log(chalk.green(`\n🚀 Documentation Hub live at: http://localhost:${currentPort}`));
-                    console.log(chalk.gray(`Press Ctrl+C to stop.`));
-                    resolve();
-                });
+                server.listen(p, () => resolve(p));
             });
         };
 
-        await tryListen(portNum);
+        const finalPort = await listen(portNum);
+        if (finalPort !== portNum) {
+            console.log(chalk.yellow(`ℹ️  Originally requested port ${portNum} was busy.`));
+        }
+        console.log(chalk.green(`\n🚀 Documentation Hub live at: http://localhost:${finalPort}`));
+        console.log(chalk.gray(`Press Ctrl+C to stop.`));
     }
 }

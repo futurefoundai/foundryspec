@@ -3,122 +3,155 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{projectName}} - Documentation Hub</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
+    <title>{{projectName}} - Diagram Viewer</title>
     <style>
-        :root {
-            --bg-primary: #020617;
-            --bg-secondary: #0f172a;
-            --accent: #38bdf8;
-            --accent-glow: rgba(56, 189, 248, 0.4);
-            --text-primary: #f8fafc;
-            --text-secondary: #94a3b8;
-            --border: rgba(255, 255, 255, 0.08);
-            --glass: rgba(15, 23, 42, 0.6);
-            --transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
-        }
-
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: var(--bg-primary);
-            color: var(--text-primary);
-            margin: 0;
+        body { font-family: sans-serif; margin: 0; background-color: #f0f2f5; }
+        #header { background-color: #fff; padding: 10px 20px; border-bottom: 1px solid #ddd; display: flex; align-items: center; }
+        #header h1 { font-size: 1.2em; margin: 0; flex-grow: 1; }
+        #back-button { background: #007bff; color: white; border: none; padding: 8px 12px; border-radius: 5px; cursor: pointer; display: none; }
+        #breadcrumbs { margin-left: 20px; font-size: 0.9em; color: #555; }
+        #viewer {
+            position: relative;
+            width: 100%;
+            height: calc(100vh - 50px);
             display: flex;
             justify-content: center;
             align-items: center;
-            min-height: 100vh;
-            overflow-x: hidden;
-            position: relative;
+            overflow: hidden;
         }
-
-        .hub-container {
-            max-width: 1100px;
-            width: 90%;
-            padding: 4rem 2rem;
-            position: relative;
-            z-index: 1;
-        }
-
-        header {
+        .diagram-container {
+            transition: transform 0.5s ease-in-out, opacity 0.5s ease-in-out;
             text-align: center;
-            margin-bottom: 5rem;
         }
-
-        .badge {
-            display: inline-block;
-            padding: 0.5rem 1.25rem;
-            background: rgba(56, 189, 248, 0.1);
-            border: 1px solid rgba(56, 189, 248, 0.2);
-            border-radius: 100px;
-            color: var(--accent);
-            font-size: 0.85rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            margin-bottom: 1.5rem;
-        }
-
-        h1 {
-            font-family: 'Outfit', sans-serif;
-            font-size: clamp(2.5rem, 8vw, 4.5rem);
-            font-weight: 800;
-            margin: 0;
-            background: linear-gradient(135deg, #fff 0%, #94a3b8 100%);
-            -webkit-background-clip: text;
-            background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-
-        .directory-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-            gap: 2rem;
-        }
-
-        .dir-card {
-            background: var(--glass);
-            backdrop-filter: blur(12px);
-            border: 1px solid var(--border);
-            border-radius: 2rem;
-            padding: 2.5rem;
-            text-decoration: none;
-            color: inherit;
-            transition: var(--transition);
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.7);
             display: flex;
-            flex-direction: column;
-            gap: 1.25rem;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
         }
-
-        .dir-card:hover {
-            transform: translateY(-12px);
-            border-color: rgba(56, 189, 248, 0.3);
-            box-shadow: 0 30px 60px -12px rgba(0, 0, 0, 0.5);
-        }
-
-        .dir-card h2 {
-            font-family: 'Outfit', sans-serif;
-            font-size: 1.75rem;
-            margin: 0;
-        }
-
-        .dir-card p {
-            color: var(--text-secondary);
-            font-size: 1rem;
-            line-height: 1.6;
-            margin: 0;
+        .modal-content {
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            max-width: 80%;
+            max-height: 80%;
+            overflow-y: auto;
         }
     </style>
 </head>
 <body>
-    <div class="hub-container">
-        <header>
-            <div class="badge">Documentation Hub</div>
-            <h1>{{projectName}}</h1>
-            <p class="subtitle">Architectural guide for engineers and stakeholders.</p>
-        </header>
-
-        <div class="directory-grid" id="category-grid">
-            <!-- Categories will be injected here or statically generated -->
-        </div>
+    <div id="header">
+        <h1>{{projectName}}</h1>
+        <button id="back-button">Back</button>
+        <div id="breadcrumbs"></div>
     </div>
+    <div id="viewer">
+        <div class="diagram-container" id="diagram-container"></div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script>
+        mermaid.initialize({ startOnLoad: false });
+
+        const viewer = document.getElementById('viewer');
+        const diagramContainer = document.getElementById('diagram-container');
+        const backButton = document.getElementById('back-button');
+        const breadcrumbs = document.getElementById('breadcrumbs');
+
+        let historyStack = [];
+
+        async function loadDiagram(filePath) {
+            try {
+                const response = await fetch(filePath);
+                if (!response.ok) throw new Error(`File not found: ${filePath}`);
+                const content = await response.text();
+
+                if (filePath.endsWith('.md')) {
+                    displayMarkdownModal(content);
+                    return;
+                }
+
+                const { svg } = await mermaid.render('mermaid-svg', content);
+
+                const newDiagram = document.createElement('div');
+                newDiagram.className = 'diagram-container';
+                newDiagram.innerHTML = svg;
+
+                if (historyStack.length > 0) {
+                    diagramContainer.style.transform = 'scale(0.5)';
+                    diagramContainer.style.opacity = '0';
+                }
+
+                setTimeout(() => {
+                    viewer.innerHTML = '';
+                    viewer.appendChild(newDiagram);
+
+                    newDiagram.style.transform = 'scale(1)';
+                    newDiagram.style.opacity = '1';
+                }, historyStack.length > 0 ? 500 : 0);
+
+                historyStack.push(filePath);
+                updateUI();
+
+                overrideLinks();
+
+            } catch (error) {
+                console.error('Error loading diagram:', error);
+                diagramContainer.innerHTML = `<p style="color: red;">Could not load diagram: ${filePath}</p>`;
+            }
+        }
+
+        function displayMarkdownModal(content) {
+            const modalOverlay = document.createElement('div');
+            modalOverlay.className = 'modal-overlay';
+
+            const modalContent = document.createElement('div');
+            modalContent.className = 'modal-content';
+            modalContent.innerHTML = marked.parse(content);
+
+            modalOverlay.appendChild(modalContent);
+            document.body.appendChild(modalOverlay);
+
+            modalOverlay.addEventListener('click', () => {
+                document.body.removeChild(modalOverlay);
+            });
+        }
+
+        function overrideLinks() {
+            const links = viewer.querySelectorAll('a');
+            links.forEach(link => {
+                const href = link.getAttribute('href');
+                if (href) {
+                    link.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        loadDiagram(href);
+                    });
+                }
+            });
+        }
+
+        function updateUI() {
+            backButton.style.display = historyStack.length > 1 ? 'block' : 'none';
+            breadcrumbs.innerHTML = historyStack.join(' > ');
+        }
+
+        backButton.addEventListener('click', () => {
+            if (historyStack.length > 1) {
+                historyStack.pop();
+                const previousFile = historyStack[historyStack.length - 1];
+                historyStack.pop(); // Pop again so loadDiagram can push it back
+                loadDiagram(previousFile);
+            }
+        });
+
+        // Initial load
+        loadDiagram('root.mermaid');
+    </script>
 </body>
 </html>
