@@ -99,7 +99,20 @@
                 historyStack.push(filePath);
                 updateUI();
 
-                overrideLinks();
+                const svgElement = newDiagram.querySelector('svg');
+                if (svgElement) {
+                    const links = svgElement.querySelectorAll('a');
+                    console.log(`Found ${links.length} links in the diagram.`);
+                    links.forEach(link => {
+                        link.addEventListener('click', (e) => {
+                            e.preventDefault();
+                            const href = link.getAttribute('href');
+                            if (href) {
+                                loadDiagram(href);
+                            }
+                        });
+                    });
+                }
 
             } catch (error) {
                 console.error('Error loading diagram:', error);
@@ -120,19 +133,6 @@
 
             modalOverlay.addEventListener('click', () => {
                 document.body.removeChild(modalOverlay);
-            });
-        }
-
-        function overrideLinks() {
-            const links = viewer.querySelectorAll('a');
-            links.forEach(link => {
-                const href = link.getAttribute('href');
-                if (href) {
-                    link.addEventListener('click', (e) => {
-                        e.preventDefault();
-                        loadDiagram(href);
-                    });
-                }
             });
         }
 
