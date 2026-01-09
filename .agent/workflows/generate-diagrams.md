@@ -2,17 +2,21 @@
 description: How to generate and update Mermaid diagrams
 ---
 
-As an AI agent, use this workflow to create or refine technical visualizations:
+As an AI agent, use this workflow to create technical visualizations that comply with FoundrySpec's strict validation engine:
 
-1.  **Context Discovery**: Before drawing, ask the user about boundaries, actors, and data flows to ensure you don't miss hidden complexities.
-2.  **Select Category**: Determine where the diagram belongs (Architecture, Components, Sequences, States).
-3.  **Define Diagram Type**:
-    - `graph TD/LR` for Architecture and Components.
-    - `sequenceDiagram` for logic flows.
-    - `stateDiagram-v2` for state machines.
-4.  **Draft Mermaid Code**: Write clear, well-commented Mermaid syntax.
-5.  **Link to Footnotes**: For complex nodes that require detailed logic or state descriptions, use `click NodeID "/footnotes/CATEGORY/NodeId.md"`.
-    - `CATEGORY` should be the folder name (e.g., `architecture`).
-    - Create individual markdown files in `assets/CATEGORY/footnotes/NodeId.md`.
-6.  **Robustness Check**: Ask: "Does this diagram raise more questions than it answers?". If yes, ask those questions to the user and refine.
-7.  **Save File**: Write the `.mermaid` file (e.g., `specs/architecture/context.mermaid`).
+1.  **Context Discovery**: Before drawing, ask the user about boundaries, actors, and data flows.
+2.  **Select Category**: Determine if it's Architecture, Containers, Components, etc.
+3.  **Define Diagram Type**: Use `graph`, `sequenceDiagram`, `stateDiagram-v2`, `classDiagram`, `journey`, or `requirementDiagram`.
+4.  **Add Frontmatter (CRITICAL)**: You MUST start the file with a YAML block:
+    ```mermaid
+    ---
+    title: [Clear Title]
+    description: [Concise description of the diagram's purpose]
+    ---
+    ```
+5.  **Robustness Check**: Ask: "Does this diagram raise more questions than it answers?".
+6.  **Save & Link**:
+    *   Save the `.mermaid` file to the category folder (e.g., `assets/components/my-component.mermaid`).
+    *   **Link it:** Find a parent diagram (usually in `root.mermaid` or `assets/architecture/`) and add a `click` event or link to your new file so it is not an orphan.
+    *   Example: `click MyComponent "assets/components/my-component.mermaid"`
+7.  **Validate**: Run `foundryspec build` to ensure no syntax errors or orphaned files.
