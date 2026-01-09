@@ -1,0 +1,9 @@
+{
+  "projectName": "FoundrySpec Engine",
+  "version": "1.0.0",
+  "external": [],
+  "build": {
+    "outputDir": "dist",
+    "assetsDir": "assets"
+  }
+}

@@ -1,0 +1,11 @@
+---
+title: "Component: Scaffold Manager"
+description: Internal logic for project initialization and upgrades.
+---
+classDiagram
+    class ScaffoldManager {
+        +init()
+        +upgrade()
+        -ensureGitignore()
+        -generateTemplates()
+    }

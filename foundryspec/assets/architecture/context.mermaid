@@ -1,0 +1,28 @@
+---
+title: System Context
+description: High-level context of the FoundrySpec Engine within its ecosystem.
+---
+C4Context
+    title System Context: FoundrySpec Engine
+
+    Person(architect, "Human Architect", "Defines strategic intent and reviews specs.")
+    Person(agent, "AI Agent", "Operates CLI, writes specs, implements code.")
+    
+    System_Boundary(foundry, "FoundrySpec Ecosystem") {
+        System(engine, "FoundrySpec Engine", "CLI tool for scaffolding, building, and serving specs.")
+    }
+
+    System_Ext(filesystem, "Local Filesystem", "Stores .mermaid assets and generated HTML.")
+    System_Ext(git, "Git & GitHub", "Version control and remote spec storage.")
+    System_Ext(browser, "Web Browser", "Renders the static documentation hub.")
+
+    Rel(architect, engine, "Initializes project")
+    Rel(agent, engine, "Builds, Validates, Syncs")
+    
+    Rel(engine, filesystem, "Reads Assets / Writes Dist")
+    Rel(engine, git, "Pulls external specs")
+    
+    Rel(architect, browser, "Views Documentation")
+    Rel(browser, filesystem, "Loads HTML/JS")
+
+    UpdateLayoutConfig($c4ShapeInRow="3", $c4BoundaryInRow="1")

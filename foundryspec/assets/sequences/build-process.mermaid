@@ -1,0 +1,43 @@
+---
+title: "Sequence: Build Process"
+description: The execution flow of the 'foundryspec build' command.
+---
+sequenceDiagram
+    participant CLI as CLI Entry
+    participant BM as BuildManager
+    participant FS as FileSystem
+    participant Graph as ProjectGraph
+    participant P as Puppeteer
+
+    CLI->>BM: build()
+    BM->>FS: readJson(foundry.config.json)
+    BM->>FS: emptyDir(dist)
+    
+    rect rgb(240, 240, 240)
+        note right of BM: Validation Phase
+        BM->>Graph: validateProjectGraph(assetsDir)
+        Graph->>FS: glob(**/*.mermaid)
+        Graph->>Graph: Build Adjacency List
+        Graph->>Graph: Check Connectivity (BFS)
+        alt Orphans Found
+            Graph-->>BM: Throw Error (No Orphan Policy)
+            BM-->>CLI: Exit Failure
+        else Graph Valid
+            Graph-->>BM: Success
+        end
+    end
+
+    rect rgb(230, 240, 255)
+        note right of BM: Generation Phase
+        BM->>P: launch()
+        loop For each Category
+            BM->>FS: readFile(.mermaid)
+            BM->>BM: Validate Frontmatter
+            BM->>P: render(content)
+            P-->>BM: SVG Output
+        end
+        BM->>FS: write(dist/index.html)
+        BM->>FS: copy(assets -> dist/assets)
+    end
+
+    BM-->>CLI: Build Complete

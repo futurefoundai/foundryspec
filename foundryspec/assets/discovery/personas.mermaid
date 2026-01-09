@@ -1,0 +1,19 @@
+---
+title: "Discovery: Personas"
+description: Actors involved in the FoundrySpec ecosystem.
+---
+classDiagram
+    note "Define your actors and personas here"
+    class Human_Architect {
+        +Defines Intent
+        +Reviews Specs
+    }
+    
+    class AI_Agent {
+        +Scaffolds Project
+        +Builds Docs
+        +Implements Code
+    }
+
+    click Human_Architect href "journeys.mermaid"
+    click AI_Agent href "requirements.mermaid"

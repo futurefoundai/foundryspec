@@ -184,7 +184,7 @@ export class BuildManager {
         const adjList: Map<string, string[]> = new Map();
         allFiles.forEach(file => adjList.set(file, []));
 
-        const mermaidLinkRegex = /click\s+\w+\s+\"([^\"]+\.(?:mermaid|md))\"/g;
+        const mermaidLinkRegex = /click\s+[\w\-]+\s+(?:href\s+)?"([^\"]+\.(?:mermaid|md))"/g;
         const markdownLinkRegex = /\[[^\]]+\]\(([^)]+\.(?:mermaid|md))\)/g;
 
         for (const file of allFiles) {
@@ -192,12 +192,25 @@ export class BuildManager {
             const content = await fs.readFile(filePath, 'utf8');
             const fileDir = path.dirname(file);
 
-            const regex = file.endsWith('.mermaid') ? mermaidLinkRegex : markdownLinkRegex;
+            // Scan for Mermaid 'click' links
+            if (file.endsWith('.mermaid')) {
+                let match;
+                mermaidLinkRegex.lastIndex = 0;
+                while ((match = mermaidLinkRegex.exec(content)) !== null) {
+                    const linkTarget = match[1];
+                    const linkedFile = path.normalize(path.join(fileDir, linkTarget)).replace(/\\/g, '/');
+                    if (allFiles.includes(linkedFile)) {
+                        adjList.get(file)?.push(linkedFile);
+                    }
+                }
+            }
+
+            // Scan for Markdown-style links (supported in Mermaid node labels and .md files)
             let match;
-            regex.lastIndex = 0;
-            while ((match = regex.exec(content)) !== null) {
+            markdownLinkRegex.lastIndex = 0;
+            while ((match = markdownLinkRegex.exec(content)) !== null) {
                 const linkTarget = match[1];
-                if (file.endsWith('.md') && /^(https?:|mailto:)/.test(linkTarget)) continue;
+                if (/^(https?:|mailto:)/.test(linkTarget)) continue;
 
                 const linkedFile = path.normalize(path.join(fileDir, linkTarget)).replace(/\\/g, '/');
                 if (allFiles.includes(linkedFile)) {

@@ -1,0 +1,25 @@
+---
+title: "Component: Git Manager"
+description: Internal logic for handling external specifications and version control.
+---
+classDiagram
+    class GitManager {
+        -SimpleGit git
+        -string configPath
+        +pull(url, path)
+        +sync()
+        +getSpecChanges(days)
+    }
+
+    class ExternalSpec {
+        +string remote
+        +string target
+        +string branch
+    }
+    
+    class SimpleGit {
+        <<Library>>
+    }
+
+    GitManager ..> ExternalSpec : Manages
+    GitManager ..> SimpleGit : Uses

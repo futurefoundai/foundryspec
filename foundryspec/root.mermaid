@@ -1,0 +1,32 @@
+---
+title: FoundrySpec Documentation Graph
+description: Entry point for the FoundrySpec Engine documentation.
+---
+graph TD
+    Root[FoundrySpec Engine]
+    
+    %% Core Architecture
+    Root --> Context[System Context]
+    click Context "assets/architecture/context.mermaid"
+
+    %% Discovery
+    Root --> Discovery[Discovery Phase]
+    click Discovery "assets/discovery/personas.mermaid"
+    
+    %% Containers
+    Context --> Containers[Containers]
+    click Containers "assets/containers/containers.mermaid"
+
+    %% Components
+    Containers --> BuildManager[Build Manager]
+    click BuildManager "assets/components/build-manager.mermaid"
+
+    Containers --> ScaffoldManager[Scaffold Manager]
+    click ScaffoldManager "assets/components/scaffold-manager.mermaid"
+
+    Containers --> GitManager[Git Manager]
+    click GitManager "assets/components/git-manager.mermaid"
+
+    %% Data
+    Root --> Data[Data Schema]
+    click Data "assets/data/config-schema.mermaid"
