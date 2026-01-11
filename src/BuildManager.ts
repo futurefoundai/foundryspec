@@ -76,43 +76,37 @@ export class BuildManager {
         // New validation logic
         await this.validateProjectGraph(assetsDir);
 
-        console.log(chalk.gray('Project graph is valid. Generating documentation hub...'));
+        console.log(chalk.gray('Project graph is valid. Validating frontmatter in parallel...'));
+
+        const allMermaidFiles = await glob('**/*.mermaid', { cwd: assetsDir });
+        const mermaidContents: Map<string, string> = new Map();
+
+        // --- Parallel Frontmatter Validation ---
+        await Promise.all(allMermaidFiles.map(async (file) => {
+            const filePath = path.join(assetsDir, file);
+            const rawContent = await fs.readFile(filePath, 'utf8');
+            const { data, content } = matter(rawContent);
+
+            if (!data || Object.keys(data).length === 0 || !data.title || !data.description) {
+                const errorMsg = `\n❌ Metadata error in ${file}: Missing or incomplete frontmatter (title/description required).`;
+                throw new Error(chalk.red(errorMsg));
+            }
+            mermaidContents.set(file, content);
+        }));
+
+        console.log(chalk.gray(`Frontmatter valid. Checking syntax for ${allMermaidFiles.length} files...`));
 
         const browser = await puppeteer.launch({ args: ['--no-sandbox'] });
+        const CONCURRENCY = 2; // Number of parallel pages
+        const chunks = [];
+        const filesArray = Array.from(mermaidContents.entries());
+        
+        for (let i = 0; i < filesArray.length; i += Math.ceil(filesArray.length / CONCURRENCY)) {
+            chunks.push(filesArray.slice(i, i + Math.ceil(filesArray.length / CONCURRENCY)));
+        }
+
         try {
-            const allMermaidFiles = await glob('**/*.mermaid', { cwd: assetsDir });
-            for (const file of allMermaidFiles) {
-                const filePath = path.join(assetsDir, file);
-                const rawContent = await fs.readFile(filePath, 'utf8');
-
-                // --- Frontmatter Validation ---
-                const { data, content } = matter(rawContent);
-                if (!data || Object.keys(data).length === 0) {
-                    const errorMsg = `
-❌ Metadata error in ${file}:
-   Missing frontmatter. Please add a YAML block with 'title' and 'description'.
-   Example:
-     ---
-     title: My Diagram
-     description: A brief overview.
-     ---
-`;
-                    throw new Error(chalk.red(errorMsg));
-                }
-                if (!data.title) {
-                    const errorMsg = `
-❌ Metadata error in ${file}:
-   Frontmatter is missing the required 'title' field.`;
-                    throw new Error(chalk.red(errorMsg));
-                }
-                if (!data.description) {
-                    const errorMsg = `
-❌ Metadata error in ${file}:
-   Frontmatter is missing the required 'description' field.`;
-                    throw new Error(chalk.red(errorMsg));
-                }
-                // --- End Validation ---
-
+            await Promise.all(chunks.map(async (chunk) => {
                 const page = await browser.newPage();
                 try {
                     await page.setContent('<!DOCTYPE html><html><body><div id="container"></div></body></html>');
@@ -123,20 +117,23 @@ export class BuildManager {
                         // @ts-ignore
                         mermaid.initialize({ startOnLoad: false });
                     });
-                    await page.evaluate((diagram) => {
-                        // @ts-ignore
-                        return mermaid.parse(diagram);
-                    }, content);
-                } catch (err: any) {
-                    console.error(chalk.red(`
-❌ Syntax error in ${file}:`));
-                    console.error(chalk.gray(`   Full path: ${filePath}`));
-                    console.error(chalk.yellow(err.message));
-                    throw new Error(`Build failed due to Mermaid syntax errors.`);
+
+                    for (const [file, content] of chunk) {
+                        try {
+                            await page.evaluate((diagram) => {
+                                // @ts-ignore
+                                return mermaid.parse(diagram);
+                            }, content);
+                        } catch (err: any) {
+                            console.error(chalk.red(`\n❌ Syntax error in ${file}:`));
+                            console.error(chalk.yellow(err.message));
+                            throw new Error(`Build failed due to Mermaid syntax errors.`);
+                        }
+                    }
                 } finally {
                     await page.close();
                 }
-            }
+            }));
         } finally {
             await browser.close();
         }
@@ -302,13 +299,7 @@ export class BuildManager {
 
         const server = http.createServer((req, res) => {
             serveHandler(req, res, {
-                public: outputDir,
-                rewrites: [
-                    // Serve root.mermaid from the top-level
-                    { source: 'root.mermaid', destination: '/root.mermaid' },
-                    // Serve assets correctly
-                    { source: 'assets/**', destination: '/assets/**' }
-                ]
+                public: outputDir
             });
         });
 

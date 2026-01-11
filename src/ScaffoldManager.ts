@@ -38,13 +38,14 @@ export class ScaffoldManager {
     
     // Centralized source of truth for standard project categories
     private standardCategories: CategoryTemplate[] = [
-        { name: "Discovery", path: "discovery", description: "User personas, journey maps, and requirements analysis", enabled: true },
-        { name: "Architecture", path: "architecture", description: "System context and high-level strategy", enabled: true },
-        { name: "Containers", path: "containers", description: "Technical boundaries and communication", enabled: true },
-        { name: "Components", path: "components", description: "Internal module structure", enabled: true },
+        { name: "Discovery", path: "discovery", description: "L0: User personas, journey maps, and requirements analysis", enabled: true },
+        { name: "Context", path: "context", description: "L1: System context and high-level strategy", enabled: true },
+        { name: "Boundaries", path: "boundaries", description: "L2: Technical boundaries and communication", enabled: true },
+        { name: "Components", path: "components", description: "L3: Internal module structure", enabled: true },
         { name: "Sequences", path: "sequences", description: "Interaction flows and logic progression", enabled: false },
         { name: "States", path: "states", description: "State machine logic and data lifecycle", enabled: false },
         { name: "Data", path: "data", description: "Schema, contracts, and persistence", enabled: false },
+        { name: "Design", path: "design", description: "UI/UX mocks, wireframes, and style guides", enabled: false },
         { name: "Security", path: "security", description: "Trust boundaries and threat models", enabled: false },
         { name: "Deployment", path: "deployment", description: "Infrastructure and runtime orchestration", enabled: false },
         { name: "Integration", path: "integration", description: "External APIs and ecosystem connectivity", enabled: false }
@@ -128,6 +129,61 @@ export class ScaffoldManager {
         await fs.writeFile(path.join(discoveryPath, 'requirements.mermaid'), requirementsContent);
         await fs.writeFile(path.join(discoveryPath, 'journeys.mermaid'), journeyContent);
 
+        // --- Generate L1 (Context) Assets ---
+        const contextPath = path.join(this.targetDir, 'assets', 'context');
+        const systemContextContent = `C4Context
+    title System Context Diagram (L1)
+
+    Person(user, "User", "A user of the system")
+    System(system, "${this.projectName}", "The software system being built")
+    System_Ext(external, "External System", "An external dependency")
+
+    Rel(user, system, "Uses")
+    Rel(system, external, "Connects to")`;
+        
+        await fs.writeFile(path.join(contextPath, 'system-context.mermaid'), systemContextContent);
+
+        // --- Generate L2 (Boundaries) Assets ---
+        const boundariesPath = path.join(this.targetDir, 'assets', 'boundaries');
+        const boundariesContent = `C4Container
+    title Technical Boundaries Diagram (L2)
+
+    System_Boundary(system, "${this.projectName}") {
+        Container(app, "Main Application", "Technology Stack", "Core business logic and interface")
+        ContainerDb(db, "Data Store", "Persistence Technology", "Storage for system state")
+    }
+
+    Rel(app, db, "Reads/Writes", "Protocol")`;
+
+        await fs.writeFile(path.join(boundariesPath, 'technical-boundaries.mermaid'), boundariesContent);
+
+        // --- Generate Root Map ---
+        const rootContent = `mindmap
+    root((${this.projectName}))
+        L0: Discovery
+            ::icon(fa fa-search)
+            [Personas]
+            [Journeys]
+            [Requirements]
+        L1: Context
+            ::icon(fa fa-sitemap)
+            [System Context]
+        L2: Boundaries
+            ::icon(fa fa-cubes)
+            [Technical Boundaries]
+        L3: Components
+            ::icon(fa fa-cogs)
+        Peripherals
+            [Sequences]
+            [States]
+            [Data]
+            [Design]
+            [Security]
+            [Deployment]
+            [Integration]`;
+
+        await fs.writeFile(path.join(this.targetDir, 'root.mermaid'), rootContent);
+
         const config = {
             projectName: this.projectName,
             version: "1.0.0",
@@ -184,7 +240,35 @@ export class ScaffoldManager {
             await fs.writeFile(journeysPath, `journey\n    title User Journey: [Name]\n    section [Phase]\n      [Action]: 5: [Actor]`);
         }
 
-        // 2. Ensure .gitignore rules
+        // 3. Ensure L1/L2 assets exist
+        const contextPath = path.join(projectDir, 'assets', 'context');
+        const contextFile = path.join(contextPath, 'system-context.mermaid');
+        if (await fs.pathExists(contextPath) && !await fs.pathExists(contextFile)) {
+             console.log(chalk.gray(`Adding missing L1 asset: system-context.mermaid`));
+             await fs.writeFile(contextFile, `C4Context\n    title System Context (L1)\n    System(system, "System", "Description")`);
+        }
+
+        const boundariesPath = path.join(projectDir, 'assets', 'boundaries');
+        const boundariesFile = path.join(boundariesPath, 'technical-boundaries.mermaid');
+        if (await fs.pathExists(boundariesPath) && !await fs.pathExists(boundariesFile)) {
+             console.log(chalk.gray(`Adding missing L2 asset: technical-boundaries.mermaid`));
+             await fs.writeFile(boundariesFile, `C4Container\n    title Technical Boundaries (L2)\n    Container(app, "Application", "Tech", "Description")`);
+        }
+        
+        // 4. Update root.mermaid if it seems outdated (simple check)
+        const rootPath = path.join(projectDir, 'root.mermaid');
+        if (await fs.pathExists(rootPath)) {
+            const rootContent = await fs.readFile(rootPath, 'utf8');
+            if (!rootContent.includes('L1: Context') && !rootContent.includes('L2: Boundaries')) {
+                console.log(chalk.yellow(`\n⚠️  Notice: Your root.mermaid uses the old structure.`));
+                console.log(chalk.yellow(`   Consider updating it to include L0-L3 layers: Discovery, Context, Boundaries, Components.`));
+            }
+        } else {
+             console.log(chalk.gray(`Creating missing root.mermaid...`));
+             await fs.writeFile(rootPath, `mindmap\n    root((Project))\n        L0: Discovery\n        L1: Context\n        L2: Boundaries\n        L3: Components\n        Peripherals`);
+        }
+
+        // 5. Ensure .gitignore rules
         await this.ensureGitignore(projectDir);
         
         console.log(chalk.green(`\n✅ Project structure is up to date with the latest FoundrySpec standards.`));
