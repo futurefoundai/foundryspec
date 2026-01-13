@@ -183,11 +183,21 @@ export class BuildManager {
             await browser.close();
         }
 
+        // --- Copy Hub Assets (HTML/CSS/JS) ---
         await this.generateHub(config, outputDir, idToFileMap, assets);
-
-        console.log(chalk.gray(`Copying assets to ${outputDir}...`));
-        await fs.copy(assetsDir, path.join(outputDir, 'assets'));
         
+        const templateDir = path.resolve(__dirname, '../templates');
+        const hubAssets = ['index.css', 'index.js'];
+        for (const asset of hubAssets) {
+            const assetPath = path.join(templateDir, asset);
+            if (await fs.pathExists(assetPath)) {
+                await fs.copy(assetPath, path.join(outputDir, asset));
+            }
+        }
+
+        console.log(chalk.gray(`Copying documentation assets to ${outputDir}...`));
+        await fs.copy(assetsDir, path.join(outputDir, 'assets'));
+
         // --- Copy root.mermaid to dist if it exists ---
         const rootMermaidPath = path.join(this.specDir, 'root.mermaid');
         if (await fs.pathExists(rootMermaidPath)) {
@@ -237,6 +247,12 @@ export class BuildManager {
         if (await fs.pathExists(rootMermaidPath)) {
             const raw = await fs.readFile(rootMermaidPath, 'utf8');
             const { data, content } = matter(raw);
+
+            // --- IMPORTANT VALIDATION: Root MUST be a mindmap ---
+            if (!content.trim().startsWith('mindmap')) {
+                throw new Error(chalk.red(`\n❌ Validation Error: root.mermaid must be a Mermaid mindmap.\nPlease ensure it starts with the 'mindmap' keyword.`));
+            }
+
             assets.push({
                 relPath: 'root.mermaid',
                 absPath: rootMermaidPath,

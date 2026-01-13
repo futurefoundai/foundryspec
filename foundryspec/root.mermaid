@@ -13,37 +13,18 @@ traceability:
     - "FEAT_Capabilities"
     - "assets/discovery/journeys.mermaid"
 ---
-graph TD
-    %% Custom Styling
-    classDef default fill:#0f172a,stroke:#38bdf8,stroke-width:2px,color:#fff;
-    classDef layer fill:#1e293b,stroke:#94a3b8,stroke-width:1px,color:#94a3b8,stroke-dasharray: 5 5;
-
-    ROOT(("(( FoundrySpec Engine ))"))
-    
-    ROOT --> L0
-    subgraph L0 [L0: Discovery]
-        direction LR
-        PER_EndUser([Personas])
-        REQ_Functional([Requirements])
-        FEAT_Capabilities([Engine Capabilities])
-    end
-    
-    ROOT --> L1
-    subgraph L1 [L1: Context]
-        CTX_System([System Context])
-    end
-    
-    L1 --> L2
-    subgraph L2 [L2: Boundaries]
-        BND_App([Technical Boundaries])
-    end
-    
-    L2 --> L3
-    subgraph L3 [L3: Components]
-        COMP_Example([Example Component])
-    end
-
-    ROOT --> Peripherals([Peripherals])
-    
-    %% Apply Styles
-    class L0,L1,L2,L3 layer;
+mindmap
+  root((FoundrySpec Engine))
+    Discovery
+      PER_EndUser(Personas)
+      REQ_Functional(Requirements)
+      FEAT_Capabilities(Engine Capabilities)
+      assets/discovery/journeys.mermaid(User Journeys)
+    Context
+      CTX_System(System Context)
+    Boundaries
+      BND_App(Technical Boundaries)
+    Components
+      COMP_Scaffold(Scaffold Manager)
+    Peripherals
+      PER_Stakeholder(Stakeholders)

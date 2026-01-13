@@ -1,0 +1,332 @@
+/* Mindmap Custom Classes - Premium Stellar Palette */
+.mindmap-node-root > circle {
+  fill: #0ea5e9 !important; /* Bright Cyan */
+  stroke: #f8fafc !important;
+  stroke-width: 4px !important;
+  filter: drop-shadow(0 0 10px rgba(14, 165, 233, 0.5));
+}
+.mindmap-node-root > text {
+  fill: #ffffff !important;
+  font-weight: 900 !important;
+  font-size: 1.25rem !important;
+}
+
+.mindmap-node-l0 > rect {
+  fill: #4338ca !important; /* Indigo */
+  stroke: #818cf8 !important;
+  stroke-width: 2px !important;
+}
+.mindmap-node-l0 > text {
+  fill: #ffffff !important;
+  font-weight: 700 !important;
+}
+
+.mindmap-node-l1 > rect {
+  fill: #0369a1 !important; /* Sky Blue */
+  stroke: #38bdf8 !important;
+  stroke-width: 2px !important;
+}
+.mindmap-node-l1 > text {
+  fill: #ffffff !important;
+  font-weight: 700 !important;
+}
+
+.mindmap-node-l2 > rect {
+  fill: #047857 !important; /* Emerald */
+  stroke: #34d399 !important;
+  stroke-width: 2px !important;
+}
+.mindmap-node-l2 > text {
+  fill: #ffffff !important;
+  font-weight: 700 !important;
+}
+
+.mindmap-node-l3 > rect {
+  fill: #b45309 !important; /* Amber */
+  stroke: #fbbf24 !important;
+  stroke-width: 2px !important;
+}
+.mindmap-node-l3 > text {
+  fill: #ffffff !important;
+  font-weight: 700 !important;
+}
+
+/* Mindmap Branch Lines */
+.mindmap-path {
+  stroke: #38bdf8 !important;
+  stroke-width: 2.5px !important;
+  opacity: 0.8;
+}
+
+:root {
+  --bg-primary: #020617; /* Deep Slate */
+  --bg-secondary: #0f172a;
+  --accent: #38bdf8; /* Cyan */
+  --text-primary: #f8fafc;
+  --text-secondary: #94a3b8;
+  --border: rgba(255, 255, 255, 0.06);
+  --transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+  --overlay: rgba(2, 6, 23, 0.8);
+  --glass: rgba(15, 23, 42, 0.7);
+}
+
+body {
+  font-family: "Inter", sans-serif;
+  margin: 0;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  overflow: hidden;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+#header {
+  background-color: var(--glass);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  padding: 0.75rem 2rem;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  z-index: 100;
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+}
+
+#header h1 {
+  font-family: "Outfit", sans-serif;
+  font-size: 1.15rem;
+  margin: 0;
+  flex-grow: 1;
+  font-weight: 800; /* Ultra Bold */
+  letter-spacing: -0.02em;
+  background: linear-gradient(to right, #fff, #cbd5e1);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+#back-button {
+  background: var(--text-primary);
+  color: var(--bg-primary);
+  border: none;
+  padding: 0.5rem 1.25rem;
+  border-radius: 99px;
+  cursor: pointer;
+  display: none;
+  font-weight: 800; /* Ultra Bold */
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  transition: var(--transition);
+  margin-right: 1.5rem;
+}
+#back-button:hover {
+  transform: scale(1.05);
+  background: var(--accent);
+}
+
+#breadcrumbs {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  font-weight: 800; /* Ultra Bold */
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+#viewer {
+  position: relative;
+  flex-grow: 1;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+  background: radial-gradient(circle at center, #0f172a 0%, #020617 100%);
+}
+
+.diagram-container {
+  transition: transform 0.6s cubic-bezier(0.23, 1, 0.32, 1),
+    opacity 0.4s ease-in-out;
+  text-align: center;
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* Modal Styles */
+#modal-backdrop {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: var(--overlay);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 3000;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+#modal-backdrop.open {
+  display: flex;
+  opacity: 1;
+}
+
+#modal-content {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 1.25rem;
+  width: 90%;
+  max-width: 850px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  transform: scale(0.95);
+  transition: transform 0.3s cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+#modal-backdrop.open #modal-content {
+  transform: scale(1);
+}
+
+.modal-header {
+  padding: 1.25rem 2rem;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.modal-body {
+  padding: 2.5rem;
+  overflow-y: auto;
+  line-height: 1.8;
+  font-size: 1.05rem;
+  color: #cbd5e1;
+}
+
+.modal-body h1,
+.modal-body h2,
+.modal-body h3 {
+  font-family: "Outfit", sans-serif;
+  color: var(--text-primary);
+  margin-top: 2rem;
+  margin-bottom: 1rem;
+  font-weight: 800;
+}
+.modal-body h1:first-child {
+  margin-top: 0;
+}
+
+.modal-body pre {
+  background: #020617;
+  border: 1px solid var(--border);
+  color: #e2e8f0;
+  padding: 1.5rem;
+  border-radius: 0.75rem;
+  overflow-x: auto;
+}
+
+.modal-body code {
+  font-family: "JetBrains Mono", monospace;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 0.2rem 0.4rem;
+  border-radius: 0.25rem;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 1.75rem;
+  cursor: pointer;
+  line-height: 1;
+  transition: var(--transition);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+}
+
+.close-btn:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-primary);
+}
+
+/* Fade in/out classes */
+.fade-out {
+  transform: scale(0.98) translateY(10px);
+  opacity: 0;
+}
+.fade-in {
+  transform: scale(1) translateY(0);
+  opacity: 1;
+}
+.initial {
+  transform: scale(1.02) translateY(-10px);
+  opacity: 0;
+}
+
+.modal-body strong {
+  color: #fff;
+  font-weight: 700;
+}
+
+.modal-body h1,
+.modal-body h2,
+.modal-body h3 {
+  font-family: "Outfit", sans-serif;
+  color: var(--text-primary);
+  margin-top: 2rem;
+  margin-bottom: 1rem;
+  font-weight: 800;
+}
+
+/* Interactivity Cues */
+.clickable-node {
+  cursor: pointer !important;
+}
+.clickable-node:hover {
+  filter: brightness(1.2);
+}
+a {
+  cursor: pointer;
+}
+
+/* Requirement Diagram Premium Styling */
+.requirementBox {
+  fill: #0f172a !important;
+  stroke: #38bdf8 !important;
+  stroke-width: 2px !important;
+}
+.requirementTitle,
+.requirementBodyText,
+.reqId,
+.reqText,
+.reqRisk,
+.reqMethod {
+  fill: #f8fafc !important;
+  font-weight: 700 !important;
+  font-family: "Inter", sans-serif !important;
+}
+.requirementTitle {
+  font-family: "Outfit", sans-serif !important;
+  font-weight: 800 !important;
+}
+/* Fix for lines/arrows in requirement diagrams */
+.relation {
+  stroke: #94a3b8 !important;
+  stroke-width: 1.5px !important;
+}

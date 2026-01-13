@@ -30,3 +30,13 @@ To ensure a perfectly consistent documentation graph, the engine enforces **upli
 ## 4. Smart Clickability
 
 Documentation diagrams are interactive by default. The engine semantically matches SVG nodes to specification IDs and titles, enabling navigation without polluting source files with link injection boilerplate.
+
+## 5. Modular Frontend Architecture
+
+The documentation hub is built with clean separation of concerns:
+
+- **HTML**: Pure semantic structure.
+- **CSS**: Premium "Stellar" theme for high-impact visualization.
+- **JS**: Smart rendering core supporting pan-zoom and dynamic navigation.
+
+This modularity allows for high **improvability**, enabling users to easily customize styles or extend functionality.
