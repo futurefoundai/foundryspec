@@ -31,6 +31,9 @@ interface PackageJson {
     scripts?: Record<string, string>;
 }
 
+/**
+ * @foundryspec COMP_Scaffold
+ */
 export class ScaffoldManager {
     private projectName: string;
     private targetDir: string;

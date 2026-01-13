@@ -9,7 +9,9 @@ traceability:
     - "REQ_Functional"
     - "CTX_System"
     - "BND_App"
-    - "COMP_Example"
+    - "COMP_Scaffold"
+    - "FEAT_Capabilities"
+    - "assets/discovery/journeys.mermaid"
 ---
 graph TD
     %% Custom Styling
@@ -23,6 +25,7 @@ graph TD
         direction LR
         PER_EndUser([Personas])
         REQ_Functional([Requirements])
+        FEAT_Capabilities([Engine Capabilities])
     end
     
     ROOT --> L1

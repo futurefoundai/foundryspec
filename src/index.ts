@@ -22,6 +22,30 @@ import { ScaffoldManager } from './ScaffoldManager.js';
 import { BuildManager } from './BuildManager.js';
 import { GitManager } from './GitManager.js';
 
+/**
+ * Finds the project root by searching upwards for foundry.config.json or a foundryspec/ folder.
+ * Returns the directory containing foundry.config.json.
+ */
+async function findProjectRoot(startDir: string): Promise<string> {
+    let current = path.resolve(startDir);
+    while (true) {
+        // Option A: Current directory contains foundry.config.json directly
+        if (await fs.pathExists(path.join(current, 'foundry.config.json'))) {
+            return current;
+        }
+        // Option B: Current directory has a foundryspec folder with a config
+        const subConfig = path.join(current, 'foundryspec', 'foundry.config.json');
+        if (await fs.pathExists(subConfig)) {
+            return path.join(current, 'foundryspec');
+        }
+
+        const parent = path.dirname(current);
+        if (parent === current) break;
+        current = parent;
+    }
+    return startDir; // Fallback
+}
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const packageJson = fs.readJsonSync(path.join(__dirname, '../package.json'));
 
@@ -58,7 +82,8 @@ program
     .option('-p, --port <number>', 'Port to use', '3000')
     .action(async (options: { port: string }) => {
         try {
-            const builder = new BuildManager();
+            const root = await findProjectRoot(process.cwd());
+            const builder = new BuildManager(root);
             await builder.serve(options.port);
         } catch (err: any) {
             console.error(chalk.red('\n❌ Serve failed:'), err.message);
@@ -86,11 +111,22 @@ program
     .action(async (category: string) => {
         console.log(chalk.blue(`\n📂 Adding category: ${category}...`));
         try {
-            const configPath = path.join(process.cwd(), 'foundry.config.json');
-            if (!await fs.pathExists(configPath)) throw new Error('Not in a FoundrySpec project.');
+            const root = await findProjectRoot(process.cwd());
+            const configPath = path.join(root, 'foundryspec', 'foundry.config.json');
+            if (!await fs.pathExists(configPath)) {
+                 // Try if config is in root
+                 const altConfig = path.join(root, 'foundry.config.json');
+                 if (!await fs.pathExists(altConfig)) throw new Error('Not in a FoundrySpec project.');
+            }
 
-            const config = await fs.readJson(configPath);
+            const activeConfigPath = await fs.pathExists(path.join(root, 'foundryspec', 'foundry.config.json')) 
+                ? path.join(root, 'foundryspec', 'foundry.config.json')
+                : path.join(root, 'foundry.config.json');
+
+            const config = await fs.readJson(activeConfigPath);
             const catSlug = category.toLowerCase().replace(/\s+/g, '-');
+            
+            if (!config.categories) config.categories = [];
 
             if (config.categories.find((c: any) => c.path === catSlug)) {
                 console.log(chalk.yellow(`Category "${category}" already exists.`));
@@ -103,8 +139,9 @@ program
                 description: `Documentation for ${category}`
             });
 
-            await fs.ensureDir(path.join(process.cwd(), 'assets', catSlug));
-            await fs.writeJson(configPath, config, { spaces: 2 });
+            const assetsBase = path.join(path.dirname(activeConfigPath), 'assets');
+            await fs.ensureDir(path.join(assetsBase, catSlug));
+            await fs.writeJson(activeConfigPath, config, { spaces: 2 });
             console.log(chalk.green(`\n✅ Category "${category}" added successfully.`));
         } catch (err: any) {
             console.error(chalk.red('\n❌ Failed to add category:'), err.message);
@@ -179,7 +216,8 @@ program
     .action(async () => {
         console.log(chalk.blue('\n🛠️  Building documentation hub...'));
         try {
-            const builder = new BuildManager();
+            const root = await findProjectRoot(process.cwd());
+            const builder = new BuildManager(root);
             await builder.build();
         } catch (err: any) {
             console.error(chalk.red('\n❌ Build failed:'), err.message);

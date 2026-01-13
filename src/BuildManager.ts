@@ -59,12 +59,18 @@ interface ProjectAsset {
 }
 
 export class BuildManager {
-    private projectDir: string;
+    private specDir: string;    // Directory where foundry.config.json and assets/ reside
+    private projectDir: string; // Root directory for codebase scanning
     private configPath: string;
 
-    constructor(projectDir: string = process.cwd()) {
-        this.projectDir = projectDir;
-        this.configPath = path.join(this.projectDir, 'foundry.config.json');
+    constructor(specDir: string = process.cwd()) {
+        this.specDir = path.resolve(specDir);
+        // If we are in a 'foundryspec' subfolder, the codebase root is the parent.
+        this.projectDir = path.basename(this.specDir) === 'foundryspec' 
+            ? path.dirname(this.specDir) 
+            : this.specDir;
+        
+        this.configPath = path.join(this.specDir, 'foundry.config.json');
     }
 
     async build(): Promise<void> {
@@ -74,8 +80,8 @@ export class BuildManager {
         }
 
         const config: FoundryConfig = await fs.readJson(this.configPath);
-        const outputDir = path.resolve(this.projectDir, config.build.outputDir || 'dist');
-        const assetsDir = path.resolve(this.projectDir, config.build.assetsDir || 'assets');
+        const outputDir = path.resolve(this.specDir, config.build.outputDir || 'dist');
+        const assetsDir = path.resolve(this.specDir, config.build.assetsDir || 'assets');
 
         console.log(chalk.gray(`Cleaning output directory: ${outputDir}...`));
         await fs.emptyDir(outputDir);
@@ -83,23 +89,11 @@ export class BuildManager {
         // --- 1. Load All Assets Once ---
         const assets = await this.loadAssets(assetsDir);
 
-        // --- 2. Centralized Validation ---
-        await this.validateFrontmatter(assets);
-        await this.validateProjectGraph(assets); // Now uses loaded assets
-
-        console.log(chalk.gray('Injecting traceability links & checking syntax...'));
-
-        const mermaidContents: Map<string, string> = new Map();
-
-        // --- 3. Build Global ID Registry (for Auto-Wiring) ---
+        // --- 2. Build Global ID Registry ---
         const idToFileMap: Map<string, string> = new Map();
-        
         for (const asset of assets) {
             const { data, relPath } = asset;
-            
             if (data?.traceability?.id) idToFileMap.set(data.traceability.id, relPath);
-            if (data?.title) idToFileMap.set(data.title, relPath); // Index Title too!
-            
             if (data?.traceability?.relationships) {
                 for (const rel of data.traceability.relationships) {
                     if (rel.id) idToFileMap.set(rel.id, relPath);
@@ -112,7 +106,16 @@ export class BuildManager {
             }
         }
 
-        // --- 4. Prepare Mermaid Contents for Syntax Check ---
+        // --- 3. Scan Codebase for Implementation Markers ---
+        const codeMap = await this.scanCodebase();
+
+        // --- 4. Centralized Validation ---
+        await this.validateFrontmatter(assets);
+        await this.validateProjectGraph(assets);
+        await this.validateTraceability(assets, idToFileMap, codeMap);
+
+        // --- 5. Prepare Mermaid Contents for Syntax Check ---
+        const mermaidContents: Map<string, string> = new Map();
         for (const asset of assets) {
             const { relPath, content } = asset;
             if (relPath.endsWith('.mermaid')) {
@@ -180,13 +183,13 @@ export class BuildManager {
             await browser.close();
         }
 
-        await this.generateHub(config, outputDir, idToFileMap);
+        await this.generateHub(config, outputDir, idToFileMap, assets);
 
         console.log(chalk.gray(`Copying assets to ${outputDir}...`));
         await fs.copy(assetsDir, path.join(outputDir, 'assets'));
         
         // --- Copy root.mermaid to dist if it exists ---
-        const rootMermaidPath = path.join(this.projectDir, 'root.mermaid');
+        const rootMermaidPath = path.join(this.specDir, 'root.mermaid');
         if (await fs.pathExists(rootMermaidPath)) {
             await fs.copy(rootMermaidPath, path.join(outputDir, 'root.mermaid'));
         }
@@ -196,7 +199,7 @@ export class BuildManager {
         console.timeEnd('Build process');
     }
 
-    async generateHub(config: FoundryConfig, outputDir: string, idMap: Map<string, string>): Promise<void> {
+    async generateHub(config: FoundryConfig, outputDir: string, idMap: Map<string, string>, assets: ProjectAsset[]): Promise<void> {
         const templatePath = path.resolve(__dirname, '../templates/index.html');
         if (!await fs.pathExists(templatePath)) {
             throw new Error('Hub template not found. Please reinstall FoundrySpec.');
@@ -206,6 +209,13 @@ export class BuildManager {
         // Convert Map to serializable object
         const mapObj: Record<string, string> = {};
         idMap.forEach((v, k) => mapObj[k] = v);
+
+        // Also add titles to the map for better semantic matching in the frontend
+        for (const asset of assets) {
+            if (asset.data?.title) {
+                mapObj[asset.data.title] = asset.relPath;
+            }
+        }
 
         const rendered = templateContent
             .replace(/{{projectName}}/g, config.projectName)
@@ -223,7 +233,7 @@ export class BuildManager {
         const assets: ProjectAsset[] = [];
         
         // 1. Load Root Mermaid (Special Case)
-        const rootMermaidPath = path.join(this.projectDir, 'root.mermaid');
+        const rootMermaidPath = path.join(this.specDir, 'root.mermaid');
         if (await fs.pathExists(rootMermaidPath)) {
             const raw = await fs.readFile(rootMermaidPath, 'utf8');
             const { data, content } = matter(raw);
@@ -250,6 +260,112 @@ export class BuildManager {
         }));
 
         return assets;
+    }
+
+    private async getIgnoreRules(): Promise<string[]> {
+        const ignoreFile = path.join(this.projectDir, '.foundryspecignore');
+        const defaultIgnores = ['node_modules/**', 'dist/**', '.git/**', 'foundryspec/dist/**'];
+        
+        if (await fs.pathExists(ignoreFile)) {
+            const content = await fs.readFile(ignoreFile, 'utf8');
+            const userIgnores = content.split('\n')
+                .map(line => line.trim())
+                .filter(line => line && !line.startsWith('#'));
+            return [...defaultIgnores, ...userIgnores];
+        }
+        return defaultIgnores;
+    }
+
+    private async scanCodebase(): Promise<Map<string, string[]>> {
+        console.log(chalk.blue('🔍 Scanning codebase for markers...'));
+        const idToFiles: Map<string, string[]> = new Map();
+        const ignoreRules = await this.getIgnoreRules();
+
+        // Scan common code files
+        const files = await glob('**/*.{ts,js,py,go,java,c,cpp,cs,rb,php,rs,swift}', {
+            cwd: this.projectDir,
+            nodir: true,
+            ignore: ignoreRules
+        });
+
+        const markerRegex = /@foundryspec\s+([\w\-]+)/g;
+
+        await Promise.all(files.map(async (file) => {
+            const content = await fs.readFile(path.join(this.projectDir, file), 'utf8');
+            let match;
+            markerRegex.lastIndex = 0;
+            while ((match = markerRegex.exec(content)) !== null) {
+                const id = match[1];
+                if (!idToFiles.has(id)) idToFiles.set(id, []);
+                idToFiles.get(id)!.push(file);
+            }
+        }));
+
+        const count = Array.from(idToFiles.keys()).length;
+        console.log(chalk.green(`✅ Scanned codebase. Found ${count} integrated components.`));
+        return idToFiles;
+    }
+
+    private async validateTraceability(assets: ProjectAsset[], idToFileMap: Map<string, string>, codeMap: Map<string, string[]>): Promise<void> {
+        console.log(chalk.blue('🔍 Validating semantic traceability (Spec <-> Code)...'));
+        
+        // 1. Cross-reference Spec IDs referenced in Code
+        for (const [id, files] of codeMap.entries()) {
+            if (!idToFileMap.has(id)) {
+                const errorMsg = `\n❌ Semantic Error: Code references non-existent FoundrySpec ID "${id}" in:\n${files.map(f => `   - ${f}`).join('\n')}`;
+                throw new Error(chalk.red(errorMsg));
+            }
+        }
+
+        // 2. Validate internal Spec references (Frontmatter Uplinks/Downlinks)
+        const assetMap: Map<string, ProjectAsset> = new Map(assets.map(a => [a.relPath, a]));
+
+        for (const asset of assets) {
+            const { relPath, data } = asset;
+            if (data?.traceability) {
+                const checkId = (target: any) => {
+                    const targets = Array.isArray(target) ? target : [target];
+                    for (const t of targets) {
+                        if (typeof t === 'string' && !t.includes('.') && t !== 'ROOT') {
+                            if (!idToFileMap.has(t)) {
+                                const errorMsg = `\n❌ Traceability Error in ${relPath}: Reference to unknown ID "${t}"`;
+                                throw new Error(chalk.red(errorMsg));
+                            }
+
+                            // --- Reciprocity Check ---
+                            const targetFile = idToFileMap.get(t)!;
+                            const targetAsset = assetMap.get(targetFile);
+                            if (targetAsset?.data?.traceability) {
+                                // If this is a downlink, target MUST have an uplink to this ID
+                                const currentId = data.traceability.id;
+                                const isDownlink = Array.isArray(data.traceability.downlinks) 
+                                    ? data.traceability.downlinks.includes(t)
+                                    : data.traceability.downlinks === t;
+
+                                if (isDownlink && currentId) {
+                                    const targetUplink = targetAsset.data.traceability.uplink;
+                                    const uplinks = Array.isArray(targetUplink) ? targetUplink : [targetUplink];
+                                    if (!uplinks.includes(currentId)) {
+                                        console.warn(chalk.yellow(`\n⚠️  Reciprocity Warning: ${relPath} has a downlink to ${t}, but ${targetFile} does not have an uplink to ${currentId}.`));
+                                    }
+                                }
+                            }
+                        }
+                    }
+                };
+
+                if (data.traceability.uplink) checkId(data.traceability.uplink);
+                if (data.traceability.downlinks) checkId(data.traceability.downlinks);
+                if (data.traceability.relationships) {
+                    for (const rel of data.traceability.relationships) {
+                        if (rel.uplink) checkId(rel.uplink);
+                        if (rel.downlinks) checkId(rel.downlinks);
+                    }
+                }
+            }
+        }
+
+        console.log(chalk.green('✅ Semantic traceability is valid.'));
     }
 
     private async validateFrontmatter(assets: ProjectAsset[]): Promise<void> {
@@ -396,8 +512,8 @@ export class BuildManager {
         }
 
         const config: FoundryConfig = await fs.readJson(this.configPath);
-        const outputDir = path.resolve(this.projectDir, config.build.outputDir || 'dist');
-        const assetsDir = path.resolve(this.projectDir, config.build.assetsDir || 'assets');
+        const outputDir = path.resolve(this.specDir, config.build.outputDir || 'dist');
+        const assetsDir = path.resolve(this.specDir, config.build.assetsDir || 'assets');
 
         if (!await fs.pathExists(outputDir) || !await fs.pathExists(path.join(outputDir, 'index.html'))) {
             console.log(chalk.yellow(`
@@ -405,13 +521,12 @@ export class BuildManager {
             await this.build();
         }
 
-        // Watch for changes in the entire project directory for simplicity,
-        // especially since root.mermaid is now at the top level.
-        console.log(chalk.cyan(`👀 Watching for changes in ${this.projectDir}...`));
+        // Watch for changes in the spec directory
+        console.log(chalk.cyan(`👀 Watching for changes in ${this.specDir}...`));
         let isBuilding = false;
-        fs.watch(this.projectDir, { recursive: true }, async (eventType, filename) => {
-            // Ignore changes in dist and node_modules
-            if (filename && (filename.includes('dist') || filename.includes('node_modules'))) {
+        fs.watch(this.specDir, { recursive: true }, async (eventType, filename) => {
+            // Ignore changes in dist
+            if (filename && filename.includes('dist')) {
                 return;
             }
 
@@ -430,6 +545,9 @@ export class BuildManager {
                 }
             }
         });
+
+        // Also watch for codebase changes if user wants bi-directional validation
+        // (Optional: for now we just watch specDir for speed)
 
         const server = http.createServer((req, res) => {
             serveHandler(req, res, {

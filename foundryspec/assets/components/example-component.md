@@ -1,18 +1,29 @@
 ---
-title: Example Component
-description: A sample component definition.
+title: Scaffold Manager
+description: Core component for project initialization and template management.
 traceability:
-  id: "COMP_Example"
-  uplink: "BND_App"
+  id: "COMP_Scaffold"
+  uplink:
+    - "BND_App"
+    - "ROOT"
 ---
-# Example Component (L3)
+
+# Scaffold Manager (L3)
 
 ## Overview
-This component demonstrates the ID-based traceability chain.
+
+The `ScaffoldManager` is the core component responsible for initializing new FoundrySpec projects and managing the standard category templates.
+
+### Key Logic
+
+- **Initialization**: Generates the standard `foundryspec/` folder structure.
+- **Traceability Injection**: Automatically adds base frontmatter to new assets to ensure "Zero-Question" connectivity from the start.
 
 ## Traceability
-- **ID:** `COMP_Example`
+
+- **ID:** `COMP_Scaffold`
 - **Uplink:** Satisfies Boundary [`BND_App`](../boundaries/technical-boundaries.mermaid)
 
 ## Interface
+
 ...

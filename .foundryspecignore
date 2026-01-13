@@ -1,0 +1,7 @@
+# FoundrySpec Ignore
+node_modules/**
+dist/**
+.git/**
+foundryspec/dist/**
+*.log
+build-info.txt
