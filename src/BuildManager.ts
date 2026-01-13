@@ -267,6 +267,28 @@ export class BuildManager {
             const raw = await fs.readFile(absPath, 'utf8');
             const { data, content } = matter(raw);
             const relPath = path.join(assetsDirName, file).replace(/\\/g, '/'); // Standardize to forward slashes
+
+            const isRequirementFile = relPath.includes('requirements.mermaid') || relPath.includes('/requirements/');
+
+            // --- IMPORTANT VALIDATION: Requirements MUST be requirementDiagram ---
+            if (isRequirementFile && file.endsWith('.mermaid')) {
+                if (!content.trim().startsWith('requirementDiagram')) {
+                    throw new Error(chalk.red(`\n❌ Validation Error: ${relPath} must be a Mermaid requirementDiagram.\nPlease ensure it starts with the 'requirementDiagram' keyword.`));
+                }
+            }
+
+            // --- REQ_ ID Placement Enforcement ---
+            const ids = [];
+            if (data?.traceability?.id) ids.push(data.traceability.id);
+            if (data?.traceability?.relationships) {
+                for (const rel of data.traceability.relationships) if (rel.id) ids.push(rel.id);
+            }
+
+            const hasReqId = ids.some(id => typeof id === 'string' && id.startsWith('REQ_'));
+            if (hasReqId && !isRequirementFile) {
+                throw new Error(chalk.red(`\n❌ Architectural Error: Requirement ID (REQ_*) found in non-requirement file: ${relPath}.\nAll requirements must reside in a dedicated requirements file.`));
+            }
+
             assets.push({
                 relPath,
                 absPath,

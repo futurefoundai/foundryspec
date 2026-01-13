@@ -40,3 +40,10 @@ The documentation hub is built with clean separation of concerns:
 - **JS**: Smart rendering core supporting pan-zoom and dynamic navigation.
 
 This modularity allows for high **improvability**, enabling users to easily customize styles or extend functionality.
+
+## 6. Strict Requirement Management
+
+The engine enforces architectural standards for requirement documentation:
+
+- **Syntax Enforcement**: Files named `requirements.mermaid` or in `requirements/` folders MUST use the Mermaid `requirementDiagram` syntax.
+- **Architectural Isolation**: IDs starting with `REQ_` are only permitted within dedicated requirement files. This prevents requirements from being scattered across unrelated documentation assets.
