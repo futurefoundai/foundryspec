@@ -72,31 +72,59 @@ export class ScaffoldManager {
         // Programmatically generate Discovery assets (Mermaid only)
         const discoveryPath = path.join(this.targetDir, 'assets', 'discovery');
         
-        const personasContent = `classDiagram
-    note "Define your actors and personas here"
-    %% class User {
-    %%    +String role
-    %%    +List goals
-    %% }`;
+        const personasContent = `---
+title: Personas
+description: Actors and roles within the ecosystem.
+traceability:
+  # Root Layer (L0) - No Uplinks
+  entities:
+    - id: "PER_EndUser"
+    - id: "PER_Stakeholder"
+---
+%% The Four Persona Types:
+%% 1. The End-User Persona (The "Actor"): Interact with UI/API. Drives L3 Component design (UX, Latency, Accessibility).
+%% 2. The Stakeholder Persona (The "Influencer"): Define success (CTO, PM). Drives L1 Context (Strategy, Overhead).
+%% 3. The Regulatory Persona (The "Guardian"): Legal/Compliance (GDPR, SOC2). Drives L2 Boundaries (Isolation, Security).
+%% 4. The System Persona (The "Proxy"): External systems (Mainframes, Gateways). Drives L3 Interfaces (Protocols, Formats).
 
-        const requirementsContent = `requirementDiagram
+classDiagram
+    class PER_EndUser {
+        <<Actor>>
+        +Goal: Achieve personal/pro objectives
+    }
+    class PER_Stakeholder {
+        <<Influencer>>
+        +Goal: Business success
+    }
+`;
+
+        const requirementsContent = `---
+title: Functional Requirements
+description: Core system capabilities.
+traceability:
+  id: "REQ_Group"
+  relationships:
+    - id: "REQ_Functional"
+      uplink: "PER_EndUser"
+---
+requirementDiagram
 
     requirement Functional {
-        id: "1"
-        text: "Functional Requirements"
+        id: "REQ_Functional"
+        text: "The system shall provide X..."
         risk: Low
         verifymethod: Test
     }
 
     requirement Feature_A {
-        id: "1.1"
-        text: "Description of specific feature"
+        id: "REQ_FeatA"
+        text: "Specific feature detail"
         risk: Low
         verifymethod: Test
     }
 
     requirement Non_Functional {
-        id: "2"
+        id: "REQ_NonFunctional"
         text: "Non-Functional Requirements"
         risk: Low
         verifymethod: Test
@@ -104,26 +132,19 @@ export class ScaffoldManager {
 
     Functional -contains-> Feature_A`;
 
-        const journeyContent = `journey
+        const journeyContent = `---
+title: User Journey
+description: High-level workflow visualization.
+traceability:
+  uplink: "PER_EndUser"
+---
+journey
     title User Journey: [Workflow Name]
     section [Phase Name]
       [Action]: 5: [Actor]
       [System Response]: 3: System`;
 
-        const traceabilityContent = `requirementDiagram
-    %% Traceability Matrix: Links Requirements to Components
-    
-    requirement Req_Sample {
-        id: "REQ-001"
-        text: "Sample Functional Requirement"
-    }
-
-    requirement Comp_Sample {
-        id: "COMP-001"
-        text: "Source Code / Component Reference"
-    }
-
-    Comp_Sample -satisfies-> Req_Sample`;
+        // Note: Traceability matrix diagram removed as it's now handled by Frontmatter logic
 
         await fs.writeFile(path.join(discoveryPath, 'personas.mermaid'), personasContent);
         await fs.writeFile(path.join(discoveryPath, 'requirements.mermaid'), requirementsContent);
@@ -131,56 +152,102 @@ export class ScaffoldManager {
 
         // --- Generate L1 (Context) Assets ---
         const contextPath = path.join(this.targetDir, 'assets', 'context');
-        const systemContextContent = `C4Context
+        const systemContextContent = `---
+title: System Context Diagram (L1)
+description: High-level system landscape.
+traceability:
+  relationships:
+    - id: "CTX_System"
+      uplink: "REQ_Functional"
+---
+C4Context
     title System Context Diagram (L1)
 
     Person(user, "User", "A user of the system")
-    System(system, "${this.projectName}", "The software system being built")
+    System(CTX_System, "${this.projectName}", "The software system being built")
     System_Ext(external, "External System", "An external dependency")
 
-    Rel(user, system, "Uses")
-    Rel(system, external, "Connects to")`;
+    Rel(user, CTX_System, "Uses")
+    Rel(CTX_System, external, "Connects to")`;
         
         await fs.writeFile(path.join(contextPath, 'system-context.mermaid'), systemContextContent);
 
         // --- Generate L2 (Boundaries) Assets ---
         const boundariesPath = path.join(this.targetDir, 'assets', 'boundaries');
-        const boundariesContent = `C4Container
+        const boundariesContent = `---
+title: Technical Boundaries Diagram (L2)
+description: Boundary decomposition.
+traceability:
+  relationships:
+    - id: "BND_App"
+      uplink: "CTX_System"
+---
+C4Container
     title Technical Boundaries Diagram (L2)
 
     System_Boundary(system, "${this.projectName}") {
-        Container(app, "Main Application", "Technology Stack", "Core business logic and interface")
-        ContainerDb(db, "Data Store", "Persistence Technology", "Storage for system state")
+        Container(BND_App, "Main Application", "Technology Stack", "Core business logic")
+        ContainerDb(db, "Data Store", "Persistence Technology", "Storage")
     }
 
-    Rel(app, db, "Reads/Writes", "Protocol")`;
+    Rel(BND_App, db, "Reads/Writes", "Protocol")`;
 
         await fs.writeFile(path.join(boundariesPath, 'technical-boundaries.mermaid'), boundariesContent);
 
+        // --- Generate L3 (Components) Assets ---
+        const componentsPath = path.join(this.targetDir, 'assets', 'components');
+        const componentContent = `---
+title: Example Component
+description: A sample component definition.
+traceability:
+  id: "COMP_Example"
+  uplink: "BND_App"
+---
+# Example Component (L3)
+
+## Overview
+This component demonstrates the ID-based traceability chain.
+
+## Traceability
+- **ID:** \`COMP_Example\`
+- **Uplink:** Satisfies Boundary [\`BND_App\`](../boundaries/technical-boundaries.mermaid)
+
+## Interface
+...
+`;
+        await fs.writeFile(path.join(componentsPath, 'example-component.md'), componentContent);
+
         // --- Generate Root Map ---
-        const rootContent = `mindmap
-    root((${this.projectName}))
-        L0: Discovery
-            ::icon(fa fa-search)
-            [Personas]
-            [Journeys]
-            [Requirements]
-        L1: Context
-            ::icon(fa fa-sitemap)
-            [System Context]
-        L2: Boundaries
-            ::icon(fa fa-cubes)
-            [Technical Boundaries]
-        L3: Components
-            ::icon(fa fa-cogs)
-        Peripherals
-            [Sequences]
-            [States]
-            [Data]
-            [Design]
-            [Security]
-            [Deployment]
-            [Integration]`;
+        const rootContent = `---
+title: Project Root
+description: The entry point for the documentation graph.
+traceability:
+  id: "ROOT"
+  downlinks:
+    - "PER_EndUser"
+    - "PER_Stakeholder"
+    - "REQ_Functional"
+    - "CTX_System"
+    - "BND_App"
+    - "COMP_Example"
+---
+mindmap
+        root((${this.projectName}))
+            :::root
+            L0(Discovery)
+                :::l0
+                Personas
+                Requirements
+                Journeys
+            L1(Context)
+                :::l1
+                System Context
+            L2(Boundaries)
+                :::l2
+                Technical Boundaries
+            L3(Components)
+                :::l3
+                Components`;
 
         await fs.writeFile(path.join(this.targetDir, 'root.mermaid'), rootContent);
 
@@ -225,7 +292,7 @@ export class ScaffoldManager {
         const personasPath = path.join(discoveryPath, 'personas.mermaid');
         if (!await fs.pathExists(personasPath)) {
             console.log(chalk.gray(`Adding missing Discovery asset: personas.mermaid`));
-            await fs.writeFile(personasPath, `classDiagram\n    note "Define your actors and personas here"\n    %% class User { ... }`);
+            await fs.writeFile(personasPath, `%% The Four Persona Types:\n%% 1. End-User (Actor) -> L3 UX\n%% 2. Stakeholder (Influencer) -> L1 Context\n%% 3. Regulatory (Guardian) -> L2 Boundaries\n%% 4. System (Proxy) -> L3 Interfaces\n\nclassDiagram\n    class EndUser { <<Actor>> }`);
         }
 
         const requirementsPath = path.join(discoveryPath, 'requirements.mermaid');

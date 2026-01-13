@@ -1,32 +1,46 @@
 ---
-title: FoundrySpec Documentation Graph
-description: Entry point for the FoundrySpec Engine documentation.
+title: Project Root
+description: The entry point for the documentation graph.
+traceability:
+  id: "ROOT"
+  downlinks:
+    - "PER_EndUser"
+    - "PER_Stakeholder"
+    - "REQ_Functional"
+    - "CTX_System"
+    - "BND_App"
+    - "COMP_Example"
 ---
 graph TD
-    Root[FoundrySpec Engine]
+    %% Custom Styling
+    classDef default fill:#0f172a,stroke:#38bdf8,stroke-width:2px,color:#fff;
+    classDef layer fill:#1e293b,stroke:#94a3b8,stroke-width:1px,color:#94a3b8,stroke-dasharray: 5 5;
+
+    ROOT(("(( FoundrySpec Engine ))"))
     
-    %% Core Architecture
-    Root --> Context[System Context]
-    click Context "assets/architecture/context.mermaid"
-
-    %% Discovery
-    Root --> Discovery[Discovery Phase]
-    click Discovery "assets/discovery/personas.mermaid"
+    ROOT --> L0
+    subgraph L0 [L0: Discovery]
+        direction LR
+        PER_EndUser([Personas])
+        REQ_Functional([Requirements])
+    end
     
-    %% Containers
-    Context --> Containers[Containers]
-    click Containers "assets/containers/containers.mermaid"
+    ROOT --> L1
+    subgraph L1 [L1: Context]
+        CTX_System([System Context])
+    end
+    
+    L1 --> L2
+    subgraph L2 [L2: Boundaries]
+        BND_App([Technical Boundaries])
+    end
+    
+    L2 --> L3
+    subgraph L3 [L3: Components]
+        COMP_Example([Example Component])
+    end
 
-    %% Components
-    Containers --> BuildManager[Build Manager]
-    click BuildManager "assets/components/build-manager.mermaid"
-
-    Containers --> ScaffoldManager[Scaffold Manager]
-    click ScaffoldManager "assets/components/scaffold-manager.mermaid"
-
-    Containers --> GitManager[Git Manager]
-    click GitManager "assets/components/git-manager.mermaid"
-
-    %% Data
-    Root --> Data[Data Schema]
-    click Data "assets/data/config-schema.mermaid"
+    ROOT --> Peripherals([Peripherals])
+    
+    %% Apply Styles
+    class L0,L1,L2,L3 layer;

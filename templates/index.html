@@ -6,15 +6,38 @@
     <title>{{projectName}} - Diagram Viewer</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
     <style>
+        /* Mindmap Custom Classes - Premium Palette */
+        .mindmap-node-root > circle,
+        .mindmap-node-root > text {
+            fill: #ffffff !important;
+            stroke: #38bdf8 !important;
+            stroke-width: 3px !important;
+            font-weight: 800 !important;
+            color: #020617 !important;
+        }
+        
+        .mindmap-node-l0 > rect { fill: #1e1b4b !important; stroke: #6366f1 !important; stroke-width: 2px !important; }
+        .mindmap-node-l0 > text { fill: #e0e7ff !important; font-weight: 600 !important; }
+
+        .mindmap-node-l1 > rect { fill: #0c4a6e !important; stroke: #0ea5e9 !important; stroke-width: 2px !important; }
+        .mindmap-node-l1 > text { fill: #e0f2fe !important; font-weight: 600 !important; }
+
+        .mindmap-node-l2 > rect { fill: #064e3b !important; stroke: #10b981 !important; stroke-width: 2px !important; }
+        .mindmap-node-l2 > text { fill: #d1fae5 !important; font-weight: 600 !important; }
+
+        .mindmap-node-l3 > rect { fill: #451a03 !important; stroke: #f59e0b !important; stroke-width: 2px !important; }
+        .mindmap-node-l3 > text { fill: #fef3c7 !important; font-weight: 600 !important; }
+
         :root {
-            --bg-primary: #f8fafc;
-            --bg-secondary: #ffffff;
-            --accent: #38bdf8;
-            --text-primary: #0f172a;
-            --text-secondary: #64748b;
-            --border: rgba(15, 23, 42, 0.08);
+            --bg-primary: #020617; /* Deep Slate */
+            --bg-secondary: #0f172a;
+            --accent: #38bdf8; /* Cyan */
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --border: rgba(255, 255, 255, 0.06);
             --transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
-            --overlay: rgba(15, 23, 42, 0.6);
+            --overlay: rgba(2, 6, 23, 0.8);
+            --glass: rgba(15, 23, 42, 0.7);
         }
 
         body { 
@@ -29,44 +52,55 @@
         }
 
         #header { 
-            background-color: var(--bg-secondary); 
-            padding: 1rem 2rem; 
+            background-color: var(--glass);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            padding: 0.75rem 2rem; 
             border-bottom: 1px solid var(--border); 
             display: flex; 
             align-items: center;
             z-index: 100;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
         }
 
         #header h1 { 
             font-family: 'Outfit', sans-serif;
-            font-size: 1.25rem; 
+            font-size: 1.15rem; 
             margin: 0; 
             flex-grow: 1; 
-            font-weight: 700;
+            font-weight: 800; /* Ultra Bold */
+            letter-spacing: -0.02em;
+            background: linear-gradient(to right, #fff, #cbd5e1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
         }
 
         #back-button { 
             background: var(--text-primary); 
-            color: white; 
+            color: var(--bg-primary); 
             border: none; 
-            padding: 0.6rem 1.2rem; 
-            border-radius: 0.75rem; 
+            padding: 0.5rem 1.25rem; 
+            border-radius: 99px; 
             cursor: pointer; 
             display: none; 
-            font-weight: 600;
-            font-size: 0.875rem;
+            font-weight: 800; /* Ultra Bold */
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
             transition: var(--transition);
+            margin-right: 1.5rem;
         }
         #back-button:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            transform: scale(1.05);
+            background: var(--accent);
         }
 
         #breadcrumbs { 
-            margin-left: 1.5rem; 
-            font-size: 0.875rem; 
+            font-size: 0.75rem; 
             color: var(--text-secondary);
-            font-weight: 500;
+            font-weight: 800; /* Ultra Bold */
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
         }
 
         #viewer {
@@ -77,11 +111,11 @@
             justify-content: center;
             align-items: center;
             overflow: hidden;
-            background: #ffffff;
+            background: radial-gradient(circle at center, #0f172a 0%, #020617 100%);
         }
 
         .diagram-container {
-            transition: transform 0.4s cubic-bezier(0.23, 1, 0.32, 1), opacity 0.4s ease-in-out;
+            transition: transform 0.6s cubic-bezier(0.23, 1, 0.32, 1), opacity 0.4s ease-in-out;
             text-align: center;
             position: absolute;
             width: 100%;
@@ -101,6 +135,7 @@
             height: 100%;
             background: var(--overlay);
             backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
             z-index: 3000;
             align-items: center;
             justify-content: center;
@@ -114,15 +149,16 @@
         }
 
         #modal-content {
-            background: #ffffff;
-            border-radius: 1.5rem;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 1.25rem;
             width: 90%;
-            max-width: 800px;
-            max-height: 85vh;
+            max-width: 850px;
+            max-height: 80vh;
             display: flex;
             flex-direction: column;
             overflow: hidden;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
             transform: scale(0.95);
             transition: transform 0.3s cubic-bezier(0.23, 1, 0.32, 1);
         }
@@ -132,78 +168,129 @@
         }
 
         .modal-header {
-            padding: 1.5rem 2rem;
+            padding: 1.25rem 2rem;
             border-bottom: 1px solid var(--border);
             display: flex;
             justify-content: space-between;
             align-items: center;
-            background: #fcfcfd;
+            background: rgba(255,255,255,0.02);
         }
 
         .modal-body {
-            padding: 2rem 2.5rem;
+            padding: 2.5rem;
             overflow-y: auto;
-            line-height: 1.7;
+            line-height: 1.8;
             font-size: 1.05rem;
-            color: #334155;
+            color: #cbd5e1;
         }
 
         .modal-body h1, .modal-body h2, .modal-body h3 {
             font-family: 'Outfit', sans-serif;
             color: var(--text-primary);
-            margin-top: 1.5rem;
+            margin-top: 2rem;
             margin-bottom: 1rem;
+            font-weight: 800;
         }
         .modal-body h1:first-child { margin-top: 0; }
 
         .modal-body pre {
-            background: #0f172a;
-            color: #f8fafc;
-            padding: 1.25rem;
+            background: #020617;
+            border: 1px solid var(--border);
+            color: #e2e8f0;
+            padding: 1.5rem;
             border-radius: 0.75rem;
             overflow-x: auto;
+        }
+
+        .modal-body code {
+            font-family: 'JetBrains Mono', monospace;
+            background: rgba(255,255,255,0.05);
+            padding: 0.2rem 0.4rem;
+            border-radius: 0.25rem;
         }
 
         .close-btn {
             background: none;
             border: none;
             color: var(--text-secondary);
-            font-size: 1.5rem;
+            font-size: 1.75rem;
             cursor: pointer;
             line-height: 1;
             transition: var(--transition);
             display: flex;
             align-items: center;
             justify-content: center;
-            width: 32px;
-            height: 32px;
+            width: 40px;
+            height: 40px;
             border-radius: 50%;
         }
 
         .close-btn:hover {
-            background: rgba(0,0,0,0.05);
+            background: rgba(255,255,255,0.05);
             color: var(--text-primary);
         }
 
         /* Fade in/out classes */
         .fade-out {
-            transform: scale(0.95);
+            transform: scale(0.98) translateY(10px);
             opacity: 0;
         }
         .fade-in {
-            transform: scale(1);
+            transform: scale(1) translateY(0);
             opacity: 1;
         }
         .initial {
-            transform: scale(1.05);
+            transform: scale(1.02) translateY(-10px);
             opacity: 0;
         }
+
+        .modal-body strong {
+            color: #fff;
+            font-weight: 700;
+        }
+
+        .modal-body h1, .modal-body h2, .modal-body h3 {
+            font-family: 'Outfit', sans-serif;
+            color: var(--text-primary);
+            margin-top: 2rem;
+            margin-bottom: 1rem;
+            font-weight: 800;
+        }
+
+        /* Interactivity Cues */
+        .clickable-node { cursor: pointer !important; }
+        .clickable-node:hover { filter: brightness(1.2); }
+        a { cursor: pointer; }
+
+        /* Requirement Diagram Premium Styling */
+        .requirementBox {
+            fill: #0f172a !important;
+            stroke: #38bdf8 !important;
+            stroke-width: 2px !important;
+        }
+        .requirementTitle, .requirementBodyText, .reqId, .reqText, .reqRisk, .reqMethod {
+            fill: #f8fafc !important;
+            font-weight: 700 !important;
+            font-family: 'Inter', sans-serif !important;
+        }
+        .requirementTitle {
+            font-family: 'Outfit', sans-serif !important;
+            font-weight: 800 !important;
+        }
+        /* Fix for lines/arrows in requirement diagrams */
+        .relation {
+            stroke: #94a3b8 !important;
+            stroke-width: 1.5px !important;
+        }
     </style>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/svg-pan-zoom@3.6.1/dist/svg-pan-zoom.min.js"></script>
 </head>
 <body>
     <div id="header">
+        <button id="back-button">← Back</button>
         <h1>{{projectName}}</h1>
-        <button id="back-button">Back</button>
         <div id="breadcrumbs"></div>
     </div>
     <div id="viewer">
@@ -213,38 +300,125 @@
     <div id="modal-backdrop" onclick="closeModal(event)">
         <div id="modal-content" onclick="event.stopPropagation()">
             <div class="modal-header">
-                <h2 id="modal-title" style="margin: 0; font-family: 'Outfit', sans-serif;">Details</h2>
+                <h2 id="modal-title" style="margin: 0; font-family: 'Outfit', sans-serif; font-size: 1.25rem;">Details</h2>
                 <button class="close-btn" onclick="closeModal()">&times;</button>
             </div>
             <div id="modal-body" class="modal-body"></div>
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/svg-pan-zoom@3.6.1/dist/svg-pan-zoom.min.js"></script>
     <script>
-        mermaid.initialize({ 
-            startOnLoad: false, 
-            securityLevel: 'loose',
-            theme: 'default',
-            flowchart: { useMaxWidth: false, htmlLabels: true }
-        });
-
-        const viewer = document.getElementById('viewer');
-        const backButton = document.getElementById('back-button');
-        const breadcrumbs = document.getElementById('breadcrumbs');
-        const modalBackdrop = document.getElementById('modal-backdrop');
-        const modalBody = document.getElementById('modal-body');
-        const modalTitle = document.getElementById('modal-title');
-
+        // --- Globals & Injected Data ---
+        const idMap = {{idMap}};
         let historyStack = [];
-        let currentContainer = document.getElementById('diagram-container');
+        let currentContainer = null;
         let panZoomInstance = null;
+        let viewer, backButton, breadcrumbs, modalBackdrop, modalBody, modalTitle;
 
-        function closeModal(e) {
-            if (e && e.target !== modalBackdrop) return;
-            modalBackdrop.classList.remove('open');
+        // --- Auto-CSS Injector ---
+        async function injectCustomCSS() {
+            const cssFiles = ['assets/theme.css', 'assets/custom.css'];
+            for (const file of cssFiles) {
+                try {
+                    const resp = await fetch(file, { method: 'HEAD' });
+                    if (resp.ok) {
+                        const link = document.createElement('link');
+                        link.rel = 'stylesheet';
+                        link.href = file;
+                        document.head.appendChild(link);
+                    }
+                } catch (e) {}
+            }
+        }
+
+        function applyCursors(container) {
+            const nodes = container.querySelectorAll('.nodes .node, .cluster, .mindmap-node, text');
+            nodes.forEach(node => {
+                const text = node.textContent?.trim();
+                if (idMap[text] || node.closest('a')) {
+                    node.classList.add('clickable-node');
+                }
+            });
+        }
+
+        async function initApp() {
+            // Select Elements
+            viewer = document.getElementById('viewer');
+            backButton = document.getElementById('back-button');
+            breadcrumbs = document.getElementById('breadcrumbs');
+            modalBackdrop = document.getElementById('modal-backdrop');
+            modalBody = document.getElementById('modal-body');
+            modalTitle = document.getElementById('modal-title');
+            currentContainer = document.getElementById('diagram-container');
+
+            const mermaidReady = typeof mermaid !== 'undefined';
+            const domReady = !!(backButton && viewer);
+
+            if (!mermaidReady || !domReady) {
+                setTimeout(initApp, 200);
+                return;
+            }
+
+            appStarted = true;
+            
+            // Initialize Mermaid
+            mermaid.initialize({ 
+                startOnLoad: false, 
+                securityLevel: 'loose',
+                theme: 'base',
+                themeVariables: {
+                    primaryColor: '#1e293b',
+                    primaryTextColor: '#f8fafc',
+                    primaryBorderColor: '#334155',
+                    lineColor: '#38bdf8',
+                    secondaryColor: '#0f172a',
+                    tertiaryColor: '#1e293b',
+                    fontSize: '14px',
+                    fontWeight: '700'
+                },
+                themeCSS: `
+                    .requirementBox { fill: #0f172a !important; stroke: #38bdf8 !important; stroke-width: 2px !important; }
+                    .requirementTitle { fill: #38bdf8 !important; font-weight: 800 !important; font-family: 'Outfit' !important; }
+                    .requirementBodyText, .reqId, .reqText, .reqRisk, .reqMethod { fill: #f8fafc !important; font-family: 'Inter' !important; }
+                    .relation { stroke: #94a3b8 !important; stroke-width: 1.5px !important; }
+                `,
+                flowchart: { useMaxWidth: false, htmlLabels: true, curve: 'basis' }
+            });
+
+            // Smart Interceptor: Generic Click Handler for SVGs
+            viewer.addEventListener('click', (e) => {
+                let target = e.target;
+                
+                // If it's already a link, let Mermaid handle it natively
+                if (target.closest('a')) return; 
+
+                while (target && target !== viewer) {
+                    const text = target.textContent?.trim();
+                    if (text && idMap[text]) {
+                        loadDiagram(idMap[text]);
+                        return;
+                    }
+                    
+                    const targetId = target.id || target.getAttribute('id');
+                    if (targetId && idMap[targetId]) {
+                        loadDiagram(idMap[targetId]);
+                        return;
+                    }
+
+                    target = target.parentElement;
+                }
+            });
+
+            backButton.addEventListener('click', () => {
+                if (historyStack.length > 1) {
+                    historyStack.pop(); 
+                    const previous = historyStack.pop(); 
+                    loadDiagram(previous);
+                }
+            });
+
+            injectCustomCSS();
+            loadDiagram('root.mermaid');
         }
 
         function resolvePath(base, relative) {
@@ -263,7 +437,10 @@
             try {
                 const response = await fetch(filePath);
                 if (!response.ok) throw new Error(`File not found: ${filePath}`);
-                const content = await response.text();
+                let content = await response.text();
+
+                // More robust frontmatter removal
+                content = content.replace(/^---[\s\S]*?---\s*/, '');
 
                 if (filePath.endsWith('.md')) {
                     modalTitle.innerText = filePath.split('/').pop();
@@ -286,6 +463,7 @@
                 }
 
                 viewer.appendChild(newContainer);
+                applyCursors(newContainer);
 
                 if (currentContainer) {
                     const oldContainer = currentContainer;
@@ -309,7 +487,7 @@
                                     minZoom: 0.1
                                 });
                             } catch (e) {
-                                console.warn('SVG Pan Zoom failed', e);
+                                // Silent failure
                             }
                         }
                     });
@@ -337,31 +515,31 @@
                     });
                 }
             } catch (error) {
-                console.error('Error loading diagram:', error);
+                console.error('[FoundrySpec] Error loading diagram:', error);
                 const errDiv = document.createElement('div');
-                errDiv.style.color = 'red';
+                errDiv.style.color = '#ef4444';
                 errDiv.style.padding = '2rem';
-                errDiv.innerText = `Could not load: ${filePath}`;
-                viewer.innerHTML = '';
-                viewer.appendChild(errDiv);
+                errDiv.style.fontWeight = 'bold';
+                errDiv.innerText = `Error loading diagram: ${filePath}\n${error.message}`;
+                if (viewer) {
+                    viewer.innerHTML = '';
+                    viewer.appendChild(errDiv);
+                }
             }
         }
 
         function updateUI() {
-            backButton.style.display = historyStack.length > 1 ? 'block' : 'none';
-            breadcrumbs.innerHTML = historyStack.map(p => p.split('/').pop()).join(' > ');
+            if (backButton) backButton.style.display = historyStack.length > 1 ? 'block' : 'none';
+            if (breadcrumbs) breadcrumbs.innerHTML = historyStack.map(p => p.split('/').pop()).join(' > ');
         }
 
-        backButton.addEventListener('click', () => {
-            if (historyStack.length > 1) {
-                historyStack.pop(); 
-                const previous = historyStack.pop(); 
-                loadDiagram(previous);
-            }
-        });
+        function closeModal(e) {
+            if (e && e.target !== modalBackdrop) return;
+            modalBackdrop.classList.remove('open');
+        }
 
-        loadDiagram('root.mermaid');
         window.closeModal = closeModal;
+        initApp();
     </script>
 </body>
 </html>

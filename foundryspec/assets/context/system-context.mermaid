@@ -1,0 +1,17 @@
+---
+title: System Context Diagram (L1)
+description: High-level system landscape.
+traceability:
+  relationships:
+    - id: "CTX_System"
+      uplink: "REQ_Functional"
+---
+C4Context
+    title System Context Diagram (L1)
+
+    Person(user, "User", "A user of the system")
+    System(CTX_System, "FoundrySpec Engine", "The software system being built")
+    System_Ext(external, "External System", "An external dependency")
+
+    Rel(user, CTX_System, "Uses")
+    Rel(CTX_System, external, "Connects to")

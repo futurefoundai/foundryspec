@@ -82,7 +82,7 @@ program
 program
     .command('add')
     .description('Add a new documentation category')
-    .argument('<category>', 'Name of the category (e.g., architecture, containers)')
+    .argument('<category>', 'Name of the category (e.g., architecture, boundaries)')
     .action(async (category: string) => {
         console.log(chalk.blue(`\n📂 Adding category: ${category}...`));
         try {

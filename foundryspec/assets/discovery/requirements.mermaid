@@ -1,37 +1,33 @@
 ---
-title: Requirements
-description: Key functional and non-functional requirements for the FoundrySpec Engine.
+title: Functional Requirements
+description: Core system capabilities.
+traceability:
+  id: "REQ_Group"
+  relationships:
+    - id: "REQ_Functional"
+      uplink: "PER_EndUser"
 ---
 requirementDiagram
 
     requirement Functional {
-        id: "1"
-        text: "Functional Requirements"
+        id: "REQ_Functional"
+        text: "The system shall provide X..."
         risk: Low
         verifymethod: Test
     }
 
-    requirement GraphBased {
-        id: "1.1"
-        text: "Docs must be a connected graph"
-        risk: Medium
-        verifymethod: Analysis
-    }
-
-    requirement NoOrphans {
-        id: "1.2"
-        text: "Build fails on orphaned files"
-        risk: High
+    requirement Feature_A {
+        id: "REQ_FeatA"
+        text: "Specific feature detail"
+        risk: Low
         verifymethod: Test
     }
 
-    requirement Frontmatter {
-        id: "1.3"
-        text: "Mermaid files must have metadata"
-        risk: Medium
-        verifymethod: Inspection
+    requirement Non_Functional {
+        id: "REQ_NonFunctional"
+        text: "Non-Functional Requirements"
+        risk: Low
+        verifymethod: Test
     }
 
-    Functional -contains-> GraphBased
-    Functional -contains-> NoOrphans
-    Functional -contains-> Frontmatter
+    Functional -contains-> Feature_A
