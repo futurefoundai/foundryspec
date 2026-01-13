@@ -51,6 +51,13 @@ interface Diagram {
     updatedAt: string;
 }
 
+interface ProjectAsset {
+    relPath: string;
+    absPath: string;
+    content: string;
+    data: any;
+}
+
 export class BuildManager {
     private projectDir: string;
     private configPath: string;
@@ -73,40 +80,75 @@ export class BuildManager {
         console.log(chalk.gray(`Cleaning output directory: ${outputDir}...`));
         await fs.emptyDir(outputDir);
 
-        // New validation logic
-        await this.validateProjectGraph(assetsDir);
+        // --- 1. Load All Assets Once ---
+        const assets = await this.loadAssets(assetsDir);
 
-        console.log(chalk.gray('Project graph is valid. Validating frontmatter in parallel...'));
+        // --- 2. Centralized Validation ---
+        await this.validateFrontmatter(assets);
+        await this.validateProjectGraph(assets); // Now uses loaded assets
 
-        const allMermaidFiles = await glob('**/*.mermaid', { cwd: assetsDir });
+        console.log(chalk.gray('Injecting traceability links & checking syntax...'));
+
         const mermaidContents: Map<string, string> = new Map();
 
-        // --- Parallel Frontmatter Validation ---
-        await Promise.all(allMermaidFiles.map(async (file) => {
-            const filePath = path.join(assetsDir, file);
-            const rawContent = await fs.readFile(filePath, 'utf8');
-            const { data, content } = matter(rawContent);
-
-            if (!data || Object.keys(data).length === 0 || !data.title || !data.description) {
-                const errorMsg = `\n❌ Metadata error in ${file}: Missing or incomplete frontmatter (title/description required).`;
-                throw new Error(chalk.red(errorMsg));
-            }
-            mermaidContents.set(file, content);
-        }));
-
-        console.log(chalk.gray(`Frontmatter valid. Checking syntax for ${allMermaidFiles.length} files...`));
-
-        const browser = await puppeteer.launch({ args: ['--no-sandbox'] });
-        const CONCURRENCY = 2; // Number of parallel pages
-        const chunks = [];
-        const filesArray = Array.from(mermaidContents.entries());
+        // --- 3. Build Global ID Registry (for Auto-Wiring) ---
+        const idToFileMap: Map<string, string> = new Map();
         
-        for (let i = 0; i < filesArray.length; i += Math.ceil(filesArray.length / CONCURRENCY)) {
-            chunks.push(filesArray.slice(i, i + Math.ceil(filesArray.length / CONCURRENCY)));
+        for (const asset of assets) {
+            const { data, relPath } = asset;
+            
+            if (data?.traceability?.id) idToFileMap.set(data.traceability.id, relPath);
+            if (data?.title) idToFileMap.set(data.title, relPath); // Index Title too!
+            
+            if (data?.traceability?.relationships) {
+                for (const rel of data.traceability.relationships) {
+                    if (rel.id) idToFileMap.set(rel.id, relPath);
+                }
+            }
+            if (data?.traceability?.entities) {
+                for (const entity of data.traceability.entities) {
+                    if (entity.id) idToFileMap.set(entity.id, relPath);
+                }
+            }
         }
 
+        // --- 4. Prepare Mermaid Contents for Syntax Check ---
+        for (const asset of assets) {
+            const { relPath, content } = asset;
+            if (relPath.endsWith('.mermaid')) {
+                mermaidContents.set(relPath, content);
+            }
+        }
+
+        // --- 5. Puppeteer Syntax Check ---
+        const CONCURRENCY = 4; // User requested 4 tabs
+        const browser = await puppeteer.launch({ args: ['--no-sandbox'] });
+
         try {
-            await Promise.all(chunks.map(async (chunk) => {
+            const filesArray = Array.from(mermaidContents.entries());
+            const chunks = [];
+            for (let i = 0; i < filesArray.length; i += Math.ceil(filesArray.length / CONCURRENCY)) {
+                chunks.push(filesArray.slice(i, i + Math.ceil(filesArray.length / CONCURRENCY)));
+            }
+
+            // Fix: We need to process chunks correctly or just map concurrency controlled promises
+            // Logic above was splitting into chunks equal to concurrency count (e.g. 2 chunks for CONCURRENCY=2?)
+            // Actually, best way to limit concurrency is a queue or p-limit, but simple chunking works if we await Promise.all(chunks)
+            // Wait, previous logic:
+            // for (let i = 0; i < filesArray.length; i += Math.ceil(filesArray.length / CONCURRENCY))
+            // This creates CONCURRENCY number of chunks? No, it creates chunks of size (Total/Concurrency).
+            // So if 10 files, C=4, size=3. 10/3 ~ 4 chunks. So 4 parallel promises. Correct.
+            
+            // Re-evaluating the chunk logic to be safe and clear:
+            // We want 4 parallel workers.
+            const chunkSize = Math.ceil(filesArray.length / CONCURRENCY);
+            const workChunks = [];
+            for (let i = 0; i < filesArray.length; i += chunkSize) {
+                workChunks.push(filesArray.slice(i, i + chunkSize));
+            }
+
+            await Promise.all(workChunks.map(async (chunk) => {
+                // Single Page per chunk (Total 4 pages max)
                 const page = await browser.newPage();
                 try {
                     await page.setContent('<!DOCTYPE html><html><body><div id="container"></div></body></html>');
@@ -138,87 +180,180 @@ export class BuildManager {
             await browser.close();
         }
 
-        await this.generateHub(config, outputDir);
+        await this.generateHub(config, outputDir, idToFileMap);
 
         console.log(chalk.gray(`Copying assets to ${outputDir}...`));
-        const rootMermaidPath = path.join(this.projectDir, 'root.mermaid');
         await fs.copy(assetsDir, path.join(outputDir, 'assets'));
-        await fs.copy(rootMermaidPath, path.join(outputDir, 'root.mermaid'));
+        
+        // --- Copy root.mermaid to dist if it exists ---
+        const rootMermaidPath = path.join(this.projectDir, 'root.mermaid');
+        if (await fs.pathExists(rootMermaidPath)) {
+            await fs.copy(rootMermaidPath, path.join(outputDir, 'root.mermaid'));
+        }
 
         console.log(chalk.green(`
 ✅ Build complete! Documentation is in: ${outputDir}`));
         console.timeEnd('Build process');
     }
 
-    async generateHub(config: FoundryConfig, outputDir: string): Promise<void> {
+    async generateHub(config: FoundryConfig, outputDir: string, idMap: Map<string, string>): Promise<void> {
         const templatePath = path.resolve(__dirname, '../templates/index.html');
         if (!await fs.pathExists(templatePath)) {
             throw new Error('Hub template not found. Please reinstall FoundrySpec.');
         }
         const templateContent = await fs.readFile(templatePath, 'utf8');
+        
+        // Convert Map to serializable object
+        const mapObj: Record<string, string> = {};
+        idMap.forEach((v, k) => mapObj[k] = v);
+
         const rendered = templateContent
             .replace(/{{projectName}}/g, config.projectName)
-            .replace(/{{version}}/g, config.version);
+            .replace(/{{version}}/g, config.version)
+            .replace(/{{idMap}}/g, JSON.stringify(mapObj));
 
         await fs.writeFile(path.join(outputDir, 'index.html'), rendered);
     }
 
-    private async validateProjectGraph(assetsDir: string): Promise<void> {
-        console.log(chalk.blue('🔍 Validating project structure and links...'));
+    private async loadAssets(assetsDir: string): Promise<ProjectAsset[]> {
+        const assetsDirName = path.basename(assetsDir);
+        // Load assets from assetsDir
+        const assetFiles = await glob('**/*.{mermaid,md}', { cwd: assetsDir, nodir: true });
+        
+        const assets: ProjectAsset[] = [];
+        
+        // 1. Load Root Mermaid (Special Case)
         const rootMermaidPath = path.join(this.projectDir, 'root.mermaid');
-
-        if (!await fs.pathExists(rootMermaidPath)) {
-            throw new Error(chalk.red(`❌ Critical: root.mermaid not found at ${rootMermaidPath}. This file is the required entry point.`));
+        if (await fs.pathExists(rootMermaidPath)) {
+            const raw = await fs.readFile(rootMermaidPath, 'utf8');
+            const { data, content } = matter(raw);
+            assets.push({
+                relPath: 'root.mermaid',
+                absPath: rootMermaidPath,
+                content,
+                data
+            });
         }
 
-        const assetsDirName = path.basename(assetsDir);
-        const assetFiles = (await glob('**/*.{mermaid,md}', { cwd: assetsDir, nodir: true }))
-            .map(file => path.join(assetsDirName, file).replace(/\\/g, '/'));
+        // 2. Load Assets
+        await Promise.all(assetFiles.map(async (file) => {
+            const absPath = path.join(assetsDir, file);
+            const raw = await fs.readFile(absPath, 'utf8');
+            const { data, content } = matter(raw);
+            const relPath = path.join(assetsDirName, file).replace(/\\/g, '/'); // Standardize to forward slashes
+            assets.push({
+                relPath,
+                absPath,
+                content,
+                data
+            });
+        }));
 
-        const rootRelativePath = 'root.mermaid';
-        const allFiles = [rootRelativePath, ...assetFiles];
+        return assets;
+    }
 
+    private async validateFrontmatter(assets: ProjectAsset[]): Promise<void> {
+        console.log(chalk.blue('🔍 Validating frontmatter...'));
+        
+        for (const { relPath, data, absPath } of assets) {
+            if (!data || Object.keys(data).length === 0 || !data.title || !data.description) {
+                const errorMsg = `\n❌ Metadata error in ${relPath}: Missing or incomplete frontmatter (title/description required).`;
+                throw new Error(chalk.red(errorMsg));
+            }
+        }
+        console.log(chalk.green('✅ Frontmatter is valid.'));
+    }
+
+    private async validateProjectGraph(assets: ProjectAsset[]): Promise<void> {
+        console.log(chalk.blue('🔍 Validating project structure and links...'));
+        
+        // Ensure root.mermaid exists in loaded assets
+        const rootAsset = assets.find(a => a.relPath === 'root.mermaid');
+        if (!rootAsset) {
+            throw new Error(chalk.red(`❌ Critical: root.mermaid not found. This file is the required entry point.`));
+        }
+
+        const allFiles = assets.map(a => a.relPath);
         const adjList: Map<string, string[]> = new Map();
         allFiles.forEach(file => adjList.set(file, []));
 
         const mermaidLinkRegex = /click\s+[\w\-]+\s+(?:href\s+)?"([^\"]+\.(?:mermaid|md))"/g;
         const markdownLinkRegex = /\[[^\]]+\]\(([^)]+\.(?:mermaid|md))\)/g;
 
-        for (const file of allFiles) {
-            const filePath = path.join(this.projectDir, file);
-            const content = await fs.readFile(filePath, 'utf8');
-            const fileDir = path.dirname(file);
+        // --- Auto-Wiring: Build Global ID Registry (using passed assets) ---
+        const idToFileMap: Map<string, string> = new Map();
+        
+        for (const asset of assets) {
+            const { data, relPath } = asset;
+            if (data?.traceability?.id) idToFileMap.set(data.traceability.id, relPath);
+            if (data?.traceability?.relationships) {
+                for (const rel of data.traceability.relationships) {
+                    if (rel.id) idToFileMap.set(rel.id, relPath);
+                }
+            }
+            if (data?.traceability?.entities) {
+                for (const entity of data.traceability.entities) {
+                    if (entity.id) idToFileMap.set(entity.id, relPath);
+                }
+            }
+        }
 
-            // Scan for Mermaid 'click' links
-            if (file.endsWith('.mermaid')) {
+        for (const asset of assets) {
+            const { relPath, content, data } = asset;
+            const fileDir = path.dirname(relPath);
+
+            // 1. Standard Mermaid/Markdown Links (Manual)
+            if (relPath.endsWith('.mermaid')) {
                 let match;
                 mermaidLinkRegex.lastIndex = 0;
                 while ((match = mermaidLinkRegex.exec(content)) !== null) {
                     const linkTarget = match[1];
                     const linkedFile = path.normalize(path.join(fileDir, linkTarget)).replace(/\\/g, '/');
-                    if (allFiles.includes(linkedFile)) {
-                        adjList.get(file)?.push(linkedFile);
-                    }
+                    if (allFiles.includes(linkedFile)) adjList.get(relPath)?.push(linkedFile);
                 }
             }
 
-            // Scan for Markdown-style links (supported in Mermaid node labels and .md files)
             let match;
             markdownLinkRegex.lastIndex = 0;
             while ((match = markdownLinkRegex.exec(content)) !== null) {
                 const linkTarget = match[1];
                 if (/^(https?:|mailto:)/.test(linkTarget)) continue;
-
                 const linkedFile = path.normalize(path.join(fileDir, linkTarget)).replace(/\\/g, '/');
-                if (allFiles.includes(linkedFile)) {
-                    adjList.get(file)?.push(linkedFile);
+                if (allFiles.includes(linkedFile)) adjList.get(relPath)?.push(linkedFile);
+            }
+
+            // 2. Auto-Wired Frontmatter Links
+            if (data?.traceability) {
+                const processLink = (target: any) => {
+                    const targets = Array.isArray(target) ? target : [target];
+                    for (const t of targets) {
+                        // Is it a file path?
+                        if (typeof t === 'string' && t.includes('.')) {
+                            const linkedFile = path.normalize(path.join(fileDir, t)).replace(/\\/g, '/');
+                            if (allFiles.includes(linkedFile)) adjList.get(relPath)?.push(linkedFile);
+                        }
+                        // Is it an ID?
+                        else if (idToFileMap.has(t)) {
+                            const targetFile = idToFileMap.get(t)!;
+                            adjList.get(relPath)?.push(targetFile);
+                        }
+                    }
+                };
+
+                if (data.traceability.uplink) processLink(data.traceability.uplink);
+                if (data.traceability.downlinks) processLink(data.traceability.downlinks);
+                if (data.traceability.relationships) {
+                    for (const rel of data.traceability.relationships) {
+                        if (rel.uplink) processLink(rel.uplink);
+                        if (rel.downlinks) processLink(rel.downlinks);
+                    }
                 }
             }
         }
 
         const connectedGraph = new Set<string>();
-        const queue: string[] = [rootRelativePath];
-        connectedGraph.add(rootRelativePath);
+        const queue: string[] = ['root.mermaid'];
+        connectedGraph.add('root.mermaid');
 
         let head = 0;
         while(head < queue.length) {
@@ -254,7 +389,6 @@ export class BuildManager {
 
         console.log(chalk.green('✅ Project graph is valid. No orphaned files found.'));
     }
-
 
     async serve(port: number | string = 3000): Promise<void> {
         if (!await fs.pathExists(this.configPath)) {
