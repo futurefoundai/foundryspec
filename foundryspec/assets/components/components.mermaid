@@ -1,0 +1,24 @@
+---
+id: "COMP_Overview"
+title: Component Architecture
+description: Detailed decomposition of the FoundrySpec engine components.
+uplink: "ROOT"
+requirements:
+  - "REQ_NonFunctional"
+entities:
+  - id: "COMP_Group"
+    uplink: "REQ_NonFunctional"
+---
+
+classDiagram
+    class COMP_Group {
+        <<Component>>
+        +ScaffoldManager
+        +TemplateRegistry
+    }
+    
+    class ROOT {
+        <<Entry>>
+    }
+    
+    ROOT --> COMP_Group : defines

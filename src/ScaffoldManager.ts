@@ -32,7 +32,7 @@ interface PackageJson {
 }
 
 /**
- * @foundryspec COMP_Scaffold
+ * @foundryspec COMP_Group
  */
 export class ScaffoldManager {
     private projectName: string;

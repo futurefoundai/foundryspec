@@ -91,17 +91,59 @@ export class BuildManager {
 
         // --- 2. Build Global ID Registry ---
         const idToFileMap: Map<string, string> = new Map();
+        const directoryBlueprints: Map<string, Set<string>> = new Map();
+        
+        const getEffectiveDir = (relPath: string) => {
+            const dir = path.dirname(relPath);
+            return dir.replace(/\/footnotes$/, '').replace(/^footnotes$/, '.');
+        };
+
         for (const asset of assets) {
             const { data, relPath } = asset;
-            if (data?.traceability?.id) idToFileMap.set(data.traceability.id, relPath);
-            if (data?.traceability?.relationships) {
-                for (const rel of data.traceability.relationships) {
-                    if (rel.id) idToFileMap.set(rel.id, relPath);
-                }
+            const isMermaid = relPath.endsWith('.mermaid');
+            const effectiveDir = getEffectiveDir(relPath);
+            
+            if (!directoryBlueprints.has(effectiveDir)) {
+                directoryBlueprints.set(effectiveDir, new Set());
             }
-            if (data?.traceability?.entities) {
-                for (const entity of data.traceability.entities) {
-                    if (entity.id) idToFileMap.set(entity.id, relPath);
+            const blueprintSet = directoryBlueprints.get(effectiveDir)!;
+
+            const addLinks = (link: any) => {
+                if (!link) return;
+                if (Array.isArray(link)) link.forEach(l => { if (typeof l === 'string') blueprintSet.add(l); });
+                else if (typeof link === 'string') blueprintSet.add(link);
+            };
+
+            // Support both top-level ID and legacy traceability.id
+            const id = data.id || data?.traceability?.id;
+            if (id) {
+                idToFileMap.set(id, relPath);
+                if (isMermaid) blueprintSet.add(id);
+            }
+
+            // --- Capture Linked IDs in Blueprints ---
+            if (isMermaid) {
+                addLinks(data.uplink);
+                addLinks(data.downlinks);
+                addLinks(data.traceability?.uplink);
+                addLinks(data.traceability?.downlinks);
+            }
+
+            // Support top-level entities and legacy nested relationships/entities
+            const entities = [
+                ...(Array.isArray(data.entities) ? data.entities : []),
+                ...(Array.isArray(data.traceability?.relationships) ? data.traceability.relationships : []),
+                ...(Array.isArray(data.traceability?.entities) ? data.traceability.entities : [])
+            ];
+
+            for (const ent of entities) {
+                if (ent.id) {
+                    idToFileMap.set(ent.id, relPath);
+                    if (isMermaid) {
+                        blueprintSet.add(ent.id);
+                        addLinks(ent.uplink);
+                        addLinks(ent.downlinks);
+                    }
                 }
             }
         }
@@ -110,9 +152,10 @@ export class BuildManager {
         const codeMap = await this.scanCodebase();
 
         // --- 4. Centralized Validation ---
-        await this.validateFrontmatter(assets);
+        await this.validateFrontmatter(assets, directoryBlueprints);
         await this.validateProjectGraph(assets);
         await this.validateTraceability(assets, idToFileMap, codeMap);
+        await this.validateMindmapLabels(assets, idToFileMap);
 
         // --- 5. Prepare Mermaid Contents for Syntax Check ---
         const mermaidContents: Map<string, string> = new Map();
@@ -184,7 +227,7 @@ export class BuildManager {
         }
 
         // --- Copy Hub Assets (HTML/CSS/JS) ---
-        await this.generateHub(config, outputDir, idToFileMap, assets);
+        await this.generateHub(config, outputDir, idToFileMap, assets, codeMap);
         
         const templateDir = path.resolve(__dirname, '../templates');
         const hubAssets = ['index.css', 'index.js'];
@@ -209,18 +252,25 @@ export class BuildManager {
         console.timeEnd('Build process');
     }
 
-    async generateHub(config: FoundryConfig, outputDir: string, idMap: Map<string, string>, assets: ProjectAsset[]): Promise<void> {
+    async generateHub(config: FoundryConfig, outputDir: string, idToSpecFile: Map<string, string>, assets: ProjectAsset[], codeMap: Map<string, string[]>): Promise<void> {
         const templatePath = path.resolve(__dirname, '../templates/index.html');
         if (!await fs.pathExists(templatePath)) {
             throw new Error('Hub template not found. Please reinstall FoundrySpec.');
         }
         const templateContent = await fs.readFile(templatePath, 'utf8');
         
-        // Convert Map to serializable object
-        const mapObj: Record<string, string> = {};
-        idMap.forEach((v, k) => mapObj[k] = v);
+        // Merge Spec Files and Code Implementations into one idMap
+        const mapObj: Record<string, any> = {};
+        
+        // 1. Map IDs to Spec Files
+        idToSpecFile.forEach((v, k) => mapObj[k] = v);
 
-        // Also add titles to the map for better semantic matching in the frontend
+        // 2. Map IDs to Code Implementations
+        codeMap.forEach((files, id) => {
+            mapObj[`${id}_code`] = files;
+        });
+
+        // 3. Map Titles to Spec Files
         for (const asset of assets) {
             if (asset.data?.title) {
                 mapObj[asset.data.title] = asset.relPath;
@@ -326,7 +376,7 @@ export class BuildManager {
             ignore: ignoreRules
         });
 
-        const markerRegex = /@foundryspec\s+([\w\-]+)/g;
+        const markerRegex = /@foundryspec\s+(?:REQUIREMENT\s+)?([\w\-]+)/g;
 
         await Promise.all(files.map(async (file) => {
             const content = await fs.readFile(path.join(this.projectDir, file), 'utf8');
@@ -355,67 +405,171 @@ export class BuildManager {
             }
         }
 
-        // 2. Validate internal Spec references (Frontmatter Uplinks/Downlinks)
-        const assetMap: Map<string, ProjectAsset> = new Map(assets.map(a => [a.relPath, a]));
-
+        // 2. Build Unified Graph Registry for Semantic Validation
+        const nodeMap: Map<string, { uplinks: string[], downlinks: string[], relPath: string, requirements?: string[] }> = new Map();
+        
         for (const asset of assets) {
-            const { relPath, data } = asset;
-            if (data?.traceability) {
-                const checkId = (target: any) => {
-                    const targets = Array.isArray(target) ? target : [target];
-                    for (const t of targets) {
-                        if (typeof t === 'string' && !t.includes('.') && t !== 'ROOT') {
-                            if (!idToFileMap.has(t)) {
-                                const errorMsg = `\n❌ Traceability Error in ${relPath}: Reference to unknown ID "${t}"`;
-                                throw new Error(chalk.red(errorMsg));
-                            }
+            const { data, relPath } = asset;
+            const addNode = (id: string, uplinks: any, downlinks: any, requirements?: any) => {
+                if (!id) return;
+                const ups = Array.isArray(uplinks) ? uplinks : (uplinks ? [uplinks] : []);
+                const downs = Array.isArray(downlinks) ? downlinks : (downlinks ? [downlinks] : []);
+                const reqs = Array.isArray(requirements) ? requirements : (requirements ? [requirements] : []);
+                nodeMap.set(id, { uplinks: ups, downlinks: downs, relPath, requirements: reqs });
+            };
 
-                            // --- Reciprocity Check ---
-                            const targetFile = idToFileMap.get(t)!;
-                            const targetAsset = assetMap.get(targetFile);
-                            if (targetAsset?.data?.traceability) {
-                                // If this is a downlink, target MUST have an uplink to this ID
-                                const currentId = data.traceability.id;
-                                const isDownlink = Array.isArray(data.traceability.downlinks) 
-                                    ? data.traceability.downlinks.includes(t)
-                                    : data.traceability.downlinks === t;
+            // Process both Flat and Legacy structures
+            addNode(data.id || data.traceability?.id, data.uplink || data.traceability?.uplink, data.downlinks || data.traceability?.downlinks, data.requirements);
+            
+            const entities = [
+                ...(Array.isArray(data.entities) ? data.entities : []),
+                ...(Array.isArray(data.traceability?.relationships) ? data.traceability.relationships : []),
+                ...(Array.isArray(data.traceability?.entities) ? data.traceability.entities : [])
+            ];
+            for (const ent of entities) {
+                addNode(ent.id, ent.uplink, ent.downlinks, ent.requirements);
+            }
+        }
 
-                                if (isDownlink && currentId) {
-                                    const targetUplink = targetAsset.data.traceability.uplink;
-                                    const uplinks = Array.isArray(targetUplink) ? targetUplink : [targetUplink];
-                                    if (!uplinks.includes(currentId)) {
-                                        console.warn(chalk.yellow(`\n⚠️  Reciprocity Warning: ${relPath} has a downlink to ${t}, but ${targetFile} does not have an uplink to ${currentId}.`));
-                                    }
-                                }
-                            }
-                        }
-                    }
-                };
+        // 3. Absolute Traceability Enforcement (Persona -> Req -> Implementation)
+        const traceToPersona = (id: string, visited: Set<string> = new Set()): boolean => {
+            if (id.startsWith('PER_')) return true;
+            if (visited.has(id)) return false;
+            visited.add(id);
 
-                if (data.traceability.uplink) checkId(data.traceability.uplink);
-                if (data.traceability.downlinks) checkId(data.traceability.downlinks);
-                if (data.traceability.relationships) {
-                    for (const rel of data.traceability.relationships) {
-                        if (rel.uplink) checkId(rel.uplink);
-                        if (rel.downlinks) checkId(rel.downlinks);
+            const node = nodeMap.get(id);
+            if (!node) return false;
+
+            // Check uplinks
+            for (const up of node.uplinks) {
+                if (traceToPersona(up, visited)) return true;
+            }
+            return false;
+        };
+
+        for (const [id, node] of nodeMap.entries()) {
+            // Enforcement A: Every Requirement MUST trace back to a Persona
+            if (id.startsWith('REQ_')) {
+                if (!traceToPersona(id)) {
+                    throw new Error(chalk.red(`\n❌ Traceability Error in ${node.relPath}: Requirement "${id}" is orphaned. It must trace back to a Persona (PER_*).`));
+                }
+                
+                // Enforcement B: Every Requirement MUST have at least one implementation downlink (or be linked TO by one)
+                const hasDownlink = node.downlinks.some(d => d.startsWith('FEAT_') || d.startsWith('COMP_') || d.startsWith('REQ_'));
+                // Also check if any implementation links TO this requirement via data.requirements
+                const isImplemented = Array.from(nodeMap.values()).some(n => n.requirements?.includes(id));
+                
+                if (!hasDownlink && !isImplemented) {
+                    throw new Error(chalk.red(`\n❌ Traceability Error in ${node.relPath}: Requirement "${id}" has no implementation. It must link to a FEAT_* or COMP_*.`));
+                }
+            }
+
+            // Enforcement C: Every Implementation (FEAT/COMP) MUST link to at least one Requirement
+            const isImplementation = id.startsWith('FEAT_') || id.startsWith('COMP_');
+            if (isImplementation) {
+                const reqs = node.requirements || [];
+                if (reqs.length === 0) {
+                    throw new Error(chalk.red(`\n❌ Traceability Error in ${node.relPath}: Asset "${id}" is an implementation but has no linked requirements.`));
+                }
+                for (const reqId of reqs) {
+                    if (!idToFileMap.has(reqId)) {
+                        throw new Error(chalk.red(`\n❌ Traceability Error in ${node.relPath}: Asset "${id}" links to missing requirement "${reqId}".`));
                     }
                 }
             }
         }
 
-        console.log(chalk.green('✅ Semantic traceability is valid.'));
+        console.log(chalk.green('✅ Absolute semantic traceability is valid.'));
     }
 
-    private async validateFrontmatter(assets: ProjectAsset[]): Promise<void> {
-        console.log(chalk.blue('🔍 Validating frontmatter...'));
+    private async validateFrontmatter(assets: ProjectAsset[], directoryBlueprints: Map<string, Set<string>>): Promise<void> {
+        console.log(chalk.blue('🔍 Validating frontmatter and Footnote Policy...'));
         
-        for (const { relPath, data, absPath } of assets) {
-            if (!data || Object.keys(data).length === 0 || !data.title || !data.description) {
-                const errorMsg = `\n❌ Metadata error in ${relPath}: Missing or incomplete frontmatter (title/description required).`;
+        const getEffectiveDir = (relPath: string) => {
+            const dir = path.dirname(relPath);
+            return dir.replace(/\/footnotes$/, '').replace(/^footnotes$/, '.');
+        };
+
+        for (const { relPath, data } of assets) {
+            if (!data || Object.keys(data).length === 0 || !data.title || !data.description || !data.id) {
+                const errorMsg = `\n❌ Metadata error in ${relPath}: Missing or incomplete frontmatter (title, description, and top-level id required).`;
                 throw new Error(chalk.red(errorMsg));
             }
+
+            // --- Footnote Policy Enforcement ---
+            if (relPath.endsWith('.md')) {
+                const pathParts = relPath.split('/');
+                const isUnderFootnotes = pathParts.includes('footnotes');
+                
+                if (!isUnderFootnotes) {
+                    throw new Error(chalk.red(`\n❌ Footnote Policy Violation: Markdown files are no longer first-class citizens.
+   File ${relPath} must be moved to a 'footnotes/' subdirectory to supplement a specific architectural node.`));
+                }
+
+                const effectiveDir = getEffectiveDir(relPath);
+                const blueprintSet = directoryBlueprints.get(effectiveDir) || new Set();
+
+                // Surgical Addressing: Footnote ID must exist in a Blueprint WITHIN THE SAME DIRECTORY
+                if (!blueprintSet.has(data.id)) {
+                    throw new Error(chalk.red(`\n❌ Footnote Policy Violation: Directory Isolation failed.
+   Footnote "${data.id}" in ${relPath} does not address any existing architectural node defined in blueprints (.mermaid files) within its parent directory "${effectiveDir}".
+   Prose must be local to its blueprint.`));
+                }
+            }
         }
-        console.log(chalk.green('✅ Frontmatter is valid.'));
+        console.log(chalk.green('✅ Frontmatter and Footnote Policy are valid.'));
+    }
+
+    private async validateMindmapLabels(assets: ProjectAsset[], idToFileMap: Map<string, string>): Promise<void> {
+        console.log(chalk.blue('🔍 Validating mindmap label integrity...'));
+        
+        const rootAsset = assets.find(a => a.relPath === 'root.mermaid');
+        if (!rootAsset) return; // Root validation happens elsewhere
+        
+        const content = rootAsset.content;
+        
+        // Extract all mindmap labels: ID(Label) or ID((Label))
+        const labelPattern = /(\w+)\(+([^)]+)\)+/g;
+        const labels: { id: string, label: string, line: string }[] = [];
+        
+        let match;
+        while ((match = labelPattern.exec(content)) !== null) {
+            const id = match[1];
+            const label = match[2].trim();
+            labels.push({ id, label, line: match[0] });
+        }
+        
+        // Build a comprehensive lookup: IDs + Titles
+        const validTargets = new Set<string>();
+        idToFileMap.forEach((file, id) => validTargets.add(id));
+        
+        for (const asset of assets) {
+            if (asset.data?.title) {
+                validTargets.add(asset.data.title);
+            }
+        }
+        
+        // Validate each label
+        const errors: string[] = [];
+        for (const { id, label, line } of labels) {
+            // Check if either the ID or the Label resolves to a valid target
+            const idValid = validTargets.has(id);
+            const labelValid = validTargets.has(label);
+            
+            if (!idValid && !labelValid) {
+                errors.push(`   - "${line}" → Neither ID "${id}" nor Label "${label}" exists in the project.`);
+            }
+        }
+        
+        if (errors.length > 0) {
+            let errorMsg = chalk.red('\n❌ Label Integrity Error in root.mermaid:\n');
+            errorMsg += chalk.yellow('   The following mindmap labels do not resolve to valid IDs or Titles:\n');
+            errorMsg += errors.join('\n');
+            errorMsg += chalk.gray('\n\n   Fix: Ensure every label matches either an asset ID or Title exactly.');
+            throw new Error(errorMsg);
+        }
+        
+        console.log(chalk.green('✅ Mindmap label integrity is valid.'));
     }
 
     private async validateProjectGraph(assets: ProjectAsset[]): Promise<void> {
@@ -439,7 +593,9 @@ export class BuildManager {
         
         for (const asset of assets) {
             const { data, relPath } = asset;
-            if (data?.traceability?.id) idToFileMap.set(data.traceability.id, relPath);
+            const id = data.id || data?.traceability?.id;
+            if (id) idToFileMap.set(id, relPath);
+
             if (data?.traceability?.relationships) {
                 for (const rel of data.traceability.relationships) {
                     if (rel.id) idToFileMap.set(rel.id, relPath);
@@ -476,31 +632,67 @@ export class BuildManager {
                 if (allFiles.includes(linkedFile)) adjList.get(relPath)?.push(linkedFile);
             }
 
-            // 2. Auto-Wired Frontmatter Links
-            if (data?.traceability) {
-                const processLink = (target: any) => {
-                    const targets = Array.isArray(target) ? target : [target];
-                    for (const t of targets) {
-                        // Is it a file path?
-                        if (typeof t === 'string' && t.includes('.')) {
-                            const linkedFile = path.normalize(path.join(fileDir, t)).replace(/\\/g, '/');
-                            if (allFiles.includes(linkedFile)) adjList.get(relPath)?.push(linkedFile);
-                        }
-                        // Is it an ID?
-                        else if (idToFileMap.has(t)) {
-                            const targetFile = idToFileMap.get(t)!;
-                            adjList.get(relPath)?.push(targetFile);
-                        }
-                    }
-                };
+            // 2. Auto-Wired Frontmatter Links (Robust Scanning)
+            const frontmatterLinks = [
+                data.id, 
+                data.uplink, 
+                data.downlinks, 
+                data.requirements,
+                data.traceability?.id,
+                data.traceability?.uplink,
+                data.traceability?.downlinks
+            ];
 
-                if (data.traceability.uplink) processLink(data.traceability.uplink);
-                if (data.traceability.downlinks) processLink(data.traceability.downlinks);
-                if (data.traceability.relationships) {
-                    for (const rel of data.traceability.relationships) {
-                        if (rel.uplink) processLink(rel.uplink);
-                        if (rel.downlinks) processLink(rel.downlinks);
+            const processLink = (target: any) => {
+                if (!target) return;
+                const targets = Array.isArray(target) ? target : [target];
+                for (const t of targets) {
+                    if (typeof t !== 'string') continue;
+                    
+                    // Is it a file path?
+                    if (t.includes('.')) {
+                        const linkedFile = path.normalize(path.join(fileDir, t)).replace(/\\/g, '/');
+                        if (allFiles.includes(linkedFile)) adjList.get(relPath)?.push(linkedFile);
                     }
+                    // Is it an ID?
+                    else if (idToFileMap.has(t)) {
+                        const targetFile = idToFileMap.get(t)!;
+                        adjList.get(relPath)?.push(targetFile);
+
+                        // --- Enforcement: Root Entry-Point Isolation ---
+                        if (relPath === 'root.mermaid') {
+                            const allowedPatterns = [/_Group$/, /_Overview$/, /_Catalog$/, /_Flow$/, /_Map$/, /^ROOT$/];
+                            const isAllowed = allowedPatterns.some(p => p.test(t));
+                            
+                            if (!isAllowed && targetFile.includes('/')) {
+                                throw new Error(chalk.red(`\n❌ Root Isolation Error: root.mermaid cannot link to leaf node "${t}" in ${targetFile}. 
+   Root must strictly be a map of folder-level entry points (Overview, Group, or Catalog diagrams).
+   Please move "${t}" into a sub-diagram and link to that instead.`));
+                            }
+                        }
+                    }
+                }
+            };
+
+            frontmatterLinks.forEach(processLink);
+            
+            if (data.entities) {
+                for (const ent of data.entities) {
+                    processLink(ent.id);
+                    processLink(ent.uplink);
+                    processLink(ent.downlinks);
+                }
+            }
+            if (data.traceability?.relationships) {
+                for (const rel of data.traceability.relationships) {
+                    processLink(rel.id);
+                    processLink(rel.uplink);
+                    processLink(rel.downlinks);
+                }
+            }
+            if (data.traceability?.entities) {
+                for (const entity of data.traceability.entities) {
+                    processLink(entity.id);
                 }
             }
         }

@@ -1,30 +1,27 @@
 ---
-title: Project Root
+id: "ROOT"
+title: FoundrySpec Engine
 description: The entry point for the documentation graph.
-traceability:
-  id: "ROOT"
-  downlinks:
-    - "PER_EndUser"
-    - "PER_Stakeholder"
-    - "REQ_Functional"
-    - "CTX_System"
-    - "BND_App"
-    - "COMP_Scaffold"
-    - "FEAT_Capabilities"
-    - "assets/discovery/journeys.mermaid"
+downlinks:
+  - "PER_Group"
+  - "REQ_Group"
+  - "CTX_Group"
+  - "BND_Group"
+  - "COMP_Overview"
+  - "FEAT_Group"
+  - "JOUR_Flow"
 ---
+
 mindmap
-  root((FoundrySpec Engine))
+  ROOT((FoundrySpec Engine))
     Discovery
-      PER_EndUser(Personas)
-      REQ_Functional(Requirements)
-      FEAT_Capabilities(Engine Capabilities)
-      assets/discovery/journeys.mermaid(User Journeys)
+      PER_Group(Personas)
+      REQ_Group(Requirements)
+      FEAT_Group(Features)
+      JOUR_Flow(User Journey)
     Context
-      CTX_System(System Context)
+      CTX_Group(System Context)
     Boundaries
-      BND_App(Technical Boundaries)
+      BND_Group(Technical Boundaries)
     Components
-      COMP_Scaffold(Scaffold Manager)
-    Peripherals
-      PER_Stakeholder(Stakeholders)
+      COMP_Overview(Component Architecture)

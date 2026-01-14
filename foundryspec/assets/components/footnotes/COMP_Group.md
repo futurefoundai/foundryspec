@@ -1,14 +1,14 @@
 ---
+id: "COMP_Group"
 title: Scaffold Manager
 description: Core component for project initialization and template management.
-traceability:
-  id: "COMP_Scaffold"
-  uplink:
-    - "BND_App"
-    - "ROOT"
+requirements:
+  - "REQ_NonFunctional"
+uplink:
+  - "COMP_Overview"
+  - "ROOT"
+  - "REQ_Group"
 ---
-
-# Scaffold Manager (L3)
 
 ## Overview
 
@@ -19,11 +19,10 @@ The `ScaffoldManager` is the core component responsible for initializing new Fou
 - **Initialization**: Generates the standard `foundryspec/` folder structure.
 - **Traceability Injection**: Automatically adds base frontmatter to new assets to ensure "Zero-Question" connectivity from the start.
 
-## Traceability
+## Implementation Details
 
-- **ID:** `COMP_Scaffold`
-- **Uplink:** Satisfies Boundary [`BND_App`](../boundaries/technical-boundaries.mermaid)
+The scaffold logic ensures that all new documentation assets are built with the correct metadata standard:
 
-## Interface
-
-...
+1.  Top-level `id` for identity.
+2.  `uplink`/`downlinks` for graph connectivity.
+3.  `requirements` array for semantic justification.

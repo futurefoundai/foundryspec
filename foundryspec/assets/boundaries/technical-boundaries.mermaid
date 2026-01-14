@@ -1,14 +1,15 @@
 ---
-title: Technical Boundaries Diagram (L2)
+id: "BND_Group"
+title: Technical Boundaries
 description: Container decomposition.
-traceability:
-  uplink: "ROOT"
-  relationships:
-    - id: "BND_App"
-      uplink: "CTX_System"
+uplink: "ROOT"
+entities:
+  - id: "BND_App"
+    uplink: "CTX_System"
 ---
+
 C4Container
-    title Technical Boundaries Diagram (L2)
+    title Technical Boundaries
 
     System_Boundary(system, "FoundrySpec Engine") {
         Container(BND_App, "Main Application", "Technology Stack", "Core business logic")

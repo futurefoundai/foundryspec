@@ -23,10 +23,14 @@ async function injectCustomCSS() {
 function applyCursors(container) {
     const nodes = container.querySelectorAll('.nodes .node, .cluster, .mindmap-node, text, .requirementBox, .edgeLabel');
     nodes.forEach(node => {
-        const text = node.textContent?.trim();
+        let text = node.textContent?.trim() || "";
         const id = node.id || node.getAttribute('id');
         
-        let isClickable = (text && idMap[text]) || (id && idMap[id]);
+        // --- Robust Normalization ---
+        // Strip Mermaid shape markers: (text), ((text)), [text], [[text]], {{text}}
+        const cleanText = text.replace(/^[\(\[\{]+|[\)\]\}]+$/g, '').trim();
+        
+        let isClickable = (text && idMap[text]) || (id && idMap[id]) || (cleanText && idMap[cleanText]);
         
         if (!isClickable && id) {
             const cleanId = id.split('-').find(part => idMap[part]);
@@ -37,7 +41,11 @@ function applyCursors(container) {
             const possibleMatch = Array.from(node.childNodes)
                 .filter(n => n.nodeType === 3 || n.tagName === 'text' || n.tagName === 'tspan')
                 .map(n => n.textContent?.trim())
-                .find(t => t && idMap[t]);
+                .find(t => {
+                    if (!t) return false;
+                    const ct = t.replace(/^[\(\[\{]+|[\)\]\}]+$/g, '').trim();
+                    return idMap[t] || idMap[ct];
+                });
             if (possibleMatch) isClickable = true;
         }
 
@@ -120,11 +128,14 @@ async function initApp() {
 
             // 2. Check Text-based match
             // We only check text if this is a leaf element or a recognized node container
-            const text = current.textContent?.trim();
-            if (text && idMap[text]) {
+            let text = current.textContent?.trim() || "";
+            const cleanText = text.replace(/^[\(\[\{]+|[\)\]\}]+$/g, '').trim();
+            
+            if ((text && idMap[text]) || (cleanText && idMap[cleanText])) {
+                const targetPath = idMap[text] || idMap[cleanText];
                 // Verify it's not the entire SVG text (anti-collision)
                 if (text.length < 500) { // Safety threshold to avoid matching whole-diagram text
-                    loadDiagram(idMap[text]);
+                    loadDiagram(targetPath);
                     return;
                 }
             }
@@ -132,11 +143,15 @@ async function initApp() {
             // 3. Fallback: Check direct children for an exact match
             const possibleMatch = Array.from(current.childNodes)
                 .filter(n => n.nodeType === 3 || n.tagName === 'text' || n.tagName === 'tspan')
-                .map(n => n.textContent?.trim())
-                .find(t => t && idMap[t]);
+                .map(n => n.textContent?.trim() || "")
+                .find(t => {
+                    const ct = t.replace(/^[\(\[\{]+|[\)\]\}]+$/g, '').trim();
+                    return idMap[t] || idMap[ct];
+                });
             
             if (possibleMatch) {
-                loadDiagram(idMap[possibleMatch]);
+                const ct = possibleMatch.replace(/^[\(\[\{]+|[\)\]\}]+$/g, '').trim();
+                loadDiagram(idMap[possibleMatch] || idMap[ct]);
                 return;
             }
 
@@ -179,7 +194,30 @@ async function loadDiagram(filePath) {
 
         if (filePath.endsWith('.md')) {
             modalTitle.innerText = filePath.split('/').pop();
-            modalBody.innerHTML = marked.parse(content);
+            
+            let html = marked.parse(content);
+            
+            // Check if this ID (or path) has code implementation mapping
+            const fileName = filePath.split('/').pop();
+            const possibleId = Object.keys(idMap).find(k => idMap[k] === filePath);
+            if (possibleId && idMap[`${possibleId}_code`]) {
+                const codeFiles = idMap[`${possibleId}_code`];
+                html += `
+                    <div class="implementation-box" style="margin-top: 2rem; padding: 1.5rem; background: rgba(56, 189, 248, 0.05); border: 1px solid rgba(56, 189, 248, 0.2); border-radius: 8px;">
+                        <h3 style="margin-top: 0; color: #38bdf8; font-family: 'Outfit'; font-size: 1rem;">Implementation Traceability</h3>
+                        <p style="font-size: 0.9rem; color: #94a3b8; margin-bottom: 1rem;">This requirement is implemented in the following codebase locations:</p>
+                        <ul style="list-style: none; padding: 0; margin: 0;">
+                            ${codeFiles.map(f => `
+                                <li style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; font-family: monospace; font-size: 0.85rem; color: #f8fafc;">
+                                    <span style="color: #38bdf8;">📁</span> ${f}
+                                </li>
+                            `).join('')}
+                        </ul>
+                    </div>
+                `;
+            }
+
+            modalBody.innerHTML = html;
             modalBackdrop.classList.add('open');
             return;
         }

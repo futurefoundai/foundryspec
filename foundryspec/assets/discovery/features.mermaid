@@ -1,0 +1,19 @@
+---
+id: "FEAT_Group"
+title: Features
+description: Catalog of the core technical features of the FoundrySpec engine.
+uplink: "ROOT"
+requirements:
+  - "REQ_Group"
+entities:
+  - id: "FEAT_Capabilities"
+    uplink: "REQ_Functional"
+---
+
+classDiagram
+    class FEAT_Group {
+        <<Catalog>>
+        +Engine_Capabilities
+        +Markdown_Enforcement
+        +Semantic_Validation
+    }

@@ -1,13 +1,15 @@
 ---
-title: Functional Requirements
+id: "REQ_Group"
+title: Requirements
 description: Core system capabilities.
-traceability:
-  uplink: "ROOT"
-  id: "REQ_Group"
-  relationships:
-    - id: "REQ_Functional"
-      uplink: "PER_EndUser"
+uplink: "PER_Group"
+entities:
+  - id: "REQ_Functional"
+    uplink: "PER_EndUser"
+  - id: "REQ_NonFunctional"
+    uplink: "PER_Stakeholder"
 ---
+
 requirementDiagram
 
     requirement Functional {

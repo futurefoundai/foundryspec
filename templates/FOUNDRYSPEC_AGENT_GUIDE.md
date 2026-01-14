@@ -82,7 +82,14 @@ The build engine traces links starting from `root.mermaid`. If a file is not lin
 - **Link Syntax (Mermaid):** `click NodeID "assets/path/to/diagram.mermaid"`
 - **Link Syntax (Markdown):** `[Link Text](assets/path/to/diagram.mermaid)`
 
-### 3. The Discovery Phase
+### 3. Root Entry-Point Isolation
+
+`root.mermaid` is a high-level map. It MUST NOT reference "leaf" nodes (individual personas, requirements, or features) directly. It must strictly link to **Architectural Entry Points** (Groups or Overviews).
+
+- **Allowed Root Targets**: `PER_Group`, `REQ_Group`, `COMP_Overview`, `FEAT_Group`, `JOUR_Flow`, etc.
+- **Forbidden Root Targets**: Individual IDs like `PER_EndUser` or `FEAT_Auth`.
+
+### 4. The Discovery Phase
 
 Do not skip Discovery. Always ensure `assets/discovery/personas.mermaid`, `assets/discovery/journeys.mermaid`, and `assets/discovery/requirements.mermaid` are updated before proposing architectural changes.
 
@@ -105,13 +112,72 @@ You can invoke the FoundrySpec CLI using `foundryspec` (if installed globally) o
 | `foundryspec help workflows`    | List available AI agent workflows.                                     |
 | `foundryspec help <workflow>`   | Display a specific workflow (e.g., `foundryspec help design-feature`). |
 
+## 📐 Mandatory Spec Metadata
+
+To maintain architectural integrity, every spec file MUST include these top-level frontmatter fields:
+
+1.  **`id`**: A unique stable identifier (e.g., `PER_User`, `REQ_Login`, `COMP_Auth`).
+2.  **`uplink`**: (Optional) The ID of the parent asset in the documentation graph.
+3.  **`downlinks`**: (Optional) An array of child IDs.
+4.  **`requirements`**: (Required for Components/Features) An array of granular `REQ_` IDs that this asset implements.
+5.  **`entities`**: (Optional) A list of internal IDs defined within this file.
+
+### 📝 Footnote Policy (Markdown Rules)
+
+Markdown files (`.md`) are NOT first-class architectural citizens. They serve exclusively as **Footnotes** to diagrams.
+
+1.  **Directory**: All `.md` files must live in a `footnotes/` subdirectory relative to the diagram they supplement.
+2.  **Surgical Addressing**: A footnote's `id` MUST match an existing node ID defined OR linked in a `.mermaid` blueprint.
+3.  **Directory Isolation**: A footnote can ONLY target IDs referenced in blueprints within its own parent directory.
+4.  **Enforcement**: The build will fail if an `.md` file is misplaced, addresses a non-existent ID, or violates directory isolation.
+
+```yaml
+---
+id: "COMP_Group"
+title: "Scaffold Manager Details"
+description: "Supplementary implementation notes."
+uplink: "requirements.mermaid"
+---
+```
+
+## ⛓️ Semantic Traceability (Spec <-> Code)
+
+FoundrySpec bridges the gap between documentation and implementation using **Traceability Markers** in your source code:
+
+### 1. The @foundryspec Marker
+
+Use this to link code (classes, functions, modules) to specific FoundrySpec IDs (from L1-L3):
+
+```typescript
+// @foundryspec COMP_Scaffold
+export class ScaffoldManager { ... }
+```
+
+### 2. The @foundryspec REQUIREMENT Marker
+
+Use this specifically for linking implementation logic to a **Functional Requirement**:
+
+```typescript
+// @foundryspec REQUIREMENT REQ_Functional
+function validateInputs() { ... }
+```
+
+### 3. Traceability Life-Cycle (Five-Nines Integrity)
+
+To achieve "Five-Nines" architectural integrity (zero-drift), the engine enforces **Absolute Continuity**:
+
+- **Strict Chain**: **PERSONA** (`PER_*`) → **REQUIREMENT** (`REQ_*`) → **IMPLEMENTATION** (`FEAT_*`/`COMP_*`) → **CODE**.
+- **Requirement Rule**: Every Requirement MUST have at least one Persona uplink AND at least one Implementation downlink.
+- **Implementation Rule**: Every Feature or Component MUST link to a verified Requirement.
+- **Enforcement**: The build tool will reject any asset that breaks this chain, ensuring every line of code is justified by a persona goal.
+
 ## 🛠️ Design-Driven Implementation (DDI)
 
 FoundrySpec is the source of truth for your implementation. Before starting any coding task, you should:
 
 1.  **Check History**: Run `foundryspec changes --days 3` to see what part of the system design has evolved recently.
 2.  **Verify Alignment**: Ensure the classes, functions, and state machines you implement match the **diagrams** and **requirements** in the spec perfectly.
-3.  **Traceability**: Use the "Implementation Suggestions" in the change report to prioritize code updates.
+3.  **Marker Integrity**: Always tag your implementation with the appropriate `@foundryspec` or `@foundryspec REQUIREMENT` markers. The build will fail if you reference non-existent IDs.
 
 ## Agent Instructions
 
