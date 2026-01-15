@@ -1,7 +1,7 @@
 /**
  * © 2026 FutureFoundAI. All rights reserved.
  *
- * This software is distributed under the GNU General Public License v3.0 (GPLv3).
+ * This software is distributed under the GNU Affero General Public License v3.0 (AGPLv3).
  * For the full license text, see the LICENSE file in the root directory.
  *
  * COMMERCIAL USE:

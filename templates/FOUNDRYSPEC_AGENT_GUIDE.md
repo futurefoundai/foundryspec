@@ -142,53 +142,25 @@ uplink: "requirements.mermaid"
 
 ## ⛓️ Semantic Traceability (Spec <-> Code)
 
-FoundrySpec bridges the gap between documentation and implementation using **Traceability Markers** in your source code:
+FoundrySpec bridges the gap between documentation and implementation. **To save token counts, AI Agents do not need to manually verify traceability.** Simply provide the correct IDs in your diagrams and implementation markers; the **FoundrySpec Build Engine** will automatically validate the graph and alert you to any breaks.
 
 ### 1. The @foundryspec Marker
+... (rest of markers) ...
 
-Use this to link code (classes, functions, modules) to specific FoundrySpec IDs (from L1-L3):
+## 🛠️ Zero-Question Readiness Checklist
 
-```typescript
-// @foundryspec COMP_Scaffold
-export class ScaffoldManager { ... }
-```
+The "Zero-Question" metric is satisfied when your documentation passes this objective checklist:
 
-### 2. The @foundryspec REQUIREMENT Marker
-
-Use this specifically for linking implementation logic to a **Functional Requirement**:
-
-```typescript
-// @foundryspec REQUIREMENT REQ_Functional
-function validateInputs() { ... }
-```
-
-### 3. Traceability Life-Cycle (Five-Nines Integrity)
-
-To achieve "Five-Nines" architectural integrity (zero-drift), the engine enforces **Absolute Continuity**:
-
-- **Strict Chain**: **PERSONA** (`PER_*`) → **REQUIREMENT** (`REQ_*`) → **IMPLEMENTATION** (`FEAT_*`/`COMP_*`) → **CODE**.
-- **Requirement Rule**: Every Requirement MUST have at least one Persona uplink AND at least one Implementation downlink.
-- **Implementation Rule**: Every Feature or Component MUST link to a verified Requirement.
-- **Enforcement**: The build tool will reject any asset that breaks this chain, ensuring every line of code is justified by a persona goal.
-
-## 🛠️ Design-Driven Implementation (DDI)
-
-FoundrySpec is the source of truth for your implementation. Before starting any coding task, you should:
-
-1.  **Check History**: Run `foundryspec changes --days 3` to see what part of the system design has evolved recently.
-2.  **Verify Alignment**: Ensure the classes, functions, and state machines you implement match the **diagrams** and **requirements** in the spec perfectly.
-3.  **Marker Integrity**: Always tag your implementation with the appropriate `@foundryspec` or `@foundryspec REQUIREMENT` markers. The build will fail if you reference non-existent IDs.
+1.  **Actor Alignment**: Does every feature link back to a `PER_` Persona?
+2.  **Boundary Integrity**: Are all cross-boundary communications (L2) labeled with a protocol (e.g., gRPC, REST)?
+3.  **State Completeness**: Does every complex data object have a corresponding `stateDiagram`?
+4.  **Interface Clarity**: Do L3 Components define their public methods/interfaces?
+5.  **Build Pass**: Does `foundryspec build` pass with zero "Orphan" or "Path Integrity" errors?
 
 ## Agent Instructions
 
-1.  **System First**: When asked to generate docs, always start by reading `root.mermaid` to understand the entry point.
-2.  **Greenfield vs. Brownfield**:
-    - **Greenfield**: Focus on "Exhaustive Discovery" and creative architectural decisions.
-    - **Brownfield**: Prioritize **System Analysis**. Read existing code/docs first, map the current state to the C4 model, and identify gaps before proposing changes.
-3.  **Validate Integrity**:
-    - When performing `build`, if it fails due to **Path Integrity Error** or **Orphaned Files**, ensure the file is reachable from `root.mermaid`.
-    - If it fails due to **Mermaid syntax** or **Missing Frontmatter**, fix the diagram code immediately.
-4.  **Use Workflows**: Do NOT look for a local `.agent` folder. Instead:
-    - Run `foundryspec help workflows` to see available standard operating procedures.
-    - Run `foundryspec help <workflow-name>` (e.g., `foundryspec help design-feature`) to read the specific instructions for a task.
-5.  **No Hallucinations**: Do not reference files or folders that do not exist in the structure above unless explicitly created.
+1.  **Focus on Intent**: Your primary job is to capture architectural intent. Let the build tool handle the validation.
+2.  **Optional Footnotes**: Do not feel compelled to create `footnotes/` folders or `.md` files unless a diagram node is too complex to be self-explanatory.
+3.  **Greenfield vs. Brownfield**:
+    - **Greenfield**: Use the `design-feature` workflow to scaffold new logic.
+    - **Brownfield**: Map existing code to IDs first, then use `foundryspec changes` to identify gaps.

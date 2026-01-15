@@ -12,42 +12,30 @@ In a world of rapid AI development, traditional documentation fails because it i
 
 FoundrySpec solves this by providing:
 
-- 🤖 **AI-First Design:** Optimized for LLM context windows. No prose-heavy fluff—just structured, machine-readable specifications (Mermaid + Markdown).
+- 🤖 **AI-First Design:** Optimized for LLM context windows. Structured, machine-readable specifications (Mermaid + Markdown).
 - 🗺️ **Discovery-First Workflow:** Mandates a "Discovery Phase" (Personas, Journeys, Requirements) before a single line of code is written.
-- 🔗 **Zero-Question Traceability:** Link high-level requirements directly to code components. Achieve "Zero-Question Implementation" readiness.
-- ⚡ **Zero-Config Auto-Discovery:** Simply create a folder in `assets/`, and the engine handles the rest. No configuration bloat.
-- 👀 **Hot-Reload Dev Experience:** Real-time feedback loop. Edit your diagrams and see the changes instantly in the Documentation Hub.
+- 🔗 **Zero-Question Traceability:** Link high-level requirements directly to code components using implementation markers.
+- ⚡ **Zero-Config Auto-Discovery:** Automated category management and project-wide graph validation.
+- 👀 **Hot-Reload Dev Experience:** Real-time feedback loop. Edit your diagrams and see changes instantly in the Documentation Hub.
 
 ---
 
-## 🛠️ Core Features
+## 🛠️ CLI Commands
 
-### 1. The Discovery Layer (L0)
+FoundrySpec provides a comprehensive toolset for managing your documentation lifecycle:
 
-Define the **Who, What, and Why** before the **How**.
-
-- **Personas:** Identify your system's actors using Mermaid Class Diagrams.
-- **User Journeys:** Map workflows with visual journey maps.
-- **Requirement Diagrams:** Rigorous SysML-style requirement tracking.
-
-### 2. The C4 Architectural Hub (L1-L3)
-
-A layered approach to system understanding:
-
-- **L1 (Context):** High-level system landscape.
-- **L2 (Boundaries):** Technical boundaries and services.
-- **L3 (Components):** Internal module logic and method-level detail.
-
-### 3. Dynamic Sequences & States (L4)
-
-Capture the behavior of your system:
-
-- **Sequences:** Visualize complex logic flows across components.
-- **State Machines:** Document data lifecycles and project states.
-
-### 4. Deep-Link Footnotes
-
-Bridge the gap between diagrams and detail. Click any node in a diagram to jump into a deep-dive Markdown specification.
+| Command | Description |
+| :--- | :--- |
+| `init` | Scaffold a new FoundrySpec documentation project. |
+| `build` | Generate the static documentation hub with full graph validation. |
+| `serve` | Locally serve the documentation hub with hot-reloading. |
+| `add` | Add a new documentation category (e.g., `foundryspec add security`). |
+| `changes` | Generate a report of recent spec changes and implementation tasks. |
+| `deploy` | Scaffold GitHub Actions for automatic deployment to GH Pages. |
+| `pull` | Incorporate external specs from a Git repository. |
+| `sync` | Synchronize all external specs from remote repositories. |
+| `upgrade` | Update local project templates and workflows to the latest standards. |
+| `help` | Display the AI Agent Guide or specific workflow instructions. |
 
 ---
 
@@ -59,43 +47,55 @@ Bridge the gap between diagrams and detail. Click any node in a diagram to jump 
 npm install -g @futurefoundaihq/foundryspec
 ```
 
-### Initialize a New Project (Greenfield)
+### Initialize a New Project
 
 ```bash
 foundryspec init "My Awesome Project"
 cd foundryspec
+foundryspec build
 foundryspec serve
 ```
 
-### Onboard an Existing Project (Brownfield)
+---
 
-```bash
-foundryspec upgrade
-foundryspec build
+## 🖋️ The Footnote Policy (Optional)
+
+Footnotes are **not compulsory**. They are supplemental assets used only when a diagram node requires deeper prose or technical specification.
+1. **Diagrams First:** All architectural nodes are defined in `.mermaid` files.
+2. **Markdown as Supplement:** If you choose to add detail, `.md` files must reside in a `footnotes/` subdirectory.
+3. **Strict Addressing:** A footnote's `id` must match a node ID in its parent directory's diagrams.
+
+---
+
+## 🔗 Implementation Markers
+
+Bridge the gap between design and code. While the AI focuses on intent, the **FoundrySpec Build Engine** handles the heavy lifting of traceability validation. Add markers to your code to link it to the spec:
+
+```typescript
+/**
+ * @foundryspec REQ_UserAuthentication
+ */
+export class AuthService { ... }
 ```
 
-### 🤖 Onboarding your AI Agent
-
-The best way to get an AI Agent (like Gemini, Jules, or Claude) started is to simply tell it:
-
-> "Run `foundryspec help` to understand the system architecture and our design-driven workflow."
+Run `foundryspec build` to validate that all code markers resolve to existing IDs in your documentation.
 
 ---
 
 ## 🤖 For AI Agents (Jules, Gemini, etc.)
 
-FoundrySpec provides you with a **Structured Context Layer**. When working in a FoundrySpec-enabled repository:
+FoundrySpec provides a **Structured Context Layer**. When working in a FoundrySpec-enabled repository:
 
 1.  **Consult Discovery:** Understand the user's intent and personas.
 2.  **Verify Traceability:** Check which requirements your task satisfies.
-3.  **Align with Architecture:** Ensure your implementation matches the Container and Component diagrams perfectly.
-4.  **Build & Validate:** Use `foundryspec build` to check for broken links or syntax errors before committing.
+3.  **Align with Architecture:** Ensure your implementation matches the Boundary and Component diagrams.
+4.  **Sync Design:** Use `foundryspec changes` to identify what parts of the code need updating after a design change.
 
 ---
 
 ## 📜 License
 
-Distributed under the GNU Affero General Public License v3.0 (AGPLv3).
+Distributed under the **GNU Affero General Public License v3.0 (AGPLv3)**.
 Commercial use requires a separate license from **FutureFoundAI**.
 
 ---

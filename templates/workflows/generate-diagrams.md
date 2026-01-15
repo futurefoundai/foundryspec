@@ -5,7 +5,7 @@ description: How to generate and update Mermaid diagrams
 As an AI agent, use this workflow to create technical visualizations that comply with FoundrySpec's strict validation engine:
 
 1.  **Context Discovery**: Before drawing, ask the user about boundaries, actors, and data flows.
-2.  **Select Category**: Determine if it's Architecture, Containers, Components, etc.
+2.  **Select Category**: Determine if it's Discovery, Context, Boundaries, Components, etc.
 3.  **Define Diagram Type**: Use `graph`, `sequenceDiagram`, `stateDiagram-v2`, `classDiagram`, `journey`, or `requirementDiagram`.
 4.  **Add Frontmatter (CRITICAL)**: You MUST start the file with a YAML block:
     ```mermaid

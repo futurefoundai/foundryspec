@@ -11,11 +11,10 @@ As an AI agent, follow this "Exhaustive Discovery" cycle to reach **Zero-Questio
     *   **Traceability:** Ensure requirements are linked to the components that will satisfy them.
     *   *Goal:* Ensure we understand "Who", "What", and "Why" before we define "How".
 
-2.  **Architecture Phase (L1 - Context & L2 - Containers)**
-    *   Analyze `root.mermaid` and follow links to `assets/architecture/` or `assets/containers/`.
-    *   Does this feature introduce a new System, User, or Container? Update the relevant diagrams.
-    *   **Link It:** If you create a new diagram, ensure it is linked from an existing parent diagram (e.g., link `assets/containers/new-service.mermaid` from `assets/architecture/context.mermaid`) to satisfy the **No Orphan Policy**.
-
+2.  **Architecture Phase (L1 - Context & L2 - Boundaries)**
+*   Analyze `root.mermaid` and follow links to `assets/boundaries/`.
+*   Does this feature introduce a new System, User, or Boundary? Update the relevant diagrams.
+*   **Link It:** If you create a new diagram, ensure it is linked from an existing parent diagram (e.g., link `assets/boundaries/new-service.mermaid` from `assets/context/system-context.mermaid`) to satisfy the **No Orphan Policy**.
 3.  **Detailed Design Phase (L3 - Components & L4 - Sequences)**
     *   Create detailed Component diagrams in `assets/components/`.
     *   Create Sequence diagrams in `assets/sequences/` for complex interactions.
