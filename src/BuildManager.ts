@@ -383,7 +383,7 @@ export class BuildManager {
             ignore: ignoreRules
         });
 
-        const markerRegex = /@foundryspec\s+(?:REQUIREMENT\s+)?([\w\-]+)/g;
+        const markerRegex = /@foundryspec(?:\/start)?\s+(?:REQUIREMENT\s+)?([\w\-]+)/g;
 
         await Promise.all(files.map(async (file) => {
             const content = await fs.readFile(path.join(this.projectDir, file), 'utf8');
@@ -392,7 +392,10 @@ export class BuildManager {
             while ((match = markerRegex.exec(content)) !== null) {
                 const id = match[1];
                 if (!idToFiles.has(id)) idToFiles.set(id, []);
-                idToFiles.get(id)!.push(file);
+                // Avoid duplicate file entries if multiple markers exist for the same ID
+                if (!idToFiles.get(id)!.includes(file)) {
+                    idToFiles.get(id)!.push(file);
+                }
             }
         }));
 

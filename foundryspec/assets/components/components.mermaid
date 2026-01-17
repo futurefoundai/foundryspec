@@ -18,6 +18,10 @@ entities:
     uplink: "REQ_PathIntegrity"
     requirements:
       - "REQ_PathIntegrity"
+  - id: "COMP_ProbeManager"
+    uplink: "REQ_AutomatedProbing"
+    requirements:
+      - "REQ_AutomatedProbing"
 ---
 
 classDiagram
@@ -31,6 +35,12 @@ classDiagram
         <<Component>>
         +ValidationEngine
         +AssetLoader
+    }
+
+    class COMP_ProbeManager {
+        <<Component>>
+        +CodeScanner
+        +DriftDetector
     }
 
     class COMP_ClickInterceptor {
@@ -51,5 +61,6 @@ classDiagram
     
     ROOT --> COMP_Group : defines
     ROOT --> COMP_BuildManager : defines
+    ROOT --> COMP_ProbeManager : defines
     ROOT --> COMP_ClickInterceptor : defines
     ROOT --> COMP_InteractiveComments : defines

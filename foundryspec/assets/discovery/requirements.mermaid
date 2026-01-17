@@ -14,6 +14,10 @@ entities:
     uplink: "PER_EndUser"
     downlinks:
       - "COMP_BuildManager"
+  - id: "REQ_AutomatedProbing"
+    uplink: "PER_EndUser"
+    downlinks:
+      - "COMP_ProbeManager"
   - id: "REQ_NonFunctional"
     uplink: "PER_Stakeholder"
 ---
@@ -55,6 +59,13 @@ requirementDiagram
         verifymethod: Test
     }
 
+    requirement AutomatedProbing {
+        id: "REQ_AutomatedProbing"
+        text: "The system shall provide a 'probe' command to detect drift between the architectural specification and the codebase implementation."
+        risk: Low
+        verifymethod: Demonstration
+    }
+
     requirement DeterministicIdentity {
         id: "REQ_DeterministicIdentity"
         text: "The system shall enforce the use of Universal Stable Identifiers (USIs) anchored by a globally unique UUID generated at initialization to ensure feedback remains persistent."
@@ -65,4 +76,5 @@ requirementDiagram
     Functional -contains-> Feature_A
     Functional -contains-> InteractiveComments
     Functional -contains-> PathIntegrity
+    Functional -contains-> AutomatedProbing
     InteractiveComments -contains-> DeterministicIdentity

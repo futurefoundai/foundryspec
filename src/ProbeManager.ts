@@ -24,6 +24,7 @@ interface ProbeResult {
     file?: string;
 }
 
+// @foundryspec/start COMP_ProbeManager
 export class ProbeManager {
     private specDir: string;
     private projectDir: string;
@@ -115,7 +116,7 @@ export class ProbeManager {
             ignore: ignoreRules
         });
 
-        const markerRegex = new RegExp('@' + 'foundryspec\\s+(?:REQUIREMENT\\s+)?([\\w\\-]+)', 'g');
+        const markerRegex = new RegExp('@' + 'foundryspec(?:\\/start)?\\s+(?:REQUIREMENT\\s+)?([\\w\\-]+)', 'g');
 
         await Promise.all(files.map(async (file) => {
             const content = await fs.readFile(path.join(this.projectDir, file), 'utf8');
@@ -124,7 +125,9 @@ export class ProbeManager {
             while ((match = markerRegex.exec(content)) !== null) {
                 const id = match[1];
                 if (!idToFiles.has(id)) idToFiles.set(id, []);
-                idToFiles.get(id)!.push(file);
+                if (!idToFiles.get(id)!.includes(file)) {
+                    idToFiles.get(id)!.push(file);
+                }
             }
         }));
 
@@ -153,3 +156,4 @@ export class ProbeManager {
         }
     }
 }
+// @foundryspec/end
