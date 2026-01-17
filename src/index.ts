@@ -21,6 +21,7 @@ import { fileURLToPath } from 'url';
 import { ScaffoldManager } from './ScaffoldManager.js';
 import { BuildManager } from './BuildManager.js';
 import { GitManager } from './GitManager.js';
+import { ProbeManager } from './ProbeManager.js';
 
 /**
  * Finds the project root by searching upwards for foundry.config.json or a foundryspec/ folder.
@@ -72,6 +73,20 @@ program
             console.log(`  foundryspec serve`);
         } catch (err: any) {
             console.error(chalk.red('\n❌ Error during initialization:'), err.message);
+            process.exit(1);
+        }
+    });
+
+program
+    .command('probe')
+    .description('Analyze the project for drift between Spec and Implementation')
+    .action(async () => {
+        try {
+            const root = await findProjectRoot(process.cwd());
+            const prober = new ProbeManager(root);
+            await prober.runProbe();
+        } catch (err: any) {
+            console.error(chalk.red('\n❌ Probe failed:'), err.message);
             process.exit(1);
         }
     });
