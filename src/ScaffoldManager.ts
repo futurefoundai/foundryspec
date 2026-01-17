@@ -13,6 +13,7 @@
 import fs from 'fs-extra';
 import path from 'path';
 import chalk from 'chalk';
+import crypto from 'crypto';
 import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -256,6 +257,7 @@ mindmap
 
         const config = {
             projectName: this.projectName,
+            projectId: crypto.randomUUID(),
             version: "1.0.0",
             external: [],
             build: {

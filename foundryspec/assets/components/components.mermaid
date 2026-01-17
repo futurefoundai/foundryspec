@@ -8,6 +8,16 @@ requirements:
 entities:
   - id: "COMP_Group"
     uplink: "REQ_NonFunctional"
+  - id: "COMP_ClickInterceptor"
+    uplink: "REQ_Functional"
+  - id: "COMP_InteractiveComments"
+    uplink: "REQ_InteractiveComments"
+    requirements:
+      - "REQ_InteractiveComments"
+  - id: "COMP_BuildManager"
+    uplink: "REQ_PathIntegrity"
+    requirements:
+      - "REQ_PathIntegrity"
 ---
 
 classDiagram
@@ -16,9 +26,30 @@ classDiagram
         +ScaffoldManager
         +TemplateRegistry
     }
+
+    class COMP_BuildManager {
+        <<Component>>
+        +ValidationEngine
+        +AssetLoader
+    }
+
+    class COMP_ClickInterceptor {
+        <<Component>>
+        +SmartInterceptor
+        +IdMapResolver
+    }
+
+    class COMP_InteractiveComments {
+        <<Component>>
+        +CommentManager
+        +SidebarUI
+    }
     
     class ROOT {
         <<Entry>>
     }
     
     ROOT --> COMP_Group : defines
+    ROOT --> COMP_BuildManager : defines
+    ROOT --> COMP_ClickInterceptor : defines
+    ROOT --> COMP_InteractiveComments : defines

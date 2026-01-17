@@ -241,6 +241,12 @@ export class BuildManager {
         console.log(chalk.gray(`Copying documentation assets to ${outputDir}...`));
         await fs.copy(assetsDir, path.join(outputDir, 'assets'));
 
+        // Ensure foundry.comments.json exists in dist/assets so fetch doesn't fail
+        const distCommentsPath = path.join(outputDir, 'assets', 'foundry.comments.json');
+        if (!await fs.pathExists(distCommentsPath)) {
+            await fs.writeJson(distCommentsPath, {});
+        }
+
         // --- Copy root.mermaid to dist if it exists ---
         const rootMermaidPath = path.join(this.specDir, 'root.mermaid');
         if (await fs.pathExists(rootMermaidPath)) {
@@ -279,6 +285,7 @@ export class BuildManager {
 
         const rendered = templateContent
             .replace(/{{projectName}}/g, config.projectName)
+            .replace(/{{projectId}}/g, (config as any).projectId || 'unboarded-project')
             .replace(/{{version}}/g, config.version)
             .replace(/{{idMap}}/g, JSON.stringify(mapObj));
 
@@ -573,6 +580,7 @@ export class BuildManager {
     }
 
     private async validateProjectGraph(assets: ProjectAsset[]): Promise<void> {
+        // @foundryspec REQUIREMENT REQ_PathIntegrity
         console.log(chalk.blue('🔍 Validating project structure and links...'));
         
         // Ensure root.mermaid exists in loaded assets
@@ -619,7 +627,15 @@ export class BuildManager {
                 while ((match = mermaidLinkRegex.exec(content)) !== null) {
                     const linkTarget = match[1];
                     const linkedFile = path.normalize(path.join(fileDir, linkTarget)).replace(/\\/g, '/');
-                    if (allFiles.includes(linkedFile)) adjList.get(relPath)?.push(linkedFile);
+                    if (allFiles.includes(linkedFile)) {
+                        adjList.get(relPath)?.push(linkedFile);
+                    } else {
+                        // REQ_PathIntegrity: Fail build if link is broken
+                        throw new Error(chalk.red(`\n❌ Path Integrity Error in ${relPath}:
+   Mermaid click link points to non-existent file: "${linkTarget}"
+   Resolved path: ${linkedFile}
+   (Note: Paths must be relative to the file containing the link)`));
+                    }
                 }
             }
 
@@ -629,7 +645,15 @@ export class BuildManager {
                 const linkTarget = match[1];
                 if (/^(https?:|mailto:)/.test(linkTarget)) continue;
                 const linkedFile = path.normalize(path.join(fileDir, linkTarget)).replace(/\\/g, '/');
-                if (allFiles.includes(linkedFile)) adjList.get(relPath)?.push(linkedFile);
+                if (allFiles.includes(linkedFile)) {
+                    adjList.get(relPath)?.push(linkedFile);
+                } else {
+                    // REQ_PathIntegrity: Fail build if link is broken
+                    throw new Error(chalk.red(`\n❌ Path Integrity Error in ${relPath}:
+   Markdown link points to non-existent file: "${linkTarget}"
+   Resolved path: ${linkedFile}
+   (Note: Paths must be relative to the file containing the link)`));
+                }
             }
 
             // 2. Auto-Wired Frontmatter Links (Robust Scanning)
@@ -760,7 +784,7 @@ export class BuildManager {
                 return;
             }
 
-            if (filename && !isBuilding && (filename.endsWith('.mermaid') || filename.endsWith('.md'))) {
+            if (filename && !isBuilding && (filename.endsWith('.mermaid') || filename.endsWith('.md') || filename.endsWith('foundry.comments.json'))) {
                 isBuilding = true;
                 console.log(chalk.blue(`
 🔄 Change detected in ${filename}. Rebuilding...`));
@@ -779,7 +803,56 @@ export class BuildManager {
         // Also watch for codebase changes if user wants bi-directional validation
         // (Optional: for now we just watch specDir for speed)
 
-        const server = http.createServer((req, res) => {
+        const server = http.createServer(async (req, res) => {
+            // Handle Sync check
+            if (req.url === '/api/sync' && req.method === 'GET') {
+                const commentsPath = path.join(assetsDir, 'foundry.comments.json');
+                const stats = await fs.stat(commentsPath);
+                res.writeHead(200, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ lastModified: stats.mtimeMs }));
+                return;
+            }
+
+            // Handle Comment API
+            if (req.url === '/api/comments' && req.method === 'POST') {
+                let body = '';
+                req.on('data', chunk => { body += chunk.toString(); });
+                req.on('end', async () => {
+                    try {
+                        const payload = JSON.parse(body);
+                        const { compositeKey, ...comment } = payload;
+
+                        if (!compositeKey || compositeKey.startsWith('undefined') || compositeKey.includes('{{')) {
+                            console.error(`\n❌ [FoundrySpec] Invalid comment payload detected:`);
+                            console.error(`   Payload:`, payload);
+                            console.error(`   Reason: compositeKey is missing or invalid (check if ProjectID is injected).`);
+                            res.writeHead(400);
+                            res.end('Invalid compositeKey');
+                            return;
+                        }
+
+                        const commentsPath = path.join(assetsDir, 'foundry.comments.json');
+                        
+                        let registry: Record<string, any[]> = {};
+                        if (await fs.pathExists(commentsPath)) {
+                            registry = await fs.readJson(commentsPath);
+                        }
+
+                        if (!registry[compositeKey]) registry[compositeKey] = [];
+                        registry[compositeKey].push(comment);
+
+                        await fs.writeJson(commentsPath, registry, { spaces: 2 });
+                        
+                        res.writeHead(200, { 'Content-Type': 'application/json' });
+                        res.end(JSON.stringify({ status: 'ok' }));
+                    } catch (err) {
+                        res.writeHead(500);
+                        res.end('Internal Server Error');
+                    }
+                });
+                return;
+            }
+
             serveHandler(req, res, {
                 public: outputDir
             });

@@ -6,6 +6,14 @@ uplink: "PER_Group"
 entities:
   - id: "REQ_Functional"
     uplink: "PER_EndUser"
+  - id: "REQ_InteractiveComments"
+    uplink: "PER_EndUser"
+    downlinks:
+      - "COMP_InteractiveComments"
+  - id: "REQ_PathIntegrity"
+    uplink: "PER_EndUser"
+    downlinks:
+      - "COMP_BuildManager"
   - id: "REQ_NonFunctional"
     uplink: "PER_Stakeholder"
 ---
@@ -33,4 +41,28 @@ requirementDiagram
         verifymethod: Test
     }
 
+    requirement InteractiveComments {
+        id: "REQ_InteractiveComments"
+        text: "The system shall allow users to leave contextual feedback via a right-click menu and display visual badges on nodes with active comments."
+        risk: Medium
+        verifymethod: Demonstration
+    }
+
+    requirement PathIntegrity {
+        id: "REQ_PathIntegrity"
+        text: "The build engine must verify that all links (click events and markdown links) point to existing files, failing the build if broken links are found."
+        risk: Medium
+        verifymethod: Test
+    }
+
+    requirement DeterministicIdentity {
+        id: "REQ_DeterministicIdentity"
+        text: "The system shall enforce the use of Universal Stable Identifiers (USIs) anchored by a globally unique UUID generated at initialization to ensure feedback remains persistent."
+        risk: High
+        verifymethod: Test
+    }
+
     Functional -contains-> Feature_A
+    Functional -contains-> InteractiveComments
+    Functional -contains-> PathIntegrity
+    InteractiveComments -contains-> DeterministicIdentity
