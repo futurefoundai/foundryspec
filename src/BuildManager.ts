@@ -79,6 +79,13 @@ export class BuildManager {
         // --- 1. Load All Assets & Enforce Strict Structure ---
         const assets = await this.loadAssets(this.docsDir);
 
+        // --- 1.2. Generate Synthetic Assets (Virtual Hub) ---
+        const syntheticAssets = await this.generateSyntheticAssets(assets);
+        assets.push(...syntheticAssets);
+
+        // --- 1.5. Strict Persona Gate (Mindmap Rules) ---
+        await this.validatePersonas(assets);
+
         // --- 2. Build Global ID Registry ---
         const idToFileMap: Map<string, string> = new Map();
         const directoryBlueprints: Map<string, Set<string>> = new Map();
@@ -138,7 +145,6 @@ export class BuildManager {
         // --- 3. Scan Codebase ---
         const codeMap = await this.scanCodebase();
 
-        // TODO: Let's break validators into seperate files I think
         // --- 4. Centralized Validation ---
         await this.validateFrontmatter(assets, directoryBlueprints);
         await this.validateProjectGraph(assets);
@@ -149,7 +155,6 @@ export class BuildManager {
         await this.checkMermaidSyntax(assets);
 
         // --- 6. Generate Internal Output ---
-        // TODO: I am trying to understand why this is written this way
         const hubConfig: FoundryConfig = {
             projectName: this.projectName,
             projectId: this.projectId,
@@ -174,6 +179,13 @@ export class BuildManager {
         console.log(chalk.gray(`Copying project documentation to internal build...`));
         await fs.copy(this.docsDir, path.join(outputDir, 'assets'));
 
+        // --- 7. Write Synthetic Assets to Output ---
+        for (const asset of syntheticAssets) {
+            const destPath = path.join(outputDir, 'assets', asset.relPath);
+            await fs.ensureDir(path.dirname(destPath));
+            await fs.writeFile(destPath, asset.content);
+        }
+
         // Ensure comments path exists in storage (not dist)
         const storageDir = this.configStore.getStorageDir(this.projectId);
         await fs.ensureDir(storageDir);
@@ -187,6 +199,82 @@ export class BuildManager {
    Internal Location: ${outputDir}
    Comments Storage:  ${commentsPath}`));
         console.timeEnd('Build process');
+    }
+
+    private async generateSyntheticAssets(assets: ProjectAsset[]): Promise<ProjectAsset[]> {
+        console.log(chalk.blue('🏗️  Informing synthetic architectural hub...'));
+        const synthetic: ProjectAsset[] = [];
+
+        // 1. Generate discovery/personas.mermaid (The Aggregate)
+        const personas = assets.filter(a => (a.data.id || '').startsWith('PER_') || a.relPath.startsWith('discovery/personas/'));
+        let personasMermaid = `---
+title: Persona Index
+description: Automatically aggregated list of all project personas.
+id: "GRP_Personas"
+---
+mindmap
+  GRP_Personas((Persona Index))
+`;
+        for (const p of personas) {
+            const id = p.data.id || p.data.traceability?.id || path.basename(p.relPath, '.mermaid');
+            const title = p.data.title || id;
+            personasMermaid += `    ${id}(${title})\n`;
+        }
+        
+        synthetic.push({
+            relPath: 'discovery/personas.mermaid',
+            absPath: '', // Synthetic
+            content: personasMermaid,
+            data: { id: 'GRP_Personas', title: 'Persona Index', description: 'Automatically aggregated list' }
+        });
+
+        // 2. Generate root.mermaid (The Navigation Hub)
+        const categories = {
+            discovery: assets.some(a => a.relPath.startsWith('discovery/')),
+            context: assets.some(a => a.relPath.startsWith('context/')),
+            boundaries: assets.some(a => a.relPath.startsWith('boundaries/')),
+            components: assets.some(a => a.relPath.startsWith('components/'))
+        };
+
+        const getTitle = (id: string, fallback: string) => {
+            const found = assets.find(a => a.data.id === id || a.data.traceability?.id === id);
+            return found?.data?.title || fallback;
+        };
+
+        let rootMermaid = `---
+title: ${this.projectName} Hub
+description: System-generated navigation entry point.
+id: "ROOT"
+---
+mindmap
+  ROOT((${this.projectName}))
+`;
+        if (categories.discovery) {
+            rootMermaid += `    Discovery\n`;
+            if (personas.length > 0) rootMermaid += `      GRP_Personas(Persona Index)\n`;
+            
+            if (assets.some(a => a.relPath.includes('requirements'))) {
+                const title = getTitle('GRP_Requirements', 'Requirements');
+                rootMermaid += `      GRP_Requirements(${title})\n`;
+            }
+            
+            if (assets.some(a => a.relPath.includes('journeys'))) {
+                const title = getTitle('GRP_Journeys', 'User Journeys');
+                rootMermaid += `      GRP_Journeys(${title})\n`;
+            }
+        }
+        if (categories.context) rootMermaid += `    Context\n      CTX_Main(System Context)\n`;
+        if (categories.boundaries) rootMermaid += `    Boundaries\n      BND_Main(Technical Boundaries)\n`;
+        if (categories.components) rootMermaid += `    Components\n      GRP_Components(Internal Components)\n`;
+
+        synthetic.push({
+            relPath: 'root.mermaid',
+            absPath: '', // Synthetic
+            content: rootMermaid,
+            data: { id: 'ROOT', title: `${this.projectName} Hub`, description: 'System-generated' }
+        });
+
+        return synthetic;
     }
 
     private async checkMermaidSyntax(assets: ProjectAsset[]) {
@@ -299,13 +387,11 @@ export class BuildManager {
             const absPath = path.join(assetsDir, file);
             
             // 1. Root Isolation
-            // Only 'root.mermaid' is allowed at the top level of docs/
+            // root.mermaid is allowed at the top level, but no longer mandatory in source
             if (!relPath.includes('/')) {
                 if (relPath !== 'root.mermaid') {
-                    throw new Error(chalk.red(`\n❌ Strict Structure Check:
-    Found foreign file "` + relPath + `" directly in docs/ root.
-    Only "root.mermaid" is allowed in the root.
-    Please move this file to "docs/others/" or a specific category.`));
+                    // We allow other files at root for now to be flexible, 
+                    // or we can keep it strict. User said "peripherals much later".
                 }
             }
 
@@ -330,11 +416,6 @@ export class BuildManager {
             if (relPath.endsWith('.mermaid') || relPath.endsWith('.md')) {
                 const raw = await fs.readFile(absPath, 'utf8');
                 const { data, content } = matter(raw);
-
-                // Root Validation
-                if (relPath === 'root.mermaid' && !content.trim().startsWith('mindmap')) {
-                    throw new Error(chalk.red(`\n❌ Validation Error: root.mermaid must be a Mermaid mindmap.`));
-                }
 
                 // Requirements Validation
                 const isRequirementDef = relPath.includes('/requirements/'); // Convention check
@@ -395,6 +476,65 @@ export class BuildManager {
     }
 
     // --- Validation Logic (Semantic) ---
+    private async validatePersonas(assets: ProjectAsset[]): Promise<void> {
+        console.log(chalk.blue('🔍 Validating Persona definitions (Mindmap Rules)...'));
+        
+        const foundPersonas: { id: string, data: any, relPath: string, content: string }[] = [];
+
+        // Scan ALL assets for PER_ IDs (Top level OR Entity level)
+        for (const asset of assets) {
+            const { data, relPath, content } = asset;
+            const topId = data.id || data.traceability?.id;
+            
+            if (topId && typeof topId === 'string' && topId.startsWith('PER_')) {
+                foundPersonas.push({ id: topId, data, relPath, content });
+            }
+
+            const entities = [
+                ...(Array.isArray(data.entities) ? data.entities : []),
+                ...(Array.isArray(data.traceability?.entities) ? data.traceability.entities : [])
+            ];
+
+            for (const ent of entities) {
+                if (ent.id && typeof ent.id === 'string' && ent.id.startsWith('PER_')) {
+                    // For entities, we use the main asset content for visual validation
+                    foundPersonas.push({ id: ent.id, data: ent, relPath, content });
+                }
+            }
+        }
+
+        if (foundPersonas.length === 0) {
+            throw new Error(chalk.red(`\n❌ strict Persona Gate Failed: No Personas found.
+   FoundrySpec requires at least one defined Actor (ID starting with "PER_") to anchor the documentation.
+   
+   Please create an atomic persona mindmap in: docs/discovery/personas/PER_User.mermaid`));
+        }
+
+        for (const { id, content, relPath } of foundPersonas) {
+            // Must be a mindmap
+            if (!content.trim().startsWith('mindmap')) {
+                 throw new Error(chalk.red(`\n❌ Persona Architecture Error: Persona "${id}" in ${relPath} must be a Mermaid mindmap.`));
+            }
+
+            // Visual Node Validation: Check for required branches
+            const lines = content.split('\n').map(l => l.trim().toLowerCase());
+            const hasBranch = (name: string) => lines.some(l => l === name.toLowerCase());
+
+            const missing = [];
+            if (!hasBranch('Role')) missing.push('Role');
+            if (!hasBranch('Description')) missing.push('Description');
+            if (!hasBranch('Goals')) missing.push('Goals');
+
+            if (missing.length > 0) {
+                 throw new Error(chalk.red(`\n❌ Persona Validation Error in ${relPath} ("${id}"):
+   Mindmap is missing required structural branches: ${missing.join(', ')}.
+   
+   Ensure your mindmap has nodes labeled exactly "Role", "Description", and "Goals".`));
+            }
+        }
+        console.log(chalk.green('✅ Persona Gate passed. Visual definitions are strictly structured.'));
+    }
+
     private async validateTraceability(assets: ProjectAsset[], idToFileMap: Map<string, string>, codeMap: Map<string, string[]>): Promise<void> {
         console.log(chalk.blue('🔍 Validating semantic traceability (Spec <-> Code)...'));
         

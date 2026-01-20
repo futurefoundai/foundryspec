@@ -1,9 +1,9 @@
 ---
-id: "REQ_Core"
+id: "GRP_Core"
 title: Core Requirements
 description: General functional and non-functional requirements.
 classification: Functional
-uplink: "REQ_Group"
+uplink: "GRP_Requirements"
 downlinks:
   - "REQ_Functional"
   - "REQ_NonFunctional"
@@ -11,12 +11,12 @@ entities:
   - id: "REQ_Functional"
     classification: Functional
     uplink: 
-      - "REQ_Core"
+      - "GRP_Core"
       - "PER_EndUser"
   - id: "REQ_NonFunctional"
     classification: Non-Functional
     uplink: 
-      - "REQ_Core"
+      - "GRP_Core"
       - "PER_Stakeholder"
 ---
 

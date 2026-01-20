@@ -6,7 +6,7 @@ requirements:
   - "REQ_Functional"
 uplink:
   - "ROOT"
-  - "REQ_Group"
+  - "GRP_Requirements"
 ---
 
 FoundrySpec is designed as a **Zero-Question Implementation Engine**, ensuring that documentation and code never drift apart.

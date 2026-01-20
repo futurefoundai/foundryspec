@@ -7,7 +7,7 @@ requirements:
 uplink:
   - "COMP_Overview"
   - "ROOT"
-  - "REQ_Group"
+  - "GRP_Requirements"
 ---
 
 ## Overview
