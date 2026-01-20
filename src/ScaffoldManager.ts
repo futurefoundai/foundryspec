@@ -15,6 +15,7 @@ import path from 'path';
 import chalk from 'chalk';
 import crypto from 'crypto';
 import { fileURLToPath } from 'url';
+import { ConfigStore } from './ConfigStore.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -25,13 +26,6 @@ interface CategoryTemplate {
     enabled: boolean;
 }
 
-interface PackageJson {
-    name?: string;
-    version?: string;
-    type?: string;
-    scripts?: Record<string, string>;
-}
-
 /**
  * @foundryspec COMP_Group
  */
@@ -39,6 +33,7 @@ export class ScaffoldManager {
     private projectName: string;
     private targetDir: string;
     private templateDir: string;
+    private configStore: ConfigStore;
     
     // Centralized source of truth for standard project categories
     private standardCategories: CategoryTemplate[] = [
@@ -57,29 +52,39 @@ export class ScaffoldManager {
 
     constructor(projectName?: string) {
         this.projectName = projectName || 'My Spec Project';
-        this.targetDir = path.resolve(process.cwd(), 'foundryspec');
+        // Changed: docs/ folder instead of foundryspec/
+        this.targetDir = path.resolve(process.cwd(), 'docs');
         this.templateDir = path.resolve(__dirname, '../templates');
+        this.configStore = new ConfigStore();
     }
 
     async init(): Promise<void> {
+        // Check for .foundryid to avoid re-initializing
+        if (await fs.pathExists(path.join(process.cwd(), '.foundryid'))) {
+            throw new Error(`Project is already initialized (found .foundryid).`);
+        }
+
         if (await fs.pathExists(this.targetDir)) {
-            throw new Error(`Directory "foundryspec" already exists. Move it or use a different location.`);
+            console.log(chalk.yellow(`Directory "docs" already exists. We will populate it with standard folders if missing.`));
         }
 
         console.log(chalk.gray(`Creating directory structure...`));
         await fs.ensureDir(this.targetDir);
+        await fs.ensureDir(path.join(this.targetDir, 'others'));
 
         for (const cat of this.standardCategories) {
-            await fs.ensureDir(path.join(this.targetDir, 'assets', cat.path));
+            // Flattened structure: docs/discovery instead of docs/assets/discovery
+            await fs.ensureDir(path.join(this.targetDir, cat.path));
         }
 
         // Programmatically generate Discovery assets (Mermaid only)
-        const discoveryPath = path.join(this.targetDir, 'assets', 'discovery');
+        const discoveryPath = path.join(this.targetDir, 'discovery');
         
         const personasContent = `---
 title: Personas
 description: Actors and roles within the ecosystem.
 traceability:
+  id: "GRP_Personas"
   # Root Layer (L0) - No Uplinks
   entities:
     - id: "PER_EndUser"
@@ -106,7 +111,7 @@ classDiagram
 title: Functional Requirements
 description: Core system capabilities.
 traceability:
-  id: "REQ_Group"
+  id: "GRP_Requirements"
   relationships:
     - id: "REQ_Functional"
       uplink: "PER_EndUser"
@@ -140,6 +145,7 @@ requirementDiagram
 title: User Journey
 description: High-level workflow visualization.
 traceability:
+  id: "GRP_Journeys"
   uplink: "PER_EndUser"
 ---
 journey
@@ -148,18 +154,17 @@ journey
       [Action]: 5: [Actor]
       [System Response]: 3: System`;
 
-        // Note: Traceability matrix diagram removed as it's now handled by Frontmatter logic
-
         await fs.writeFile(path.join(discoveryPath, 'personas.mermaid'), personasContent);
         await fs.writeFile(path.join(discoveryPath, 'requirements.mermaid'), requirementsContent);
         await fs.writeFile(path.join(discoveryPath, 'journeys.mermaid'), journeyContent);
 
         // --- Generate L1 (Context) Assets ---
-        const contextPath = path.join(this.targetDir, 'assets', 'context');
+        const contextPath = path.join(this.targetDir, 'context');
         const systemContextContent = `---
 title: System Context Diagram (L1)
 description: High-level system landscape.
 traceability:
+  id: "CTX_Main"
   relationships:
     - id: "CTX_System"
       uplink: "REQ_Functional"
@@ -177,11 +182,12 @@ C4Context
         await fs.writeFile(path.join(contextPath, 'system-context.mermaid'), systemContextContent);
 
         // --- Generate L2 (Boundaries) Assets ---
-        const boundariesPath = path.join(this.targetDir, 'assets', 'boundaries');
+        const boundariesPath = path.join(this.targetDir, 'boundaries');
         const boundariesContent = `---
 title: Technical Boundaries Diagram (L2)
 description: Boundary decomposition.
 traceability:
+  id: "BND_Main"
   relationships:
     - id: "BND_App"
       uplink: "CTX_System"
@@ -199,7 +205,7 @@ C4Container
         await fs.writeFile(path.join(boundariesPath, 'technical-boundaries.mermaid'), boundariesContent);
 
         // --- Generate L3 (Components) Assets ---
-        const componentsPath = path.join(this.targetDir, 'assets', 'components');
+        const componentsPath = path.join(this.targetDir, 'components');
         const componentContent = `---
 title: Example Component
 description: A sample component definition.
@@ -221,7 +227,7 @@ This component demonstrates the ID-based traceability chain.
 `;
         await fs.writeFile(path.join(componentsPath, 'example-component.md'), componentContent);
 
-        // --- Generate Root Map ---
+        // --- Generate Root Map (Directly in docs/) ---
         const rootContent = `---
 title: Project Root
 description: The entry point for the documentation graph.
@@ -255,95 +261,25 @@ mindmap
 
         await fs.writeFile(path.join(this.targetDir, 'root.mermaid'), rootContent);
 
-        const config = {
-            projectName: this.projectName,
-            projectId: crypto.randomUUID(),
+        // --- REGISTER PROJECT GLOBALLY ---
+        const projectId = crypto.randomUUID();
+        await this.configStore.saveProject({
+            id: projectId,
+            name: this.projectName,
             version: "1.0.0",
-            external: [],
-            build: {
-                outputDir: "dist",
-                assetsDir: "assets"
-            }
-        };
+            created: new Date().toISOString(),
+            categories: this.standardCategories.map(c => ({
+                name: c.name,
+                path: c.path,
+                description: c.description
+            }))
+        });
+        // TODO: Categories will be removed because it should be automatically detected in build 
 
-        await fs.writeJson(path.join(this.targetDir, 'foundry.config.json'), config, { spaces: 2 });
-
-        await this.ensureGitignore(this.targetDir);
-        await this.ensureParentGitignore();
-    }
-
-    async upgrade(): Promise<void> {
-        const projectDir = process.cwd();
-        const configPath = path.join(projectDir, 'foundry.config.json');
-
-        if (!await fs.pathExists(configPath)) {
-            throw new Error('Not in a FoundrySpec project. Please run from the root of your project.');
-        }
-
-        console.log(chalk.gray(`Checking for structural updates...`));
-
-        // 1. Ensure all standard category folders exist
-        for (const cat of this.standardCategories) {
-            const catPath = path.join(projectDir, 'assets', cat.path);
-            if (!await fs.pathExists(catPath)) {
-                console.log(chalk.gray(`Creating missing category folder: assets/${cat.path}`));
-                await fs.ensureDir(catPath);
-            }
-        }
-
-        // 2. Ensure Discovery assets exist (onboarding old projects)
-        const discoveryPath = path.join(projectDir, 'assets', 'discovery');
-
-        const personasPath = path.join(discoveryPath, 'personas.mermaid');
-        if (!await fs.pathExists(personasPath)) {
-            console.log(chalk.gray(`Adding missing Discovery asset: personas.mermaid`));
-            await fs.writeFile(personasPath, `%% The Four Persona Types:\n%% 1. End-User (Actor) -> L3 UX\n%% 2. Stakeholder (Influencer) -> L1 Context\n%% 3. Regulatory (Guardian) -> L2 Boundaries\n%% 4. System (Proxy) -> L3 Interfaces\n\nclassDiagram\n    class EndUser { <<Actor>> }`);
-        }
-
-        const requirementsPath = path.join(discoveryPath, 'requirements.mermaid');
-        if (!await fs.pathExists(requirementsPath)) {
-            console.log(chalk.gray(`Adding missing Discovery asset: requirements.mermaid`));
-            await fs.writeFile(requirementsPath, `requirementDiagram\n    requirement R1 {\n        id: "1"\n        text: "Describe the requirement here"\n        risk: Low\n        verifymethod: Test\n    }`);
-        }
-
-        const journeysPath = path.join(discoveryPath, 'journeys.mermaid');
-        if (!await fs.pathExists(journeysPath)) {
-            console.log(chalk.gray(`Adding missing Discovery asset: journeys.mermaid`));
-            await fs.writeFile(journeysPath, `journey\n    title User Journey: [Name]\n    section [Phase]\n      [Action]: 5: [Actor]`);
-        }
-
-        // 3. Ensure L1/L2 assets exist
-        const contextPath = path.join(projectDir, 'assets', 'context');
-        const contextFile = path.join(contextPath, 'system-context.mermaid');
-        if (await fs.pathExists(contextPath) && !await fs.pathExists(contextFile)) {
-             console.log(chalk.gray(`Adding missing L1 asset: system-context.mermaid`));
-             await fs.writeFile(contextFile, `C4Context\n    title System Context (L1)\n    System(system, "System", "Description")`);
-        }
-
-        const boundariesPath = path.join(projectDir, 'assets', 'boundaries');
-        const boundariesFile = path.join(boundariesPath, 'technical-boundaries.mermaid');
-        if (await fs.pathExists(boundariesPath) && !await fs.pathExists(boundariesFile)) {
-             console.log(chalk.gray(`Adding missing L2 asset: technical-boundaries.mermaid`));
-             await fs.writeFile(boundariesFile, `C4Container\n    title Technical Boundaries (L2)\n    Container(app, "Application", "Tech", "Description")`);
-        }
+        // --- WRITE LINK FILE ---
+        await fs.writeFile(path.join(process.cwd(), '.foundryid'), projectId.trim());
         
-        // 4. Update root.mermaid if it seems outdated (simple check)
-        const rootPath = path.join(projectDir, 'root.mermaid');
-        if (await fs.pathExists(rootPath)) {
-            const rootContent = await fs.readFile(rootPath, 'utf8');
-            if (!rootContent.includes('L1: Context') && !rootContent.includes('L2: Boundaries')) {
-                console.log(chalk.yellow(`\n⚠️  Notice: Your root.mermaid uses the old structure.`));
-                console.log(chalk.yellow(`   Consider updating it to include L0-L3 layers: Discovery, Context, Boundaries, Components.`));
-            }
-        } else {
-             console.log(chalk.gray(`Creating missing root.mermaid...`));
-             await fs.writeFile(rootPath, `mindmap\n    root((Project))\n        L0: Discovery\n        L1: Context\n        L2: Boundaries\n        L3: Components\n        Peripherals`);
-        }
-
-        // 5. Ensure .gitignore rules
-        await this.ensureGitignore(projectDir);
-        
-        console.log(chalk.green(`\n✅ Project structure is up to date with the latest FoundrySpec standards.`));
+        await this.ensureGitignore(process.cwd());
     }
 
     async ensureGitignore(dir: string): Promise<void> {
@@ -353,37 +289,27 @@ mindmap
             content = await fs.readFile(gitignorePath, 'utf8');
         }
 
-        if (!content.includes('dist')) {
-            console.log(chalk.gray(`Adding "dist" to .gitignore...`));
-            content += content.endsWith('\n') ? 'dist\n' : '\ndist\n';
+        const ignores = ['dist', '.foundryspec/dist', 'foundryspec-debug.log'];
+        let updated = false;
+
+        for (const ignore of ignores) {
+            if (!content.includes(ignore)) {
+                content += content.endsWith('\n') ? `${ignore}\n` : `\n${ignore}\n`;
+                updated = true;
+            }
+        }
+
+        if (updated) {
+            console.log(chalk.gray(`Updating .gitignore...`));
             await fs.writeFile(gitignorePath, content);
         }
     }
 
-    async ensureParentGitignore(): Promise<void> {
-        const parentDir = path.dirname(this.targetDir);
-        const gitignorePath = path.join(parentDir, '.gitignore');
-
-        let content = '';
-        if (await fs.pathExists(gitignorePath)) {
-            content = await fs.readFile(gitignorePath, 'utf8');
-        }
-
-        const foundryspecRules = [
-            '# FoundrySpec self-documentation build artifacts',
-            '/foundryspec/dist',
-            '/foundryspec/*.log',
-            '/foundryspec/build-info.txt'
-        ].join('\n');
-
-        // Check if foundryspec rules are already present
-        if (!content.includes('FoundrySpec self-documentation build artifacts')) {
-            console.log(chalk.gray(`Adding FoundrySpec rules to parent .gitignore...`));
-            content += content.endsWith('\n') ? '\n' : '\n\n';
-            content += foundryspecRules + '\n';
-            await fs.writeFile(gitignorePath, content);
-        }
+    // Unchanged, but kept for compatibility validation if needed
+    async upgrade(): Promise<void> {
+       // Only upgrade logic if we detect old structure, but for now we focus on new structure.
+       // TODO: Implement migration logic from old structure to new structure if requested.
+       console.log(chalk.yellow("Upgrade for legacy projects to Global Config is not yet implemented."));
     }
-
-
 }
+

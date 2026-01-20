@@ -1,0 +1,19 @@
+---
+id: "REQ_AutomatedProbing"
+title: Automated Design Probing
+description: Requirements for the drift detection system.
+classification: Functional
+uplink: 
+  - "REQ_Group"
+  - "PER_EndUser"
+downlinks:
+  - "COMP_ProbeManager"
+---
+
+requirementDiagram
+    requirement AutomatedProbing {
+        id: "REQ_AutomatedProbing"
+        text: "The system shall provide a 'probe' command to detect drift between the architectural specification and the codebase implementation."
+        risk: Low
+        verifymethod: Demonstration
+    }

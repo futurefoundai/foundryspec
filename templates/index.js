@@ -203,7 +203,7 @@ async function initApp() {
     });
 
     backButton.addEventListener('click', () => { if (historyStack.length > 1) { historyStack.pop(); loadDiagram(historyStack.pop()); } });
-    injectCustomCSS(); await fetchComments(); startSync(); loadDiagram('root.mermaid');
+    injectCustomCSS(); await fetchComments(); startSync(); loadDiagram('assets/root.mermaid');
 }
 
 function openCommentOverlay(focusInput) {

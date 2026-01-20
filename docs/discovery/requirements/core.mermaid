@@ -1,0 +1,45 @@
+---
+id: "REQ_Core"
+title: Core Requirements
+description: General functional and non-functional requirements.
+classification: Functional
+uplink: "REQ_Group"
+downlinks:
+  - "REQ_Functional"
+  - "REQ_NonFunctional"
+entities:
+  - id: "REQ_Functional"
+    classification: Functional
+    uplink: 
+      - "REQ_Core"
+      - "PER_EndUser"
+  - id: "REQ_NonFunctional"
+    classification: Non-Functional
+    uplink: 
+      - "REQ_Core"
+      - "PER_Stakeholder"
+---
+
+requirementDiagram
+    requirement Functional {
+        id: "REQ_Functional"
+        text: "The system shall provide extensible documentation capabilities."
+        risk: Low
+        verifymethod: Test
+    }
+
+    requirement Feature_A {
+        id: "REQ_FeatA"
+        text: "Specific feature detail placeholder."
+        risk: Low
+        verifymethod: Test
+    }
+
+    requirement Non_Functional {
+        id: "REQ_NonFunctional"
+        text: "System shall perform efficiently."
+        risk: Low
+        verifymethod: Test
+    }
+
+    Functional -contains-> Feature_A

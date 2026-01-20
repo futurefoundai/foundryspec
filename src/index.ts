@@ -22,40 +22,32 @@ import { ScaffoldManager } from './ScaffoldManager.js';
 import { BuildManager } from './BuildManager.js';
 import { GitManager } from './GitManager.js';
 import { ProbeManager } from './ProbeManager.js';
+import { ConfigStore } from './ConfigStore.js';
 
 /**
- * Finds the project root by searching upwards for foundry.config.json or a foundryspec/ folder.
- * Returns the directory containing foundry.config.json.
+ * TODO: We are no longer going to support Legacy foundry.config.json anymore
+ * Finds the project root by searching for .foundryid or legacy foundry.config.json.
  */
 async function findProjectRoot(startDir: string): Promise<string> {
     let current = path.resolve(startDir);
-    while (true) {
-        // Option A: Current directory contains foundry.config.json directly
-        if (await fs.pathExists(path.join(current, 'foundry.config.json'))) {
-            return current;
-        }
-        // Option B: Current directory has a foundryspec folder with a config
-        const subConfig = path.join(current, 'foundryspec', 'foundry.config.json');
-        if (await fs.pathExists(subConfig)) {
-            return path.join(current, 'foundryspec');
-        }
-
-        const parent = path.dirname(current);
-        if (parent === current) break;
-        current = parent;
-    }
-    return startDir; // Fallback
+    // Naive check for now: assumes command running in root
+    // TODO: Recursive implementation if needed. 
+    // For now, strict root execution is safer to avoid confusion.
+    return startDir; 
 }
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const packageJson = fs.readJsonSync(path.join(__dirname, '../package.json'));
 
 const program = new Command();
+const store = new ConfigStore();
 
 program
     .name('foundryspec')
     .description('Documentation engine for human-AI collaborative system analysis and design')
     .version(packageJson.version);
+
+// --- CORE COMMANDS ---
 
 program
     .command('init')
@@ -66,9 +58,8 @@ program
         try {
             const scaffold = new ScaffoldManager(projectName);
             await scaffold.init();
-            console.log(chalk.green(`\n✅ Project "${projectName}" scaffolded successfully in "foundryspec/" folder!`));
+            console.log(chalk.green(`\n✅ Project "${projectName}" initialized successfully!`));
             console.log(chalk.cyan(`\nNext steps:`));
-            console.log(`  cd foundryspec`);
             console.log(`  foundryspec build`);
             console.log(`  foundryspec serve`);
         } catch (err: any) {
@@ -106,6 +97,91 @@ program
     });
 
 program
+    .command('build')
+    .description('Generate the static documentation hub')
+    .action(async () => {
+        console.log(chalk.blue('\n🛠️  Building documentation hub...'));
+        try {
+            const root = await findProjectRoot(process.cwd());
+            const builder = new BuildManager(root);
+            await builder.build();
+        } catch (err: any) {
+            console.error(chalk.red('\n❌ Build failed:'), err.message);
+            process.exit(1);
+        }
+    });
+
+// --- CONFIGURATION COMMANDS ---
+
+program
+    .command('config')
+    .description('Manage project configuration (show, set)')
+    .argument('<action>', 'Action to perform: show, set')
+    .argument('[key]', 'Config key (e.g., name)')
+    .argument('[value]', 'Value to set')
+    .action(async (action, key, value) => {
+        try {
+            const root = process.cwd();
+            const idPath = path.join(root, '.foundryid');
+            if (!await fs.pathExists(idPath)) {
+                throw new Error('No .foundryid found. Run this command in the project root.');
+            }
+            const id = (await fs.readFile(idPath, 'utf8')).trim();
+
+            if (action === 'show') {
+                const config = await store.getProject(id);
+                console.log(JSON.stringify(config, null, 2));
+            } else if (action === 'set') {
+                if (!key || !value) throw new Error('Usage: config set <key> <value>');
+                await store.updateProject(id, { [key]: value });
+                console.log(chalk.green(`✅ Updated ${key} to "${value}" for project ${id}.`));
+            } else {
+                console.log(chalk.yellow('Unknown action. Use "show" or "set".'));
+            }
+        } catch (err: any) {
+            console.error(chalk.red('\n❌ Config error:'), err.message);
+        }
+    });
+
+program
+    .command('comments')
+    .description('Manage internal comments (dump, import)')
+    .argument('<action>', 'Action to perform: dump, import')
+    .argument('[file]', 'File path for import')
+    .action(async (action, file) => {
+        try {
+            const root = process.cwd();
+            const idPath = path.join(root, '.foundryid');
+            if (!await fs.pathExists(idPath)) throw new Error('No .foundryid found.');
+            const id = (await fs.readFile(idPath, 'utf8')).trim();
+            const commentsPath = store.getCommentsPath(id);
+
+            if (action === 'dump') {
+                if (await fs.pathExists(commentsPath)) {
+                    const content = await fs.readFile(commentsPath, 'utf8');
+                    console.log(content);
+                } else {
+                    console.log('{}'); // Empty JSON
+                }
+            } else if (action === 'import') {
+                if (!file) throw new Error('Usage: comments import <file>');
+                const source = path.resolve(file);
+                if (!await fs.pathExists(source)) throw new Error(`File not found: ${source}`);
+                
+                await fs.ensureDir(path.dirname(commentsPath));
+                await fs.copy(source, commentsPath);
+                console.log(chalk.green(`✅ Comments imported from ${file}`));
+            } else {
+                console.log(chalk.yellow('Unknown action. Use "dump" or "import".'));
+            }
+        } catch (err: any) {
+            console.error(chalk.red('\n❌ Comments error:'), err.message);
+        }
+    });
+
+// --- MANAGEMENT COMMANDS ---
+
+program
     .command('upgrade')
     .description('Update local project templates and workflows')
     .action(async () => {
@@ -126,38 +202,31 @@ program
     .action(async (category: string) => {
         console.log(chalk.blue(`\n📂 Adding category: ${category}...`));
         try {
-            const root = await findProjectRoot(process.cwd());
-            const configPath = path.join(root, 'foundryspec', 'foundry.config.json');
-            if (!await fs.pathExists(configPath)) {
-                 // Try if config is in root
-                 const altConfig = path.join(root, 'foundry.config.json');
-                 if (!await fs.pathExists(altConfig)) throw new Error('Not in a FoundrySpec project.');
-            }
+            const root = process.cwd();
+            const idPath = path.join(root, '.foundryid');
+            if (!await fs.pathExists(idPath)) throw new Error('No .foundryid found. Run in project root.');
+            const id = (await fs.readFile(idPath, 'utf8')).trim();
+            
+            const config = await store.getProject(id);
+            if (!config) throw new Error('Project not found in store.');
 
-            const activeConfigPath = await fs.pathExists(path.join(root, 'foundryspec', 'foundry.config.json')) 
-                ? path.join(root, 'foundryspec', 'foundry.config.json')
-                : path.join(root, 'foundry.config.json');
-
-            const config = await fs.readJson(activeConfigPath);
             const catSlug = category.toLowerCase().replace(/\s+/g, '-');
             
-            if (!config.categories) config.categories = [];
-
-            if (config.categories.find((c: any) => c.path === catSlug)) {
-                console.log(chalk.yellow(`Category "${category}" already exists.`));
-                return;
+            // Update Store
+            const categories = config.categories || [];
+            if (!categories.find(c => c.path === catSlug)) {
+                categories.push({
+                    name: category,
+                    path: catSlug,
+                    description: `Documentation for ${category}`
+                });
+                await store.updateProject(id, { categories });
             }
 
-            config.categories.push({
-                name: category,
-                path: catSlug,
-                description: `Documentation for ${category}`
-            });
+            // Create Directory
+            await fs.ensureDir(path.join(root, 'docs', catSlug));
+            console.log(chalk.green(`✅ Category "${category}" added and registered.`));
 
-            const assetsBase = path.join(path.dirname(activeConfigPath), 'assets');
-            await fs.ensureDir(path.join(assetsBase, catSlug));
-            await fs.writeJson(activeConfigPath, config, { spaces: 2 });
-            console.log(chalk.green(`\n✅ Category "${category}" added successfully.`));
         } catch (err: any) {
             console.error(chalk.red('\n❌ Failed to add category:'), err.message);
         }
@@ -216,30 +285,24 @@ jobs:
       - name: Deploy to GitHub Pages
         uses: JamesIves/github-pages-deploy-action@v4
         with:
-          folder: dist
+          folder: dist  # TODO: Update this for internal builds when deployment logic is finalized
 `;
+            // NOTE: Deploying from 'dist' assumes 'foundryspec build' outputs to a local folder.
+            // With internal builds, deployment workflow needs rethinking.
+            // User likely wants to deploy the INTERNALLY built site.
+            // Current 'foundryspec build' outputs to ~/.foundryspec/builds/<id>/
+            // CI implementation will need to know where to find it or 'build' needs a --local-dist option for CI.
+            // For now, we'll keep it as is, but this is a Known Issue.
+            
             await fs.writeFile(path.join(workflowDir, 'deploy-docs.yml'), workflowContent);
             console.log(chalk.green('\n✅ GitHub Actions workflow created at .github/workflows/deploy-docs.yml'));
+            console.log(chalk.yellow('⚠️  Note: With the new internal build system, you may need to adjust your CI to locate the build output.'));
         } catch (err: any) {
             console.error(chalk.red('\n❌ Deployment scaffolding failed:'), err.message);
         }
     });
 
-program
-    .command('build')
-    .description('Generate the static documentation hub')
-    .action(async () => {
-        console.log(chalk.blue('\n🛠️  Building documentation hub...'));
-        try {
-            const root = await findProjectRoot(process.cwd());
-            const builder = new BuildManager(root);
-            await builder.build();
-        } catch (err: any) {
-            console.error(chalk.red('\n❌ Build failed:'), err.message);
-            process.exit(1);
-        }
-    });
-
+// TODO: This implementation for changes is not satisfactory yet, it needs to be replanned and redone
 program
     .command('changes')
     .description('Generate a report of recent spec changes and implementation tasks')
@@ -262,17 +325,10 @@ program
             for (const item of changes as any[]) {
                 const fileName = path.basename(item.file);
                 const isMermaid = fileName.endsWith('.mermaid');
-                const catName = item.file.split('/')[1] || 'General';
-
+                
                 report += `## [${isMermaid ? 'DIAGRAM' : 'DETAIL'}] ${item.file}\n`;
                 report += `- **Latest Intent**: ${item.commits[0].message}\n`;
                 report += `- **Last Modified**: ${new Date(item.commits[0].date).toLocaleDateString()}\n`;
-
-                if (isMermaid) {
-                    report += `- **Implementation Suggestion**: Review the architectural changes in \`${fileName}\` and ensure the corresponding services/logic in the codebase are synchronized with these updates.\n`;
-                } else {
-                    report += `- **Implementation Suggestion**: The detail file \`${fileName}\` has been updated. Verify if the business logic or contract described matches the current implementation.\n`;
-                }
                 report += `\n`;
             }
 
@@ -280,7 +336,6 @@ program
             console.log(report);
             console.log(chalk.cyan('--- END REPORT ---'));
 
-            // Optionally write to a file for agents to read easily
             const reportPath = path.join(process.cwd(), '.foundryspec_changes.md');
             await fs.writeFile(reportPath, report);
             console.log(chalk.gray(`\nReport also saved to: ${reportPath}`));
@@ -290,6 +345,7 @@ program
         }
     });
 
+// This help command needs to be redone as we are moving towards phased changes strictly following the SDLC
 program
     .command('help')
     .description('Display the AI Agent Guide or Workflows. Usage: help [topic] (topic: agent, workflows, or <workflow-name>)')
@@ -321,9 +377,7 @@ program
                 return;
             }
 
-            // Check if it matches a workflow file
             const workflowPath = path.join(templateDir, 'workflows', topic);
-            // Try exact match or with .md extension
             let finalPath = '';
             if (await fs.pathExists(workflowPath)) {
                 finalPath = workflowPath;

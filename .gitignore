@@ -10,3 +10,5 @@
 /foundryspec/dist
 /foundryspec/*.log
 /foundryspec/build-info.txt
+.foundryspec/dist
+foundryspec-debug.log

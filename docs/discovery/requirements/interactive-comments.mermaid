@@ -1,0 +1,32 @@
+---
+id: "REQ_InteractiveComments"
+title: Interactive Comments
+description: Requirements for the user feedback system.
+classification: Functional
+uplink: 
+  - "REQ_Group"
+  - "PER_EndUser"
+downlinks:
+  - "COMP_InteractiveComments"
+entities:
+  - id: "REQ_DeterministicIdentity"
+    classification: Functional
+    uplink: "REQ_InteractiveComments"
+---
+
+requirementDiagram
+    requirement InteractiveComments {
+        id: "REQ_InteractiveComments"
+        text: "The system shall allow users to leave contextual feedback via a right-click menu and display visual badges on nodes with active comments."
+        risk: Medium
+        verifymethod: Demonstration
+    }
+
+    requirement DeterministicIdentity {
+        id: "REQ_DeterministicIdentity"
+        text: "The system shall enforce the use of Universal Stable Identifiers (USIs) anchored by a globally unique UUID generated at initialization to ensure feedback remains persistent."
+        risk: High
+        verifymethod: Test
+    }
+
+    InteractiveComments -contains-> DeterministicIdentity
