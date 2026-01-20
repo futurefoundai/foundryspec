@@ -67,40 +67,41 @@ export class ScaffoldManager {
         const personaDir = path.join(this.targetDir, 'discovery', 'personas');
         await fs.ensureDir(personaDir);
 
-        const endUserContent = `--- 
-title: End User
-description: The primary actor interacting with the system.
-id: "PER_EndUser"
+        const userContent = `--- 
+title: Standard User
+description: A typical end-user of the system.
+id: "PER_User"
 ---
 mindmap
-  PER_EndUser((End User))
+  PER_User((Standard User))
     Role
-      Human Actor
+      End User
     Description
-      The primary user interacting with the system to achieve specific objectives.
+      A typical end-user interacting with the system's core features.
     Goals
-      Complete tasks efficiently
-      Interact with the UI/API
+      Access public features
+      Manage personal data
+      Perform core workflows
 `;
 
-        const stakeholderContent = `--- 
-title: Stakeholder
-description: Business or technical leaders who define success criteria.
-id: "PER_Stakeholder"
+        const adminContent = `--- 
+title: System Admin
+description: Privileged user responsible for system management.
+id: "PER_Admin"
 ---
 mindmap
-  PER_Stakeholder((Stakeholder))
+  PER_Admin((System Admin))
     Role
-      Influencer
+      Administrator
     Description
-      Business or technical leaders who define success criteria for the project.
+      Privileged user responsible for user management, configuration, and system oversight.
     Goals
-      Ensure project success
-      Minimize overhead
-      Drive strategy
+      Manage user accounts
+      Configure system settings
+      Monitor system health
 `;
-        await fs.writeFile(path.join(personaDir, 'PER_EndUser.mermaid'), endUserContent);
-        await fs.writeFile(path.join(personaDir, 'PER_Stakeholder.mermaid'), stakeholderContent);
+        await fs.writeFile(path.join(personaDir, 'PER_User.mermaid'), userContent);
+        await fs.writeFile(path.join(personaDir, 'PER_Admin.mermaid'), adminContent);
 
         // --- 2. Requirements ---
         const discoveryPath = path.join(this.targetDir, 'discovery');
@@ -120,12 +121,16 @@ mindmap
 title: User Journey
 description: High-level workflow visualization.
 id: "GRP_Journeys"
-uplink: "PER_EndUser"
+uplink: "PER_User"
 ---
 journey
-    title User Journey: [Workflow Name]
-    section [Phase Name]
-      [Action]: 5: PER_EndUser
+    title User Journey: Core Workflow
+    section Initialization
+      Login: 5: PER_User
+      Load Dashboard: 3: System
+    section Action
+      Perform Task: 5: PER_User
+      Save Data: 3: System
 `;
         await fs.writeFile(path.join(discoveryPath, 'journeys.mermaid'), journeyContent);
 
