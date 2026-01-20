@@ -11,39 +11,33 @@ uplink:
 
 FoundrySpec is designed as a **Zero-Question Implementation Engine**, ensuring that documentation and code never drift apart.
 
-## 1. Semantic Traceability (Spec <-> Code)
+## 1. Dynamic Architectural Hub
+
+The engine automatically synthesizes the navigation structure based on your file system.
+- **Auto-Discovery**: `root.mermaid` and `personas.mermaid` are dynamically generated in the build output.
+- **Zero-Boilerplate**: You no longer need to manually maintain a central index file. Simply adding a file to `docs/discovery/personas/` automatically wires it into the graph.
+
+## 2. Visual Verification (Strict Persona Gate)
+
+The system validates the *structure* of your diagrams, not just the metadata.
+- **Mindmap Validation**: Persona files (`PER_*.mermaid`) must be valid Mermaid Mindmaps.
+- **Adequacy Check**: The engine parses the diagram to ensure mandatory branches exist: **Role**, **Description**, and **Goals**. This ensures every actor is fully defined before system design begins.
+
+## 3. Semantic Traceability (Spec <-> Code)
 
 The engine scans the codebase for `@foundryspec ID` markers. Every component defined in the specification can be verified against its actual implementation in the code.
 
-## 2. Reciprocal Validation
+## 4. Reciprocal Validation
 
 To ensure a perfectly consistent documentation graph, the engine enforces **uplink/downlink reciprocity**.
-
 - If `Document A` has a `downlink` to `Document B`.
 - `Document B` must have an `uplink` to `Document A`.
-- This eliminates orphaned context and broken traceability chains.
 
-## 3. CLI Intelligence
+## 5. CLI Intelligence
 
-- **Root Detection**: Run FoundrySpec commands from any project subdirectory; the CLI automatically detects the project context.
-- **Smart Build**: Optimized single-pass build process with shared asset memory and parallelized Mermaid validation.
+- **Root Detection**: Run FoundrySpec commands from any project subdirectory.
+- **Internal Build**: Builds are stored in `~/.foundryspec/builds/`, keeping your project clean.
 
-## 4. Smart Clickability
+## 6. Smart Clickability
 
 Documentation diagrams are interactive by default. The engine semantically matches SVG nodes to specification IDs and titles, enabling navigation without polluting source files with link injection boilerplate.
-
-## 5. Modular Frontend Architecture
-
-The documentation hub is built with clean separation of concerns:
-
-- **HTML**: Pure semantic structure.
-- **CSS**: Premium "Stellar" theme for high-impact visualization.
-- **JS**: Smart rendering core supporting pan-zoom and dynamic navigation.
-
-## 6. Strict Requirement Management
-
-The engine enforces architectural standards for requirement documentation:
-
-- **Syntax Enforcement**: Files named `requirements.mermaid` or in `requirements/` folders MUST use the Mermaid `requirementDiagram` syntax.
-- **Architectural Isolation**: IDs starting with `REQ_` are only permitted within dedicated requirement files.
-- **Implementation Continuity**: Every requirement (`REQ_*`) must have at least one Persona (`PER_*`) as an uplink and at least one Feature or Component (`FEAT_*`/`COMP_*`) as a downlink.

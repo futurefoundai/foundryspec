@@ -16,7 +16,8 @@ The `ScaffoldManager` is the core component responsible for initializing new Fou
 
 ### Key Logic
 
-- **Initialization**: Generates the standard `foundryspec/` folder structure.
+- **Initialization**: Generates the standard `docs/` folder structure (Discovery, Context, Boundaries, Components).
+- **Atomic Architecture**: Scaffolds individual, self-contained Mindmaps for Personas (e.g., `PER_EndUser.mermaid`) instead of monolithic lists.
 - **Traceability Injection**: Automatically adds base frontmatter to new assets to ensure "Zero-Question" connectivity from the start.
 
 ## Implementation Details
@@ -24,5 +25,5 @@ The `ScaffoldManager` is the core component responsible for initializing new Fou
 The scaffold logic ensures that all new documentation assets are built with the correct metadata standard:
 
 1.  Top-level `id` for identity.
-2.  `uplink`/`downlinks` for graph connectivity.
-3.  `requirements` array for semantic justification.
+2.  `uplink` for graph connectivity to parent nodes.
+3.  **Visual Structure**: Pre-populates Mindmaps with required validation branches (Role, Goals, Description).

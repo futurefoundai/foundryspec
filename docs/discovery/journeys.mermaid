@@ -1,17 +1,18 @@
 ---
-id: "JOUR_Flow"
 title: User Journey
 description: High-level workflow visualization.
-uplink: "ROOT"
+id: "GRP_Journeys"
+uplink: "PER_SystemAnalyst"
 ---
-
 journey
-    title User Journey: Documentation Review
-    section Discovery
-      View Root: 5: End-User
-      Navigate Node: 5: End-User
+    title User Journey: Collaborative Design
+    section Intent
+      Provide Context: 5: PER_SystemAnalyst
+      Define Requirements: 5: PER_SystemAnalyst
+    section Implementation
+      Generate Specs: 5: PER_CodingAgent
+      Validate Structure: 5: PER_CodingAgent
     section Review
-      Right-Click Node: 5: End-User
-      View Comments: 5: End-User
-      Add Feedback: 5: End-User
-      Sync Design: 3: System
+      Verify on Hub: 5: PER_SystemAnalyst
+      Add Comments: 3: PER_SystemAnalyst
+      Refine Artifacts: 5: PER_CodingAgent
