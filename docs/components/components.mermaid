@@ -19,10 +19,15 @@ entities:
     uplink: "REQ_PathIntegrity"
     requirements:
       - "REQ_PathIntegrity"
+      - "REQ_DynamicRoot"
   - id: "COMP_ProbeManager"
     uplink: "REQ_AutomatedProbing"
     requirements:
       - "REQ_AutomatedProbing"
+  - id: "COMP_ConfigStore"
+    uplink: "REQ_ZeroConfig"
+    requirements:
+      - "REQ_ZeroConfig"
 ---
 
 classDiagram
@@ -36,6 +41,7 @@ classDiagram
         <<Component>>
         +ValidationEngine
         +AssetLoader
+        +SyntheticGenerator
     }
 
     class COMP_ProbeManager {
@@ -55,6 +61,12 @@ classDiagram
         +CommentManager
         +SidebarUI
     }
+
+    class COMP_ConfigStore {
+        <<Component>>
+        +GlobalState
+        +IdentityManager
+    }
     
     class ROOT {
         <<Entry>>
@@ -65,3 +77,4 @@ classDiagram
     ROOT --> COMP_ProbeManager : defines
     ROOT --> COMP_ClickInterceptor : defines
     ROOT --> COMP_InteractiveComments : defines
+    ROOT --> COMP_ConfigStore : defines

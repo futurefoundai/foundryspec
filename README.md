@@ -24,22 +24,38 @@ FoundrySpec solves this by providing:
 
 FoundrySpec provides a comprehensive toolset for managing your documentation lifecycle:
 
-| Command | Description |
-| :--- | :--- |
-| `init` | Scaffold a new FoundrySpec documentation project. |
-| `build` | Generate the static documentation hub with full graph validation. |
-| `serve` | Locally serve the documentation hub with hot-reloading. |
-| `add` | Add a new documentation category (e.g., `foundryspec add security`). |
-| `changes` | Generate a report of recent spec changes and implementation tasks. |
-| `deploy` | Scaffold GitHub Actions for automatic deployment to GH Pages. |
-| `pull` | Incorporate external specs from a Git repository. |
-| `sync` | Synchronize all external specs from remote repositories. |
+| Command   | Description                                                           |
+| :-------- | :-------------------------------------------------------------------- |
+| `init`    | Scaffold a new FoundrySpec documentation project.                     |
+| `build`   | Generate the static documentation hub with full graph validation.     |
+| `serve`   | Locally serve the documentation hub with hot-reloading.               |
+| `add`     | Add a new documentation category (e.g., `foundryspec add security`).  |
+| `changes` | Generate a report of recent spec changes and implementation tasks.    |
+| `deploy`  | Scaffold GitHub Actions for automatic deployment to GH Pages.         |
+| `pull`    | Incorporate external specs from a Git repository.                     |
+| `sync`    | Synchronize all external specs from remote repositories.              |
 | `upgrade` | Update local project templates and workflows to the latest standards. |
-| `help` | Display the AI Agent Guide or specific workflow instructions. |
+| `help`    | Display the AI Agent Guide or specific workflow instructions.         |
 
 ---
 
-## 🚦 Getting Started
+## 🧠 Dynamic Documentation Engine
+
+FoundrySpec now features a **Dynamic Root Infrastructure**.
+
+- **Auto-Discovery:** The build engine automatically scans your `docs/` folder. Each top-level directory becomes a category in the Root Hub.
+- **Synthetic Indexing:** If you don't provide an index file (e.g., `context/context.mermaid`), FoundrySpec generates one for you, listing all diagrams in that folder.
+- **Discovery Hub:** The `discovery` folder is special. It automatically collects and aggregates your Personas, Requirements, and Journeys into a central view.
+
+## ⚙️ Configuration
+
+FoundrySpec is **Zero-Config** by default.
+
+- **Project Identity:** A `.foundryid` file is generated on `init`. Do not delete this.
+- **Global Config:** Your projects and external references are managed in `~/.foundryspec/projects.json`.
+- **No more Config Files:** We have deprecated `foundry.config.json` in favor of this global, managed approach.
+
+## 🚀 Getting Started
 
 ### Installation
 
@@ -52,15 +68,14 @@ npm install -g @futurefoundaihq/foundryspec
 ```bash
 foundryspec init "My Awesome Project"
 cd foundryspec
-foundryspec build
-foundryspec serve
+foundryspec build   # Generates your static Documentation Hub
+foundryspec serve   # Starts the local preview server
 ```
-
----
 
 ## 🖋️ The Footnote Policy (Optional)
 
 Footnotes are **not compulsory**. They are supplemental assets used only when a diagram node requires deeper prose or technical specification.
+
 1. **Diagrams First:** All architectural nodes are defined in `.mermaid` files.
 2. **Markdown as Supplement:** If you choose to add detail, `.md` files must reside in a `footnotes/` subdirectory.
 3. **Strict Addressing:** A footnote's `id` must match a node ID in its parent directory's diagrams.

@@ -204,10 +204,81 @@ export class BuildManager {
     private async generateSyntheticAssets(assets: ProjectAsset[]): Promise<ProjectAsset[]> {
         console.log(chalk.blue('🏗️  Informing synthetic architectural hub...'));
         const synthetic: ProjectAsset[] = [];
+        
+        // 1. Scan for Directories to Create Synthetic Indices
+        const categories: Record<string, { id: string, title: string, items: { id: string, title: string }[] }> = {};
+        
+        // Identify all direct subdirectories in docs/
+        const subdirs = (await fs.readdir(this.docsDir, { withFileTypes: true }))
+            .filter(dirent => dirent.isDirectory() && dirent.name !== 'others' && !dirent.name.startsWith('.'))
+            .map(dirent => dirent.name);
 
-        // 1. Generate discovery/personas.mermaid (The Aggregate)
+        for (const dir of subdirs) {
+             const catId = `GRP_${dir.charAt(0).toUpperCase() + dir.slice(1)}`;
+             const catTitle = `${dir.charAt(0).toUpperCase() + dir.slice(1)} Index`;
+             
+             // Collect assets in this folder
+             const dirAssets = assets.filter(a => a.relPath.startsWith(`${dir}/`));
+             
+             // Special Handling for Discovery Sub-Groups (Personas, Requirements, Journeys)
+             if (dir === 'discovery') {
+                 // We will generate the specialized index separately below, 
+                 // but we register it here so ROOT knows about it.
+                 // The 'items' here won't be used for the generic generator for discovery.
+                 categories[dir] = { id: catId, title: catTitle, items: [] };
+                 continue;
+             }
+
+             // Check if the "Index File" already exists (User provided [dir]/[dir].mermaid)
+             const existingIndex = assets.find(a => a.relPath === `${dir}/${dir}.mermaid`);
+             if (existingIndex) {
+                 // User has provided the anchor file, so we just register it to the RootHub (via categories)
+                 // But we DO NOT generate a synthetic one.
+                 // We need to ensure we get the correct ID/Title from the existing file for the Root Hub.
+                 const id = existingIndex.data.id || existingIndex.data.traceability?.id || catId;
+                 const title = existingIndex.data.title || catTitle;
+                 categories[dir] = { id, title, items: [] };
+                 continue;
+             }
+
+             const items = dirAssets.map(a => {
+                 const id = a.data.id || a.data.traceability?.id;
+                 const title = a.data.title || id || path.basename(a.relPath);
+                 return { id, title };
+             }).filter(i => i.id); // Only list items with IDs
+
+             if (items.length > 0) {
+                 categories[dir] = { id: catId, title: catTitle, items };
+                 
+                 // Generate Synthetic Index for this Category
+                 let indexMermaid = `---
+title: ${catTitle}
+description: Automatically generated index for ${dir}.
+id: "${catId}"
+---
+mindmap
+  root(("${catTitle}"))
+`;
+                 items.forEach(item => {
+                     // Escape quotes and wrap in quotes to handle parens etc
+                     const safeTitle = item.title.replace(/"/g, "'");
+                     indexMermaid += `    ${item.id}("${safeTitle}")\n`;
+                 });
+
+                 synthetic.push({
+                     relPath: `${dir}/${dir}.mermaid`,
+                     absPath: '', // Synthetic
+                     content: indexMermaid,
+                     data: { id: catId, title: catTitle, description: `Index for ${dir}` }
+                 });
+             }
+        }
+
+        // 2. Special Handling: Discovery (Personas, Requirements, Journeys)
+        // Discovery is a "Super Category" that aggregates other Groups, not just files.
         const personas = assets.filter(a => (a.data.id || '').startsWith('PER_') || a.relPath.startsWith('discovery/personas/'));
-        let personasMermaid = `---
+        if (personas.length > 0) {
+             let personasMermaid = `---
 title: Persona Index
 description: Automatically aggregated list of all project personas.
 id: "GRP_Personas"
@@ -215,32 +286,82 @@ id: "GRP_Personas"
 mindmap
   GRP_Personas((Persona Index))
 `;
-        for (const p of personas) {
-            const id = p.data.id || p.data.traceability?.id || path.basename(p.relPath, '.mermaid');
-            const title = p.data.title || id;
-            personasMermaid += `    ${id}(${title})\n`;
+            for (const p of personas) {
+                const id = p.data.id || p.data.traceability?.id || path.basename(p.relPath, '.mermaid');
+                const title = p.data.title || id;
+                personasMermaid += `    ${id}(${title})\n`;
+            }
+            synthetic.push({
+                relPath: 'discovery/personas.mermaid',
+                absPath: '', 
+                content: personasMermaid,
+                data: { id: 'GRP_Personas', title: 'Persona Index', description: 'Automatically aggregated list' }
+            });
+        }
+
+        // 3. Requirements Index
+        const requirements = assets.filter(a => (a.data.id || '').startsWith('REQ_') || a.relPath.startsWith('discovery/requirements/'));
+        if (requirements.length > 0) {
+            let reqMermaid = `---
+title: Requirements Catalog
+description: Automatically aggregated list of system requirements.
+id: "GRP_Requirements"
+---
+mindmap
+  GRP_Requirements(Requirements)
+`;
+            for (const r of requirements) {
+                const id = r.data.id || r.data.traceability?.id || path.basename(r.relPath, '.mermaid');
+                const title = r.data.title || id;
+                // Avoid self-reference if some file claims to be GRP_Requirements (unlikely but safe)
+                if (id !== 'GRP_Requirements') {
+                     reqMermaid += `    ${id}(${title})\n`;
+                }
+            }
+             synthetic.push({
+                relPath: 'discovery/requirements.mermaid',
+                absPath: '', 
+                content: reqMermaid,
+                data: { id: 'GRP_Requirements', title: 'Requirements Catalog', description: 'Automatically aggregated list' }
+            });
         }
         
-        synthetic.push({
-            relPath: 'discovery/personas.mermaid',
-            absPath: '', // Synthetic
-            content: personasMermaid,
-            data: { id: 'GRP_Personas', title: 'Persona Index', description: 'Automatically aggregated list' }
+        // For now, let's create the Discovery Hub linking these groups:
+        let discoveryMermaid = `---
+title: Discovery Hub
+description: Central hub for Personas, Requirements, and Journeys.
+id: "GRP_Discovery"
+---
+mindmap
+  GRP_Discovery((Discovery Hub))
+`;
+        const discoNodes = [];
+        if (personas.length > 0) discoNodes.push({ id: 'GRP_Personas', title: 'Personas' });
+        
+        // check for Requirements group or file
+        const reqAsset = assets.find(a => a.data.id === 'GRP_Requirements');
+        if (reqAsset) discoNodes.push({ id: 'GRP_Requirements', title: 'Requirements' });
+        
+        // check for Journeys group or file
+        const journeyAsset = assets.find(a => a.data.id === 'GRP_Journeys');
+        if (journeyAsset) discoNodes.push({ id: 'GRP_Journeys', title: 'Journeys' });
+
+        discoNodes.forEach(n => {
+            discoveryMermaid += `    ${n.id}(${n.title})\n`;
         });
 
-        // 2. Generate root.mermaid (The Navigation Hub)
-        const categories = {
-            discovery: assets.some(a => a.relPath.startsWith('discovery/')),
-            context: assets.some(a => a.relPath.startsWith('context/')),
-            boundaries: assets.some(a => a.relPath.startsWith('boundaries/')),
-            components: assets.some(a => a.relPath.startsWith('components/'))
-        };
+        synthetic.push({
+            relPath: 'discovery/discovery.mermaid',
+            absPath: '', 
+            content: discoveryMermaid,
+            data: { id: 'GRP_Discovery', title: 'Discovery Hub', description: 'Central hub for Personas, Requirements, and Journeys' }
+        });
+        
+        // Ensure Discovery is in our category list for the Root Hub
+        categories['discovery'] = { id: 'GRP_Discovery', title: 'Discovery Hub', items: [] };
 
-        const getTitle = (id: string, fallback: string) => {
-            const found = assets.find(a => a.data.id === id || a.data.traceability?.id === id);
-            return found?.data?.title || fallback;
-        };
 
+        // 3. Generate root.mermaid (The Navigation Hub)
         let rootMermaid = `---
 title: ${this.projectName} Hub
 description: System-generated navigation entry point.
@@ -249,23 +370,14 @@ id: "ROOT"
 mindmap
   ROOT((${this.projectName}))
 `;
-        if (categories.discovery) {
-            rootMermaid += `    Discovery\n`;
-            if (personas.length > 0) rootMermaid += `      GRP_Personas(Persona Index)\n`;
-            
-            if (assets.some(a => a.relPath.includes('requirements'))) {
-                const title = getTitle('GRP_Requirements', 'Requirements');
-                rootMermaid += `      GRP_Requirements(${title})\n`;
-            }
-            
-            if (assets.some(a => a.relPath.includes('journeys'))) {
-                const title = getTitle('GRP_Journeys', 'User Journeys');
-                rootMermaid += `      GRP_Journeys(${title})\n`;
-            }
+        
+        // Sort categories for consistent order?
+        const sortedCats = Object.values(categories).sort((a, b) => a.title.localeCompare(b.title));
+        
+        for (const cat of sortedCats) {
+             const safeTitle = cat.title.replace(/"/g, "'");
+             rootMermaid += `    ${cat.id}("${safeTitle}")\n`;
         }
-        if (categories.context) rootMermaid += `    Context\n      CTX_Main(System Context)\n`;
-        if (categories.boundaries) rootMermaid += `    Boundaries\n      BND_Main(Technical Boundaries)\n`;
-        if (categories.components) rootMermaid += `    Components\n      GRP_Components(Internal Components)\n`;
 
         synthetic.push({
             relPath: 'root.mermaid',

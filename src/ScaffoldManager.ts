@@ -67,7 +67,7 @@ export class ScaffoldManager {
         const personaDir = path.join(this.targetDir, 'discovery', 'personas');
         await fs.ensureDir(personaDir);
 
-        const userContent = `--- 
+        const userContent = `---
 title: Standard User
 description: A typical end-user of the system.
 id: "PER_User"
@@ -84,7 +84,7 @@ mindmap
       Perform core workflows
 `;
 
-        const adminContent = `--- 
+        const adminContent = `---
 title: System Admin
 description: Privileged user responsible for system management.
 id: "PER_Admin"
@@ -104,20 +104,30 @@ mindmap
         await fs.writeFile(path.join(personaDir, 'PER_Admin.mermaid'), adminContent);
 
         // --- 2. Requirements ---
-        const discoveryPath = path.join(this.targetDir, 'discovery');
-        const requirementsContent = `--- 
-title: Requirements Catalog
-description: Index of system requirements.
-id: "GRP_Requirements"
+        const reqDir = path.join(this.targetDir, 'discovery', 'requirements');
+        await fs.ensureDir(reqDir);
+
+        const coreReqContent = `---
+title: Core Requirements
+description: Fundamental system requirements.
+id: "REQ_Core"
+uplink: "PER_User"
+downlinks:
+  - "CTX_System"
 ---
-mindmap
-  GRP_Requirements(Requirements)
-    GRP_Core(Core Requirements)
+requirementDiagram
+    requirement Fundamental {
+        id: "REQ_Core"
+        text: "The system shall perform its core functions."
+        risk: Low
+        verifymethod: Test
+    }
 `;
-        await fs.writeFile(path.join(discoveryPath, 'requirements.mermaid'), requirementsContent);
+        await fs.writeFile(path.join(reqDir, 'REQ_Core.mermaid'), coreReqContent);
 
         // --- 3. Journey ---
-        const journeyContent = `--- 
+        const discoveryPath = path.join(this.targetDir, 'discovery');
+        const journeyContent = `---
 title: User Journey
 description: High-level workflow visualization.
 id: "GRP_Journeys"
@@ -136,36 +146,29 @@ journey
 
         // --- 4. Context (L1) ---
         const contextPath = path.join(this.targetDir, 'context');
-        const systemContextContent = `--- 
+        const systemContextContent = `---
 title: System Context Diagram (L1)
 description: High-level system landscape.
 id: "CTX_Main"
 ---
-C4Context
-    title System Context Diagram (L1)
-
-    Person(user, "User", "A user of the system")
-    System(CTX_System, "${this.projectName}", "The software system being built")
-    
-    Rel(user, CTX_System, "Uses")
+graph TD
+    User((User)) --> CTX_System((${this.projectName}))
 `;
-        await fs.writeFile(path.join(contextPath, 'system-context.mermaid'), systemContextContent);
+        await fs.writeFile(path.join(contextPath, 'context.mermaid'), systemContextContent);
 
         // --- 5. Boundaries (L2) ---
         const boundariesPath = path.join(this.targetDir, 'boundaries');
-        const boundariesContent = `--- 
+        const boundariesContent = `---
 title: Technical Boundaries Diagram (L2)
 description: Boundary decomposition.
 id: "BND_Main"
 ---
-C4Container
-    title Technical Boundaries Diagram (L2)
-
-    System_Boundary(system, "${this.projectName}") {
-        Container(BND_App, "Main Application", "Technology Stack", "Core business logic")
-    }
+graph TD
+    subgraph CTX_System [${this.projectName}]
+        BND_App(Main Application)
+    end
 `;
-        await fs.writeFile(path.join(boundariesPath, 'technical-boundaries.mermaid'), boundariesContent);
+        await fs.writeFile(path.join(boundariesPath, 'boundaries.mermaid'), boundariesContent);
 
         // --- REGISTER PROJECT GLOBALLY ---
         const projectId = crypto.randomUUID();
