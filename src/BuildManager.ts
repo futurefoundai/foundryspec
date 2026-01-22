@@ -338,12 +338,38 @@ mindmap
         const discoNodes = [];
         if (personas.length > 0) discoNodes.push({ id: 'GRP_Personas', title: 'Personas' });
         
+        // 4. Journeys Index
+        const journeys = assets.filter(a => (a.data.id || '').startsWith('JRN_') || a.relPath.startsWith('discovery/journeys/'));
+        if (journeys.length > 0) {
+            let jrnMermaid = `---
+title: Journey Index
+description: Automatically aggregated list of user journeys.
+id: "GRP_Journeys"
+---
+mindmap
+  GRP_Journeys(Journeys)
+`;
+            for (const j of journeys) {
+                const id = j.data.id || j.data.traceability?.id || path.basename(j.relPath, '.mermaid');
+                const title = j.data.title || id;
+                if (id !== 'GRP_Journeys') {
+                     jrnMermaid += `    ${id}(${title})\n`;
+                }
+            }
+             synthetic.push({
+                relPath: 'discovery/journeys.mermaid',
+                absPath: '', 
+                content: jrnMermaid,
+                data: { id: 'GRP_Journeys', title: 'Journey Index', description: 'Automatically aggregated list' }
+            });
+        }
+        
         // check for Requirements group or file
-        const reqAsset = assets.find(a => a.data.id === 'GRP_Requirements');
+        const reqAsset = assets.find(a => a.data.id === 'GRP_Requirements') || synthetic.find(a => a.data.id === 'GRP_Requirements');
         if (reqAsset) discoNodes.push({ id: 'GRP_Requirements', title: 'Requirements' });
         
         // check for Journeys group or file
-        const journeyAsset = assets.find(a => a.data.id === 'GRP_Journeys');
+        const journeyAsset = assets.find(a => a.data.id === 'GRP_Journeys') || synthetic.find(a => a.data.id === 'GRP_Journeys');
         if (journeyAsset) discoNodes.push({ id: 'GRP_Journeys', title: 'Journeys' });
 
         discoNodes.forEach(n => {

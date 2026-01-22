@@ -126,11 +126,13 @@ requirementDiagram
         await fs.writeFile(path.join(reqDir, 'REQ_Core.mermaid'), coreReqContent);
 
         // --- 3. Journey ---
-        const discoveryPath = path.join(this.targetDir, 'discovery');
+        const journeyDir = path.join(this.targetDir, 'discovery', 'journeys');
+        await fs.ensureDir(journeyDir);
+        
         const journeyContent = `---
-title: User Journey
-description: High-level workflow visualization.
-id: "GRP_Journeys"
+title: User Workflow
+description: High-level user journey.
+id: "JRN_UserWorkflow"
 uplink: "PER_User"
 ---
 journey
@@ -142,7 +144,7 @@ journey
       Perform Task: 5: PER_User
       Save Data: 3: System
 `;
-        await fs.writeFile(path.join(discoveryPath, 'journeys.mermaid'), journeyContent);
+        await fs.writeFile(path.join(journeyDir, 'JRN_UserWorkflow.mermaid'), journeyContent);
 
         // --- 4. Context (L1) ---
         const contextPath = path.join(this.targetDir, 'context');
