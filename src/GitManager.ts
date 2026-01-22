@@ -15,37 +15,33 @@ import fs from 'fs-extra';
 import path from 'path';
 import chalk from 'chalk';
 
-interface ExternalSpec {
-    remote: string;
-    target: string;
-    branch: string;
-}
-
-interface FoundryConfig {
-    projectName: string;
-    version: string;
-    categories: any[];
-    external: ExternalSpec[];
-    build: any;
-}
+import { ConfigStore } from './ConfigStore.js';
 
 export class GitManager {
     private projectDir: string;
-    private configPath: string;
     private git: SimpleGit;
+    private configStore: ConfigStore;
 
     constructor(projectDir: string = process.cwd()) {
         this.projectDir = projectDir;
-        this.configPath = path.join(this.projectDir, 'foundry.config.json');
         this.git = simpleGit(this.projectDir);
+        this.configStore = new ConfigStore();
+    }
+
+    private async getProjectId(): Promise<string> {
+        const idPath = path.join(this.projectDir, '.foundryid');
+        if (!await fs.pathExists(idPath)) {
+            throw new Error('Project not initialized. No .foundryid found. Run "foundryspec init".');
+        }
+        return (await fs.readFile(idPath, 'utf8')).trim();
     }
 
     async pull(remoteUrl: string, targetPath: string): Promise<void> {
-        if (!await fs.pathExists(this.configPath)) {
-            throw new Error('foundry.config.json not found.');
-        }
+        const projectId = await this.getProjectId();
+        const config = await this.configStore.getProject(projectId);
+        
+        if (!config) throw new Error(`Project ${projectId} not found in configuration.`);
 
-        const config: FoundryConfig = await fs.readJson(this.configPath);
         const fullTargetPath = path.resolve(this.projectDir, targetPath);
 
         console.log(chalk.gray(`Pulling remote specs from ${remoteUrl} to ${targetPath}...`));
@@ -60,26 +56,26 @@ export class GitManager {
         }
 
         // Update config
-        if (!config.external) config.external = [];
-        const existing = config.external.find(e => e.remote === remoteUrl);
+        const external = config.external || [];
+        const existing = external.find(e => e.remote === remoteUrl);
         if (!existing) {
-            config.external.push({
+            external.push({
                 remote: remoteUrl,
                 target: targetPath,
                 branch: 'main'
             });
-            await fs.writeJson(this.configPath, config, { spaces: 2 });
+            await this.configStore.updateProject(projectId, { external });
         }
 
         console.log(chalk.green(`✅ Successfully integrated remote specs.`));
     }
 
     async sync(): Promise<void> {
-        if (!await fs.pathExists(this.configPath)) {
-            throw new Error('foundry.config.json not found.');
-        }
+        const projectId = await this.getProjectId();
+        const config = await this.configStore.getProject(projectId);
+        
+        if (!config) throw new Error(`Project ${projectId} not found in configuration.`);
 
-        const config: FoundryConfig = await fs.readJson(this.configPath);
         if (!config.external || config.external.length === 0) {
             console.log(chalk.yellow('No external specs configured to sync.'));
             return;
@@ -108,7 +104,6 @@ export class GitManager {
                 return [];
             }
 
-            // Get names of changed files in assets directory over last N days
             // Get names of changed files in assets directory over last N days
             const sinceDate = new Date();
             sinceDate.setDate(sinceDate.getDate() - days);
