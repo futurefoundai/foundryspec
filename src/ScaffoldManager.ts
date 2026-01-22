@@ -131,18 +131,25 @@ requirementDiagram
         
         const journeyContent = `---
 title: User Workflow
-description: High-level user journey.
+description: Core user interaction flow.
 id: "JRN_UserWorkflow"
 uplink: "PER_User"
 ---
-journey
-    title User Journey: Core Workflow
-    section Initialization
-      Login: 5: PER_User
-      Load Dashboard: 3: System
-    section Action
-      Perform Task: 5: PER_User
-      Save Data: 3: System
+sequenceDiagram
+    autonumber
+    actor User
+    participant System
+
+    rect rgb(240, 255, 240)
+    Note right of User: Happy Path: Core Workflow
+    
+    User->>System: Login(credentials)
+    System-->>User: 200 OK (Auth Token)
+
+    User->>System: Perform Action(data)
+    System->>System: Validate & Process
+    System-->>User: 200 OK (Success)
+    end
 `;
         await fs.writeFile(path.join(journeyDir, 'JRN_UserWorkflow.mermaid'), journeyContent);
 
