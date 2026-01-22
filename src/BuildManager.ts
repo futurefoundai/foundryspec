@@ -561,6 +561,25 @@ mindmap
                      // Warning or error? Strict for now.
                 }
 
+                // Journeys Validation (Strict Sequence Diagram Enforced)
+                const isJourney = relPath.includes('/journeys/') || (data.id && data.id.startsWith('JRN_'));
+                if (isJourney && relPath.endsWith('.mermaid')) {
+                    const trimmedContent = content.trim();
+                    if (!trimmedContent.startsWith('sequenceDiagram')) {
+                        throw new Error(chalk.red(`\n❌ Strict Syntax Check Failed in "${relPath}":
+    Journeys MUST be defined using "sequenceDiagram".
+    Found: "${trimmedContent.split('\n')[0]}..."
+    
+    Please update your Journey file to use the Sequence Diagram syntax.
+    Example:
+    sequenceDiagram
+        actor User
+        participant System
+        User->>System: Action
+                        `));
+                    }
+                }
+
                 assets.push({ relPath, absPath, content, data });
             }
         }
