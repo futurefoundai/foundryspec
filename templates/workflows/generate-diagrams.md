@@ -7,16 +7,16 @@ As an AI agent, use this workflow to create technical visualizations that comply
 1.  **Context Discovery**: Before drawing, ask the user about boundaries, actors, and data flows.
 2.  **Select Category**: Determine if it's Discovery, Context, Boundaries, Components, etc.
 3.  **Define Diagram Type**: Use `graph`, `sequenceDiagram`, `stateDiagram-v2`, `classDiagram`, `journey`, or `requirementDiagram`.
-4.  **Add Frontmatter (CRITICAL)**: You MUST start the file with a YAML block:
+4.  **Add Frontmatter (CRITICAL)**: You MUST start the file with a YAML block. The `id` is essential for dynamic linking:
     ```mermaid
     ---
     title: [Clear Title]
     description: [Concise description of the diagram's purpose]
+    id: "MY_UNIQUE_ID"
     ---
     ```
 5.  **Robustness Check**: Ask: "Does this diagram raise more questions than it answers?".
 6.  **Save & Link**:
-    *   Save the `.mermaid` file to the category folder (e.g., `assets/components/my-component.mermaid`).
-    *   **Link it:** Find a parent diagram (usually in `root.mermaid` or `assets/architecture/`) and add a `click` event or link to your new file so it is not an orphan.
-    *   Example: `click MyComponent "assets/components/my-component.mermaid"`
+    *   Save the `.mermaid` file to the category folder (e.g., `docs/components/my-component.mermaid`).
+    *   **Link it:** Use the diagram's **ID** or **Text Label** in a parent diagram. FoundrySpec will automatically create a dynamic link. No `click` syntax is needed.
 7.  **Validate**: Run `foundryspec build` to ensure no syntax errors or orphaned files.

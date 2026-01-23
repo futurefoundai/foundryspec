@@ -5,20 +5,20 @@ description: How to collaborate with humans to design a new feature
 As an AI agent, follow this "Exhaustive Discovery" cycle to reach **Zero-Question Implementation readiness**:
 
 1.  **Discovery Phase (Mandatory First Step)**
-    *   **Identify Actors:** Check `assets/discovery/personas.mermaid`. If the relevant actor is missing, add them using the Mermaid Class Diagram syntax.
-    *   **Map the Journey:** Update or create `assets/discovery/journeys.mermaid` to visualize the user's flow for this specific feature. Use Mermaid's `journey` syntax.
-    *   **Define Requirements:** Update `assets/discovery/requirements.mermaid` (Requirement Diagram) to include the new Functional and Non-Functional requirements for this feature.
-    *   **Traceability:** Ensure requirements are linked to the components that will satisfy them.
+    *   **Identify Actors:** Check `docs/discovery/personas/`. If the relevant actor is missing, add a new persona mindmap (e.g., `docs/discovery/personas/PER_NewUser.mermaid`).
+    *   **Map the Journey:** Update or create a sequence diagram in `docs/discovery/journeys/` to visualize the user's flow for this specific feature.
+    *   **Define Requirements:** Update `docs/discovery/requirements/` (Requirement Diagram) to include the new Functional and Non-Functional requirements for this feature.
+    *   **Traceability:** Ensure requirements are linked to the implementation assets (Features or Components) that will satisfy them.
     *   *Goal:* Ensure we understand "Who", "What", and "Why" before we define "How".
 
 2.  **Architecture Phase (L1 - Context & L2 - Boundaries)**
-*   Analyze `root.mermaid` and follow links to `assets/boundaries/`.
-*   Does this feature introduce a new System, User, or Boundary? Update the relevant diagrams.
-*   **Link It:** If you create a new diagram, ensure it is linked from an existing parent diagram (e.g., link `assets/boundaries/new-service.mermaid` from `assets/context/system-context.mermaid`) to satisfy the **No Orphan Policy**.
+    *   Navigate through the **Root Hub** to `docs/boundaries/`.
+    *   Does this feature introduce a new System, User, or Boundary? Update the relevant diagrams.
+    *   **Link It:** If you create a new diagram, ensure its **ID** or **Text Label** is referenced in an existing parent diagram (e.g., reference the new component ID in `docs/context/system-context.mermaid`) to satisfy the **No Orphan Policy** via dynamic linking.
 3.  **Detailed Design Phase (L3 - Components & L4 - Sequences)**
-    *   Create detailed Component diagrams in `assets/components/`.
-    *   Create Sequence diagrams in `assets/sequences/` for complex interactions.
-    *   **Frontmatter:** Ensure EVERY `.mermaid` file has the required YAML frontmatter (title & description).
+    *   Create detailed Component diagrams in `docs/components/`.
+    *   Create Sequence diagrams in `docs/sequences/` for complex interactions.
+    *   **Frontmatter:** Ensure EVERY `.mermaid` file has the required YAML frontmatter (title, description, and a unique id).
 
 4.  **The "Zero-Question" Inquiry**: Ask questions until you can visualize the entire implementation path with no unknowns.
 

@@ -17,6 +17,19 @@ import chalk from 'chalk';
 
 import { ConfigStore } from './ConfigStore.js';
 
+export interface FileChange {
+    file: string;
+    commits: {
+        hash: string;
+        date: string;
+        message: string;
+        author: string;
+    }[];
+}
+
+/**
+ * @foundryspec COMP_GitManager
+ */
 export class GitManager {
     private projectDir: string;
     private git: SimpleGit;
@@ -95,7 +108,7 @@ export class GitManager {
         console.log(chalk.green(`✅ All external specs synchronized.`));
     }
 
-    async getSpecChanges(days: number = 7): Promise<any[]> {
+    async getSpecChanges(days: number = 7): Promise<FileChange[]> {
         try {
             // Check if directory is a git repo
             const isRepo = await this.git.checkIsRepo();
@@ -115,7 +128,7 @@ export class GitManager {
             ];
 
             const logs = await this.git.log(logOptions);
-            const fileChanges: Record<string, any> = {};
+            const fileChanges: Record<string, FileChange> = {};
 
             for (const entry of logs.all) {
                 // For each commit, find which files in assets were changed
@@ -146,7 +159,7 @@ export class GitManager {
             }
 
             return Object.values(fileChanges);
-        } catch (err) {
+        } catch (err: unknown) {
             console.error(chalk.red('Error fetching git changes:'), err);
             return [];
         }

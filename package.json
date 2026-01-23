@@ -1,7 +1,7 @@
 {
   "name": "@futurefoundaihq/foundryspec",
-  "version": "1.0.2",
-  "description": "Documentation engine for human-AI collaborative system design",
+  "version": "1.0.3",
+  "description": "Intent Driven Development Infrastructure for human-AI CollabOps",
   "main": "index.js",
   "type": "module",
   "bin": {
@@ -11,11 +11,14 @@
     "access": "public"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "vitest run",
     "build": "tsc",
     "prepublishOnly": "npm run build",
-    "docs:build": "cd foundryspec && foundryspec build",
-    "docs:serve": "cd foundryspec && foundryspec serve"
+    "docs:build": "foundryspec build",
+    "docs:serve": "foundryspec serve",
+    "lint": "eslint 'src/**/*.ts'",
+    "lint:fix": "eslint 'src/**/*.ts' --fix",
+    "format": "prettier --write 'src/**/*.ts'"
   },
   "keywords": [
     "documentation",
@@ -24,7 +27,8 @@
     "ai-agent",
     "c4-model",
     "specification",
-    "scaffolding"
+    "scaffolding",
+    "Intent Driven Development"
   ],
   "author": "FutureFoundAI",
   "license": "AGPL-3.0-only",
@@ -44,6 +48,13 @@
   "devDependencies": {
     "@types/fs-extra": "^11.0.4",
     "@types/serve-handler": "^6.1.4",
-    "serve-handler": "^6.1.6"
+    "@typescript-eslint/eslint-plugin": "^8.53.1",
+    "@typescript-eslint/parser": "^8.53.1",
+    "eslint": "^9.39.2",
+    "eslint-config-prettier": "^10.1.8",
+    "prettier": "^3.8.1",
+    "serve-handler": "^6.1.6",
+    "typescript-eslint": "^8.53.1",
+    "vitest": "^4.0.18"
   }
 }

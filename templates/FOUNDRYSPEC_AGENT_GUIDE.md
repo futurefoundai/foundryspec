@@ -6,7 +6,7 @@
 
 ## Core Concepts
 
-- **Graph-Based Documentation**: The documentation is a directed graph starting from a single entry point: `root.mermaid`. All other diagrams must be reachable from this root to be included in the build (No Orphan Policy).
+- **Graph-Based Documentation**: The documentation is a directed graph. The **Root Hub** is **automatically generated** by scanning the `docs/` directory.
 - **Frontmatter Enforcement**: All `.mermaid` files MUST include a YAML frontmatter block with `title` and `description` fields.
 - **Discovery-First**: Every feature starts with Discovery (Personas, Journeys, Requirements) before Architecture or Code.
 - **Zero-Question Implementation**: Strive for maximum detail in your specs.
@@ -42,9 +42,12 @@ To achieve complete system understanding, you must identify four distinct types 
 
 A standard FoundrySpec project (initialized with `init`) follows a generic **L0-L3 Layered Model**:
 
-- `root.mermaid`: The **mandatory** entry point. It visualizes the hierarchy below.
-- `assets/`: The heart of the documentation.
+- `.foundryid`: The unique identifier for the project (do not edit).
+- `docs/`: The heart of the documentation.
   - `discovery/`: **L0**. Personas, Journeys, Requirements.
+    - `personas/`: Individual Persona mindmaps (`PER_*.mermaid`).
+    - `requirements/`: Requirement diagrams (`REQ_*.mermaid`).
+    - `journeys/`: User Journey sequence diagrams (`JRN_*.mermaid`).
   - `context/`: **L1**. System Context and high-level strategy.
   - `boundaries/`: **L2**. Technical boundaries and communication.
   - `components/`: **L3**. Detailed component breakdowns and specifications.
@@ -56,9 +59,10 @@ A standard FoundrySpec project (initialized with `init`) follows a generic **L0-
     - `security/`: Threat models.
     - `deployment/`: Infrastructure.
     - `integration/`: External API specs.
-- `foundry.config.json`: Configuration for the project structure.
+    - `others/`: Foreign files (images, PDFs, binaries).
 - `package.json`: Project dependencies and scripts.
-- `dist/`: Generated static site (do not edit manually).
+
+**Note:** `root.mermaid` is **auto-generated** during the build. You do not need to create it manually. The system will automatically index any subdirectories created in `docs/`.
 
 ## 📝 Critical Rules for Agents
 
@@ -70,28 +74,32 @@ Every `.mermaid` file you create MUST have this header:
 ---
 title: My Diagram Title
 description: A concise description of what this diagram represents.
+id: "UNIQUE_ID"
 ---
 graph TD
   ...
 ```
 
-### 2. No Orphan Policy
+### 2. Dynamic Linking (No Orphan Policy)
 
-The build engine traces links starting from `root.mermaid`. If a file is not linked, it will cause a **Build Error**.
+The build engine traces links starting from the auto-generated Root Hub. **You no longer need to use the Mermaid `click` syntax.**
 
-- **Link Syntax (Mermaid):** `click NodeID "assets/path/to/diagram.mermaid"`
-- **Link Syntax (Markdown):** `[Link Text](assets/path/to/diagram.mermaid)`
+FoundrySpec handles navigation dynamically:
+- If a Node's **ID** or **Text Label** matches the `id` defined in another spec file's frontmatter, the system automatically makes that node clickable.
+- Ensure your Node IDs or Labels are consistent with the `id` fields in the target files.
+- For manual Markdown links, use: `[Link Text](docs/path/to/diagram.mermaid)`.
 
 ### 3. Root Entry-Point Isolation
 
-`root.mermaid` is a high-level map. It MUST NOT reference "leaf" nodes (individual personas, requirements, or features) directly. It must strictly link to **Architectural Entry Points** (Groups or Overviews).
-
-- **Allowed Root Targets**: `PER_Group`, `REQ_Group`, `COMP_Overview`, `FEAT_Group`, `JOUR_Flow`, etc.
-- **Forbidden Root Targets**: Individual IDs like `PER_EndUser` or `FEAT_Auth`.
+The Root Hub is managed by the system. It links to high-level Category Indices (e.g., `GRP_Components`, `GRP_Discovery`). You should not attempt to link directly to the Root.
 
 ### 4. The Discovery Phase
 
-Do not skip Discovery. Always ensure `assets/discovery/personas.mermaid`, `assets/discovery/journeys.mermaid`, and `assets/discovery/requirements.mermaid` are updated before proposing architectural changes.
+Do not skip Discovery. Always ensure that Personas, Journeys, and Requirements are defined in their respective subfolders within `docs/discovery/`.
+
+- **Personas**: `docs/discovery/personas/PER_*.mermaid` (Must be `mindmap`)
+- **Requirements**: `docs/discovery/requirements/REQ_*.mermaid` (Must be `requirementDiagram`)
+- **Journeys**: `docs/discovery/journeys/JRN_*.mermaid` (Must be `sequenceDiagram`)
 
 ## Command Reference
 
@@ -101,7 +109,7 @@ You can invoke the FoundrySpec CLI using `foundryspec` (if installed globally) o
 | :------------------------------ | :--------------------------------------------------------------------- |
 | `foundryspec init [name]`       | Scaffold a new project.                                                |
 | `foundryspec add <category>`    | Add a new documentation category.                                      |
-| `foundryspec build`             | Generate the static documentation hub into `dist/`.                    |
+| `foundryspec build`             | Generate the static documentation hub (stored internally).             |
 | `foundryspec serve`             | Serve the documentation locally (typically http://localhost:3000).     |
 | `foundryspec upgrade`           | Upgrade local project templates and workflows.                         |
 | `foundryspec pull <url> <path>` | Pull specs from an external git repo.                                  |
@@ -133,10 +141,10 @@ Markdown files (`.md`) are NOT first-class architectural citizens. They serve ex
 
 ```yaml
 ---
-id: "COMP_Group"
+id: "COMP_ScaffoldManager"
 title: "Scaffold Manager Details"
 description: "Supplementary implementation notes."
-uplink: "requirements.mermaid"
+uplink: "GRP_Components"
 ---
 ```
 

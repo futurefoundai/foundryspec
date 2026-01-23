@@ -99,7 +99,7 @@ export class ProbeManager {
                 ...(Array.isArray(data.traceability?.entities) ? data.traceability.entities : [])
             ];
             
-            entities.forEach((e: any) => {
+            entities.forEach((e: { id?: string }) => {
                 if (e.id) ids.add(e.id);
             });
         }

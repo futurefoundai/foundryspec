@@ -21,8 +21,8 @@ As an AI agent, follow this "Discovery-Reverse" workflow to bring architectural 
 
 4.  **Validation (Phase 4)**
     *   Run `foundryspec build`.
-    *   **Fix Graph Breaches:** Ensure every new diagram is linked from `root.mermaid`.
-    *   **No Orphan Policy:** If you identified a feature in the code but haven't documented its requirement, add it to `assets/discovery/requirements.mermaid`.
+    *   **Fix Graph Breaches:** Ensure every new diagram is reachable from the auto-generated **Root Hub**.
+    *   **No Orphan Policy:** If you identified a feature in the code but haven't documented its requirement, add it to a requirement diagram in `docs/discovery/requirements/`.
 
 5.  **Audit & Review**
     *   Present the **FoundrySpec Hub** to the user.

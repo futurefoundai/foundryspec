@@ -28,6 +28,14 @@ entities:
     uplink: "REQ_ZeroConfig"
     requirements:
       - "REQ_ZeroConfig"
+  - id: "COMP_GitManager"
+    uplink: "REQ_Functional"
+    requirements:
+      - "REQ_Functional"
+  - id: "COMP_CLI"
+    uplink: "REQ_Functional"
+    requirements:
+      - "REQ_Functional"
 ---
 
 classDiagram
@@ -67,6 +75,18 @@ classDiagram
         +GlobalState
         +IdentityManager
     }
+
+    class COMP_GitManager {
+        <<Component>>
+        +RepoSync
+        +SpecPuller
+    }
+
+    class COMP_CLI {
+        <<Component>>
+        +CommandRegistry
+        +Entrypoint
+    }
     
     class ROOT {
         <<Entry>>
@@ -78,3 +98,5 @@ classDiagram
     ROOT --> COMP_ClickInterceptor : defines
     ROOT --> COMP_InteractiveComments : defines
     ROOT --> COMP_ConfigStore : defines
+    ROOT --> COMP_GitManager : defines
+    ROOT --> COMP_CLI : defines

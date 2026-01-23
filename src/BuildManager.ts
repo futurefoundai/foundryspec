@@ -26,6 +26,9 @@ import { ConfigStore } from './ConfigStore.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
+/**
+ * @foundryspec COMP_BuildManager
+ */
 export class BuildManager {
     private projectRoot: string;
     private docsDir: string;
@@ -105,7 +108,7 @@ export class BuildManager {
             }
             const blueprintSet = directoryBlueprints.get(effectiveDir)!;
 
-            const addLinks = (link: any) => {
+            const addLinks = (link: string | string[] | undefined) => {
                 if (!link) return;
                 if (Array.isArray(link)) link.forEach(l => { if (typeof l === 'string') blueprintSet.add(l); });
                 else if (typeof link === 'string') blueprintSet.add(link);
@@ -451,19 +454,20 @@ mindmap
                     const mermaidPath = require.resolve('mermaid/dist/mermaid.min.js');
                     await page.addScriptTag({ path: mermaidPath });
                     await page.evaluate(() => {
-                        // @ts-ignore
+                        // @ts-expect-error Mermaid types are not fully covered
                         mermaid.initialize({ startOnLoad: false });
                     });
 
                     for (const [file, content] of chunk) {
                         try {
                             await page.evaluate((diagram) => {
-                                // @ts-ignore
+                                // @ts-expect-error Mermaid types are not fully covered
                                 return mermaid.parse(diagram);
                             }, content);
-                        } catch (err: any) {
+                        } catch (err: unknown) {
                             console.error(chalk.red(`\n❌ Syntax error in ${file}:`));
-                            console.error(chalk.yellow(err.message));
+                            const message = err instanceof Error ? err.message : String(err);
+                            console.error(chalk.yellow(message));
                             throw new Error(`Build failed due to Mermaid syntax errors.`);
                         }
                     }
@@ -484,7 +488,7 @@ mindmap
         const templateContent = await fs.readFile(templatePath, 'utf8');
         
         const assetsDir = config.build?.assetsDir || 'assets';
-        const mapObj: Record<string, any> = {};
+        const mapObj: Record<string, string | string[]> = {};
         
         idToSpecFile.forEach((v, k) => {
             // Ensure we use forward slashes for URLs and prepend assets dir
@@ -503,7 +507,7 @@ mindmap
 
         const rendered = templateContent
             .replace(/{{projectName}}/g, config.projectName)
-            .replace(/{{projectId}}/g, (config as any).projectId || 'unboarded-project')
+            .replace(/{{projectId}}/g, (config as unknown as { projectId: string }).projectId || 'unboarded-project')
             .replace(/{{version}}/g, config.version)
             .replace(/{{idMap}}/g, JSON.stringify(mapObj));
 
@@ -612,7 +616,7 @@ mindmap
             ignore: ignoreRules
         });
 
-        const markerRegex = /@foundryspec(?:\/start)?\s+(?:REQUIREMENT\s+)?([\w\-]+)/g;
+        const markerRegex = /@foundryspec(?:\/start)?\s+(?:REQUIREMENT\s+)?([\w-]+)/g;
 
         await Promise.all(files.map(async (file) => {
             const content = await fs.readFile(path.join(this.projectRoot, file), 'utf8');
@@ -636,7 +640,7 @@ mindmap
     private async validatePersonas(assets: ProjectAsset[]): Promise<void> {
         console.log(chalk.blue('🔍 Validating Persona definitions (Mindmap Rules)...'));
         
-        const foundPersonas: { id: string, data: any, relPath: string, content: string }[] = [];
+        const foundPersonas: { id: string, data: Record<string, unknown>, relPath: string, content: string }[] = [];
 
         // Scan ALL assets for PER_ IDs (Top level OR Entity level)
         for (const asset of assets) {
@@ -706,7 +710,7 @@ mindmap
         
         for (const asset of assets) {
             const { data, relPath } = asset;
-            const addNode = (id: string, uplinks: any, downlinks: any, requirements?: any) => {
+            const addNode = (id: string, uplinks: string | string[] | undefined, downlinks: string | string[] | undefined, requirements?: string | string[] | undefined) => {
                 if (!id) return;
                 const ups = Array.isArray(uplinks) ? uplinks : (uplinks ? [uplinks] : []);
                 const downs = Array.isArray(downlinks) ? downlinks : (downlinks ? [downlinks] : []);
@@ -797,13 +801,13 @@ mindmap
     }
 
     // This is also key as well as other custom validators based on project roles
-    private async validateMindmapLabels(assets: ProjectAsset[], idToFileMap: Map<string, string>): Promise<void> {
+    private async validateMindmapLabels(_assets: ProjectAsset[], _idToFileMap: Map<string, string>): Promise<void> {
          // Logic validation for root.mermaid labels matching real assets
          // (Implementation omitted for brevity but assumed similar to previous)
     }
 
     // TODO: This ought to be worked on as it is very key
-    private async validateProjectGraph(assets: ProjectAsset[]): Promise<void> {
+    private async validateProjectGraph(_assets: ProjectAsset[]): Promise<void> {
         console.log(chalk.blue('🔍 Validating project graph connectivity...'));
         // (Graph traversal logic to ensure no orphans from ROOT)
         // ...
@@ -827,7 +831,10 @@ mindmap
                  isBuilding = true;
                  console.log(chalk.blue(`\n🔄 Change detected in ${filename}. Rebuilding...`));
                  try { await this.build(); } 
-                 catch (err: any) { console.error(chalk.red(`\n❌ Rebuild failed: ${err.message}`)); } 
+                 catch (err: unknown) { 
+                     const msg = err instanceof Error ? err.message : String(err);
+                     console.error(chalk.red(`\n❌ Rebuild failed: ${msg}`)); 
+                 } 
                  finally { isBuilding = false; }
              }
         });
@@ -844,7 +851,7 @@ mindmap
                         // Using ConfigStore to get the path
                         const commentsPath = this.configStore.getCommentsPath(this.projectId!);
                         
-                        let registry: Record<string, any[]> = {};
+                        let registry: Record<string, unknown[]> = {};
                         if (await fs.pathExists(commentsPath)) registry = await fs.readJson(commentsPath);
                         
                         const key = payload.compositeKey;
@@ -853,7 +860,7 @@ mindmap
                         registry[key].push(payload);
                         await fs.writeJson(commentsPath, registry, { spaces: 2 });
                         res.writeHead(200); res.end(JSON.stringify({ status: 'ok' }));
-                    } catch (e) { res.writeHead(500); res.end('Error'); }
+                    } catch { res.writeHead(500); res.end('Error'); }
                 });
                 return;
             }

@@ -42,6 +42,9 @@ export interface GlobalStore {
 }
 
 // TODO: Move type definitions to a special file
+/**
+ * @foundryspec COMP_ConfigStore
+ */
 export class ConfigStore {
   private globalDir: string;
   private dbPath: string;

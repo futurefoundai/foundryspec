@@ -20,16 +20,16 @@ import { fileURLToPath } from 'url';
 // Import managers using .js extension for ESM compatibility
 import { ScaffoldManager } from './ScaffoldManager.js';
 import { BuildManager } from './BuildManager.js';
-import { GitManager } from './GitManager.js';
+import { GitManager, FileChange } from './GitManager.js';
 import { ProbeManager } from './ProbeManager.js';
 import { ConfigStore } from './ConfigStore.js';
 
 /**
+ * @foundryspec COMP_CLI
  * TODO: We are no longer going to support Legacy foundry.config.json anymore
  * Finds the project root by searching for .foundryid or legacy foundry.config.json.
  */
 async function findProjectRoot(startDir: string): Promise<string> {
-    let current = path.resolve(startDir);
     // Naive check for now: assumes command running in root
     // TODO: Recursive implementation if needed. 
     // For now, strict root execution is safer to avoid confusion.
@@ -62,8 +62,10 @@ program
             console.log(chalk.cyan(`\nNext steps:`));
             console.log(`  foundryspec build`);
             console.log(`  foundryspec serve`);
-        } catch (err: any) {
-            console.error(chalk.red('\n❌ Error during initialization:'), err.message);
+            console.log(`  foundryspec serve`);
+        } catch (err: unknown) {
+            const msg = err instanceof Error ? err.message : String(err);
+            console.error(chalk.red('\n❌ Error during initialization:'), msg);
             process.exit(1);
         }
     });
@@ -76,8 +78,9 @@ program
             const root = await findProjectRoot(process.cwd());
             const prober = new ProbeManager(root);
             await prober.runProbe();
-        } catch (err: any) {
-            console.error(chalk.red('\n❌ Probe failed:'), err.message);
+        } catch (err: unknown) {
+            const msg = err instanceof Error ? err.message : String(err);
+            console.error(chalk.red('\n❌ Probe failed:'), msg);
             process.exit(1);
         }
     });
@@ -91,8 +94,9 @@ program
             const root = await findProjectRoot(process.cwd());
             const builder = new BuildManager(root);
             await builder.serve(options.port);
-        } catch (err: any) {
-            console.error(chalk.red('\n❌ Serve failed:'), err.message);
+        } catch (err: unknown) {
+            const msg = err instanceof Error ? err.message : String(err);
+            console.error(chalk.red('\n❌ Serve failed:'), msg);
         }
     });
 
@@ -105,8 +109,9 @@ program
             const root = await findProjectRoot(process.cwd());
             const builder = new BuildManager(root);
             await builder.build();
-        } catch (err: any) {
-            console.error(chalk.red('\n❌ Build failed:'), err.message);
+        } catch (err: unknown) {
+            const msg = err instanceof Error ? err.message : String(err);
+            console.error(chalk.red('\n❌ Build failed:'), msg);
             process.exit(1);
         }
     });
@@ -138,8 +143,9 @@ program
             } else {
                 console.log(chalk.yellow('Unknown action. Use "show" or "set".'));
             }
-        } catch (err: any) {
-            console.error(chalk.red('\n❌ Config error:'), err.message);
+        } catch (err: unknown) {
+            const msg = err instanceof Error ? err.message : String(err);
+            console.error(chalk.red('\n❌ Config error:'), msg);
         }
     });
 
@@ -174,8 +180,9 @@ program
             } else {
                 console.log(chalk.yellow('Unknown action. Use "dump" or "import".'));
             }
-        } catch (err: any) {
-            console.error(chalk.red('\n❌ Comments error:'), err.message);
+        } catch (err: unknown) {
+            const msg = err instanceof Error ? err.message : String(err);
+            console.error(chalk.red('\n❌ Comments error:'), msg);
         }
     });
 
@@ -190,8 +197,9 @@ program
             const scaffold = new ScaffoldManager();
             await scaffold.upgrade();
             console.log(chalk.green('\n✅ Project upgraded successfully!'));
-        } catch (err: any) {
-            console.error(chalk.red('\n❌ Upgrade failed:'), err.message);
+        } catch (err: unknown) {
+            const msg = err instanceof Error ? err.message : String(err);
+            console.error(chalk.red('\n❌ Upgrade failed:'), msg);
         }
     });
 
@@ -227,8 +235,9 @@ program
             await fs.ensureDir(path.join(root, 'docs', catSlug));
             console.log(chalk.green(`✅ Category "${category}" added and registered.`));
 
-        } catch (err: any) {
-            console.error(chalk.red('\n❌ Failed to add category:'), err.message);
+        } catch (err: unknown) {
+            const msg = err instanceof Error ? err.message : String(err);
+            console.error(chalk.red('\n❌ Failed to add category:'), msg);
         }
     });
 
@@ -241,8 +250,9 @@ program
         try {
             const gitMan = new GitManager();
             await gitMan.pull(url, targetPath);
-        } catch (err: any) {
-            console.error(chalk.red('\n❌ Pull failed:'), err.message);
+        } catch (err: unknown) {
+            const msg = err instanceof Error ? err.message : String(err);
+            console.error(chalk.red('\n❌ Pull failed:'), msg);
         }
     });
 
@@ -253,8 +263,9 @@ program
         try {
             const gitMan = new GitManager();
             await gitMan.sync();
-        } catch (err: any) {
-            console.error(chalk.red('\n❌ Sync failed:'), err.message);
+        } catch (err: unknown) {
+            const msg = err instanceof Error ? err.message : String(err);
+            console.error(chalk.red('\n❌ Sync failed:'), msg);
         }
     });
 
@@ -297,8 +308,9 @@ jobs:
             await fs.writeFile(path.join(workflowDir, 'deploy-docs.yml'), workflowContent);
             console.log(chalk.green('\n✅ GitHub Actions workflow created at .github/workflows/deploy-docs.yml'));
             console.log(chalk.yellow('⚠️  Note: With the new internal build system, you may need to adjust your CI to locate the build output.'));
-        } catch (err: any) {
-            console.error(chalk.red('\n❌ Deployment scaffolding failed:'), err.message);
+        } catch (err: unknown) {
+            const msg = err instanceof Error ? err.message : String(err);
+            console.error(chalk.red('\n❌ Deployment scaffolding failed:'), msg);
         }
     });
 
@@ -322,7 +334,7 @@ program
             let report = `# FoundrySpec Change Report (Last ${days} days)\n\n`;
             report += `This report identifies design changes that may require implementation updates in the codebase.\n\n`;
 
-            for (const item of changes as any[]) {
+            for (const item of changes as FileChange[]) {
                 const fileName = path.basename(item.file);
                 const isMermaid = fileName.endsWith('.mermaid');
                 
@@ -340,8 +352,9 @@ program
             await fs.writeFile(reportPath, report);
             console.log(chalk.gray(`\nReport also saved to: ${reportPath}`));
 
-        } catch (err: any) {
-            console.error(chalk.red('\n❌ Failed to generate changes report:'), err.message);
+        } catch (err: unknown) {
+            const msg = err instanceof Error ? err.message : String(err);
+            console.error(chalk.red('\n❌ Failed to generate changes report:'), msg);
         }
     });
 
@@ -392,8 +405,9 @@ program
                 console.log(chalk.gray('Available topics: agent, workflows'));
             }
 
-        } catch (err: any) {
-            console.error(chalk.red('\n❌ Failed to display help:'), err.message);
+        } catch (err: unknown) {
+            const msg = err instanceof Error ? err.message : String(err);
+            console.error(chalk.red('\n❌ Failed to display help:'), msg);
         }
     });
 
