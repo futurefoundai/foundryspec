@@ -17,15 +17,7 @@ import chalk from 'chalk';
 
 import { ConfigStore } from './ConfigStore.js';
 
-export interface FileChange {
-    file: string;
-    commits: {
-        hash: string;
-        date: string;
-        message: string;
-        author: string;
-    }[];
-}
+import { FileChange } from './types/git.js';
 
 /**
  * @foundryspec COMP_GitManager

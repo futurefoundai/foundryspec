@@ -8,7 +8,14 @@
 import fs from 'fs-extra';
 import yaml from 'js-yaml';
 import chalk from 'chalk';
-import { ProjectAsset } from './types/foundry.js';
+import { ProjectAsset, DiagramAnalysis } from './types/assets.js';
+import { 
+    RuleTarget, 
+    RuleChecks, 
+    Rule, 
+    HubCategory, 
+    RuleSet 
+} from './types/rules.js';
 import { 
     DiagramAnalyzer, 
     MindmapAnalyzer, 
@@ -16,45 +23,6 @@ import {
     FlowchartAnalyzer, 
     RequirementAnalyzer 
 } from './analyzers/index.js';
-
-export interface RuleTarget {
-    idPrefix?: string;
-    pathPattern?: string;
-}
-
-export interface RuleChecks {
-    mermaidType?: string;
-    requiredNodes?: string[];
-    requiredFrontmatter?: string[];
-    traceability?: {
-        linksToPersona?: boolean;
-        requiresImplementation?: boolean;
-        allowedDownlinkPrefixes?: string[];
-    };
-}
-
-export interface Rule {
-    id: string;
-    name: string;
-    target: RuleTarget;
-    type: 'structural' | 'syntax' | 'metadata' | 'traceability';
-    enforcement: 'error' | 'warning';
-    checks: RuleChecks;
-}
-
-export interface HubCategory {
-    id: string;
-    title: string;
-    path: string;
-    idPrefix?: string;
-}
-
-export interface RuleSet {
-    rules: Rule[];
-    hub?: {
-        categories: HubCategory[];
-    };
-}
 
 export class RuleEngine {
     private rules: Rule[] = [];

@@ -17,13 +17,7 @@ import { glob } from 'glob';
 import matter from 'gray-matter';
 import { RuleEngine } from './RuleEngine.js';
 
-interface ProbeResult {
-    id: string;
-    type: 'MISSING_IMPL' | 'ORPHAN_SPEC' | 'DRIFT';
-    message: string;
-    severity: 'LOW' | 'MEDIUM' | 'HIGH';
-    file?: string;
-}
+import { ProbeResult } from './types/probe.js';
 
 // @foundryspec/start COMP_ProbeManager
 export class ProbeManager {

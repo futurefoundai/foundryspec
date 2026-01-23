@@ -14,32 +14,7 @@ import fs from "fs-extra";
 import path from "path";
 import os from "os";
 
-// TODO: Move type definitions to a special file
-export interface ExternalSpec {
-  remote: string;
-  target: string;
-  branch: string;
-}
-
-export interface ProjectConfig {
-  id: string;
-  name: string;
-  version: string;
-  created: string;
-  lastBuild?: string;
-  external?: ExternalSpec[];
-  categories: Array<{
-    //TODO: Categories are dynamic so they should not be set in static mould, the system should automatically detect the folders that have things in them, is that not what is already done?
-    name: string;
-    path: string;
-    description: string;
-  }>;
-}
-
-// TODO: Move type definitions to a special file
-export interface GlobalStore {
-  projects: Record<string, ProjectConfig>;
-}
+import { ExternalSpec, ProjectConfig, GlobalStore } from './types/config.js';
 
 // TODO: Move type definitions to a special file
 /**

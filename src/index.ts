@@ -20,7 +20,8 @@ import { fileURLToPath } from 'url';
 // Import managers using .js extension for ESM compatibility
 import { ScaffoldManager } from './ScaffoldManager.js';
 import { BuildManager } from './BuildManager.js';
-import { GitManager, FileChange } from './GitManager.js';
+import { GitManager } from './GitManager.js';
+import { FileChange } from './types/git.js';
 import { ProbeManager } from './ProbeManager.js';
 import { ConfigStore } from './ConfigStore.js';
 

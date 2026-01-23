@@ -21,7 +21,8 @@ import matter from 'gray-matter';
 import serveHandler from 'serve-handler';
 
 import { fileURLToPath } from 'url';
-import { FoundryConfig, ProjectAsset } from './types/foundry.js';
+import { ProjectAsset } from './types/assets.js';
+import { FoundryConfig } from './types/config.js';
 import { ConfigStore } from './ConfigStore.js';
 import { RuleEngine } from './RuleEngine.js';
 
