@@ -1,0 +1,71 @@
+rules:
+  - id: persona-gate
+    name: Persona Architecture Gate
+    target:
+      idPrefix: PER_
+      pathPattern: "personas/*.mermaid"
+    type: structural
+    enforcement: error
+    checks:
+      mermaidType: mindmap
+      requiredFrontmatter: [title, description, id]
+      requiredNodes: [Role, Description, Goals]
+
+  - id: journey-syntax
+    name: Journey Strict Syntax
+    target:
+      idPrefix: JRN_
+      pathPattern: "journeys/*.mermaid"
+    type: syntax
+    enforcement: error
+    checks:
+      mermaidType: sequenceDiagram
+      requiredFrontmatter: [title, description, id]
+      requiredNodes: [User, System]
+
+  - id: requirement-syntax
+    name: Requirement Syntax
+    target:
+      idPrefix: REQ_
+      pathPattern: "requirements/*.mermaid"
+    type: syntax
+    enforcement: warning
+    checks:
+      mermaidType: requirementDiagram
+      requiredFrontmatter: [title, description, id]
+
+  - id: core-metadata
+    name: Core Document Metadata
+    target:
+      pathPattern: "**/*.mermaid"
+    type: metadata
+    enforcement: error
+    checks:
+      requiredFrontmatter: [title, description, id]
+
+hub:
+  categories:
+    - id: GRP_Personas
+      title: Personas
+      path: personas
+      idPrefix: PER_
+    - id: GRP_Requirements
+      title: Requirements
+      path: requirements
+      idPrefix: REQ_
+    - id: GRP_Journeys
+      title: Journeys
+      path: journeys
+      idPrefix: JRN_
+    - id: GRP_Context
+      title: Context
+      path: context
+      idPrefix: CTX_
+    - id: GRP_Boundaries
+      title: Boundaries
+      path: boundaries
+      idPrefix: BND_
+    - id: GRP_Components
+      title: Components
+      path: components
+      idPrefix: COMP_

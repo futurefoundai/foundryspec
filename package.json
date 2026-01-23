@@ -40,6 +40,7 @@
     "fs-extra": "^11.2.0",
     "glob": "^10.3.10",
     "gray-matter": "^4.0.3",
+    "js-yaml": "^4.1.1",
     "mermaid": "^10.8.0",
     "puppeteer": "^24.3.0",
     "simple-git": "^3.22.0",
@@ -47,6 +48,7 @@
   },
   "devDependencies": {
     "@types/fs-extra": "^11.0.4",
+    "@types/js-yaml": "^4.0.9",
     "@types/serve-handler": "^6.1.4",
     "@typescript-eslint/eslint-plugin": "^8.53.1",
     "@typescript-eslint/parser": "^8.53.1",
