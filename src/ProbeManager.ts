@@ -15,6 +15,7 @@ import path from 'path';
 import chalk from 'chalk';
 import { glob } from 'glob';
 import matter from 'gray-matter';
+import { RuleEngine } from './RuleEngine.js';
 
 interface ProbeResult {
     id: string;
@@ -28,12 +29,14 @@ interface ProbeResult {
 export class ProbeManager {
     private specDir: string;
     private projectDir: string;
+    private ruleEngine: RuleEngine;
 
     constructor(specDir: string = process.cwd()) {
         this.specDir = path.resolve(specDir);
         this.projectDir = path.basename(this.specDir) === 'foundryspec' 
             ? path.dirname(this.specDir) 
             : this.specDir;
+        this.ruleEngine = new RuleEngine();
     }
 
     async runProbe(): Promise<void> {
@@ -43,6 +46,10 @@ export class ProbeManager {
         if (!await fs.pathExists(assetsDir)) {
             throw new Error('Assets directory not found. Are you in a FoundrySpec project?');
         }
+
+        // Load Rules
+        const systemRulesPath = path.resolve(this.specDir, '../templates/rules/default-rules.yaml');
+        await this.ruleEngine.loadRules(systemRulesPath);
 
         const issues: ProbeResult[] = [];
 

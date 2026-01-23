@@ -23,6 +23,7 @@ import serveHandler from 'serve-handler';
 import { fileURLToPath } from 'url';
 import { FoundryConfig, ProjectAsset } from './types/foundry.js';
 import { ConfigStore } from './ConfigStore.js';
+import { RuleEngine } from './RuleEngine.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -33,6 +34,7 @@ export class BuildManager {
     private projectRoot: string;
     private docsDir: string;
     private configStore: ConfigStore;
+    private ruleEngine: RuleEngine;
     private projectId: string | null = null;
     private projectName: string = "FoundrySpec Project";
 
@@ -41,6 +43,7 @@ export class BuildManager {
         // We now expect 'docs' folder directly in the project root
         this.docsDir = path.join(this.projectRoot, 'docs');
         this.configStore = new ConfigStore();
+        this.ruleEngine = new RuleEngine();
     }
 
     private async resolveProject(): Promise<void> {
@@ -79,6 +82,13 @@ export class BuildManager {
 
         await fs.emptyDir(outputDir);
 
+        // --- 0. Load Build Rules ---
+        const systemRulesPath = path.resolve(__dirname, '../templates/rules/default-rules.yaml');
+        await this.ruleEngine.loadRules(systemRulesPath);
+        // Also look for local rules in .foundryspec/rules.yaml if exists
+        const localRulesPath = path.join(this.projectRoot, '.foundryspec', 'rules.yaml');
+        await this.ruleEngine.loadRules(localRulesPath);
+
         // --- 1. Load All Assets & Enforce Strict Structure ---
         const assets = await this.loadAssets(this.docsDir);
 
@@ -87,6 +97,8 @@ export class BuildManager {
         assets.push(...syntheticAssets);
 
         // --- 1.5. Strict Persona Gate (Mindmap Rules) ---
+        // This is now partially handled by RuleEngine during loadAssets, 
+        // but we keep the method for complex inter-file consistency checks if needed.
         await this.validatePersonas(assets);
 
         // --- 2. Build Global ID Registry ---
@@ -208,36 +220,24 @@ export class BuildManager {
         console.log(chalk.blue('🏗️  Informing synthetic architectural hub...'));
         const synthetic: ProjectAsset[] = [];
         
-        // 1. Scan for Directories to Create Synthetic Indices
+        // 1. Load Categories from Rules
+        const hubCategories = this.ruleEngine.getHubCategories();
         const categories: Record<string, { id: string, title: string, items: { id: string, title: string }[] }> = {};
         
-        // Identify all direct subdirectories in docs/
-        const subdirs = (await fs.readdir(this.docsDir, { withFileTypes: true }))
-            .filter(dirent => dirent.isDirectory() && dirent.name !== 'others' && !dirent.name.startsWith('.'))
-            .map(dirent => dirent.name);
-
-        for (const dir of subdirs) {
-             const catId = `GRP_${dir.charAt(0).toUpperCase() + dir.slice(1)}`;
-             const catTitle = `${dir.charAt(0).toUpperCase() + dir.slice(1)} Index`;
+        for (const catConfig of hubCategories) {
+             const dir = catConfig.path;
+             const catId = catConfig.id;
+             const catTitle = catConfig.title;
              
-             // Collect assets in this folder
-             const dirAssets = assets.filter(a => a.relPath.startsWith(`${dir}/`));
-             
-             // Special Handling for Discovery Sub-Groups (Personas, Requirements, Journeys)
-             if (dir === 'discovery') {
-                 // We will generate the specialized index separately below, 
-                 // but we register it here so ROOT knows about it.
-                 // The 'items' here won't be used for the generic generator for discovery.
-                 categories[dir] = { id: catId, title: catTitle, items: [] };
-                 continue;
-             }
+             // Collect assets in this folder OR matching the idPrefix
+             const dirAssets = assets.filter(a => 
+                a.relPath.startsWith(`${dir}/`) || 
+                (catConfig.idPrefix && (a.data.id || '').startsWith(catConfig.idPrefix))
+             );
 
              // Check if the "Index File" already exists (User provided [dir]/[dir].mermaid)
              const existingIndex = assets.find(a => a.relPath === `${dir}/${dir}.mermaid`);
              if (existingIndex) {
-                 // User has provided the anchor file, so we just register it to the RootHub (via categories)
-                 // But we DO NOT generate a synthetic one.
-                 // We need to ensure we get the correct ID/Title from the existing file for the Root Hub.
                  const id = existingIndex.data.id || existingIndex.data.traceability?.id || catId;
                  const title = existingIndex.data.title || catTitle;
                  categories[dir] = { id, title, items: [] };
@@ -263,132 +263,18 @@ mindmap
   root(("${catTitle}"))
 `;
                  items.forEach(item => {
-                     // Escape quotes and wrap in quotes to handle parens etc
                      const safeTitle = item.title.replace(/"/g, "'");
                      indexMermaid += `    ${item.id}("${safeTitle}")\n`;
                  });
 
                  synthetic.push({
                      relPath: `${dir}/${dir}.mermaid`,
-                     absPath: '', // Synthetic
+                     absPath: '', 
                      content: indexMermaid,
                      data: { id: catId, title: catTitle, description: `Index for ${dir}` }
                  });
              }
         }
-
-        // 2. Special Handling: Discovery (Personas, Requirements, Journeys)
-        // Discovery is a "Super Category" that aggregates other Groups, not just files.
-        const personas = assets.filter(a => (a.data.id || '').startsWith('PER_') || a.relPath.startsWith('discovery/personas/'));
-        if (personas.length > 0) {
-             let personasMermaid = `---
-title: Persona Index
-description: Automatically aggregated list of all project personas.
-id: "GRP_Personas"
----
-mindmap
-  GRP_Personas((Persona Index))
-`;
-            for (const p of personas) {
-                const id = p.data.id || p.data.traceability?.id || path.basename(p.relPath, '.mermaid');
-                const title = p.data.title || id;
-                personasMermaid += `    ${id}(${title})\n`;
-            }
-            synthetic.push({
-                relPath: 'discovery/personas.mermaid',
-                absPath: '', 
-                content: personasMermaid,
-                data: { id: 'GRP_Personas', title: 'Persona Index', description: 'Automatically aggregated list' }
-            });
-        }
-
-        // 3. Requirements Index
-        const requirements = assets.filter(a => (a.data.id || '').startsWith('REQ_') || a.relPath.startsWith('discovery/requirements/'));
-        if (requirements.length > 0) {
-            let reqMermaid = `---
-title: Requirements Catalog
-description: Automatically aggregated list of system requirements.
-id: "GRP_Requirements"
----
-mindmap
-  GRP_Requirements(Requirements)
-`;
-            for (const r of requirements) {
-                const id = r.data.id || r.data.traceability?.id || path.basename(r.relPath, '.mermaid');
-                const title = r.data.title || id;
-                // Avoid self-reference if some file claims to be GRP_Requirements (unlikely but safe)
-                if (id !== 'GRP_Requirements') {
-                     reqMermaid += `    ${id}(${title})\n`;
-                }
-            }
-             synthetic.push({
-                relPath: 'discovery/requirements.mermaid',
-                absPath: '', 
-                content: reqMermaid,
-                data: { id: 'GRP_Requirements', title: 'Requirements Catalog', description: 'Automatically aggregated list' }
-            });
-        }
-        
-        // For now, let's create the Discovery Hub linking these groups:
-        let discoveryMermaid = `---
-title: Discovery Hub
-description: Central hub for Personas, Requirements, and Journeys.
-id: "GRP_Discovery"
----
-mindmap
-  GRP_Discovery((Discovery Hub))
-`;
-        const discoNodes = [];
-        if (personas.length > 0) discoNodes.push({ id: 'GRP_Personas', title: 'Personas' });
-        
-        // 4. Journeys Index
-        const journeys = assets.filter(a => (a.data.id || '').startsWith('JRN_') || a.relPath.startsWith('discovery/journeys/'));
-        if (journeys.length > 0) {
-            let jrnMermaid = `---
-title: Journey Index
-description: Automatically aggregated list of user journeys.
-id: "GRP_Journeys"
----
-mindmap
-  GRP_Journeys(Journeys)
-`;
-            for (const j of journeys) {
-                const id = j.data.id || j.data.traceability?.id || path.basename(j.relPath, '.mermaid');
-                const title = j.data.title || id;
-                if (id !== 'GRP_Journeys') {
-                     jrnMermaid += `    ${id}(${title})\n`;
-                }
-            }
-             synthetic.push({
-                relPath: 'discovery/journeys.mermaid',
-                absPath: '', 
-                content: jrnMermaid,
-                data: { id: 'GRP_Journeys', title: 'Journey Index', description: 'Automatically aggregated list' }
-            });
-        }
-        
-        // check for Requirements group or file
-        const reqAsset = assets.find(a => a.data.id === 'GRP_Requirements') || synthetic.find(a => a.data.id === 'GRP_Requirements');
-        if (reqAsset) discoNodes.push({ id: 'GRP_Requirements', title: 'Requirements' });
-        
-        // check for Journeys group or file
-        const journeyAsset = assets.find(a => a.data.id === 'GRP_Journeys') || synthetic.find(a => a.data.id === 'GRP_Journeys');
-        if (journeyAsset) discoNodes.push({ id: 'GRP_Journeys', title: 'Journeys' });
-
-        discoNodes.forEach(n => {
-            discoveryMermaid += `    ${n.id}(${n.title})\n`;
-        });
-
-        synthetic.push({
-            relPath: 'discovery/discovery.mermaid',
-            absPath: '', 
-            content: discoveryMermaid,
-            data: { id: 'GRP_Discovery', title: 'Discovery Hub', description: 'Central hub for Personas, Requirements, and Journeys' }
-        });
-        
-        // Ensure Discovery is in our category list for the Root Hub
-        categories['discovery'] = { id: 'GRP_Discovery', title: 'Discovery Hub', items: [] };
-
 
         // 3. Generate root.mermaid (The Navigation Hub)
         let rootMermaid = `---
@@ -559,32 +445,10 @@ mindmap
                 const raw = await fs.readFile(absPath, 'utf8');
                 const { data, content } = matter(raw);
 
-                // Requirements Validation
-                const isRequirementDef = relPath.includes('/requirements/'); // Convention check
-                if (isRequirementDef && relPath.endsWith('.mermaid') && !content.trim().startsWith('requirementDiagram')) {
-                     // Warning or error? Strict for now.
-                }
-
-                // Journeys Validation (Strict Sequence Diagram Enforced)
-                const isJourney = relPath.includes('/journeys/') || (data.id && data.id.startsWith('JRN_'));
-                if (isJourney && relPath.endsWith('.mermaid')) {
-                    const trimmedContent = content.trim();
-                    if (!trimmedContent.startsWith('sequenceDiagram')) {
-                        throw new Error(chalk.red(`\n❌ Strict Syntax Check Failed in "${relPath}":
-    Journeys MUST be defined using "sequenceDiagram".
-    Found: "${trimmedContent.split('\n')[0]}..."
-    
-    Please update your Journey file to use the Sequence Diagram syntax.
-    Example:
-    sequenceDiagram
-        actor User
-        participant System
-        User->>System: Action
-                        `));
-                    }
-                }
-
                 assets.push({ relPath, absPath, content, data });
+                
+                // --- Rule-Based Validation ---
+                this.ruleEngine.validateAsset(assets[assets.length - 1]);
             }
         }
 
