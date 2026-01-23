@@ -1,0 +1,19 @@
+---
+id: "REQ_PathIntegrity"
+title: Path Integrity
+description: Requirements for link verification.
+classification: Functional
+uplink: 
+  - "GRP_Requirements"
+  - "PER_SystemAnalyst"
+downlinks:
+  - "COMP_BuildManager"
+---
+
+requirementDiagram
+    requirement PathIntegrity {
+        id: "REQ_PathIntegrity"
+        text: "The build engine must verify that all links (click events and markdown links) point to existing files, failing the build if broken links are found."
+        risk: Medium
+        verifymethod: Test
+    }

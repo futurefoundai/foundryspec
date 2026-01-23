@@ -37,7 +37,9 @@ export class ScaffoldManager {
     
     // Centralized source of truth for standard project categories
     private standardCategories: CategoryTemplate[] = [
-        { name: "Discovery", path: "discovery", description: "L0: User personas, journey maps, and requirements analysis", enabled: true },
+        { name: "Personas", path: "personas", description: "L0: User personas and actors", enabled: true },
+        { name: "Requirements", path: "requirements", description: "L0: Requirements analysis", enabled: true },
+        { name: "Journeys", path: "journeys", description: "L0: User journey maps", enabled: true },
         { name: "Context", path: "context", description: "L1: System context and high-level strategy", enabled: true },
         { name: "Boundaries", path: "boundaries", description: "L2: Technical boundaries and communication", enabled: true },
         { name: "Components", path: "components", description: "L3: Internal module structure", enabled: true }
@@ -64,7 +66,7 @@ export class ScaffoldManager {
         }
 
         // --- 1. Personas (Atomic Mindmaps) ---
-        const personaDir = path.join(this.targetDir, 'discovery', 'personas');
+        const personaDir = path.join(this.targetDir, 'personas');
         await fs.ensureDir(personaDir);
 
         const userContent = `---
@@ -104,7 +106,7 @@ mindmap
         await fs.writeFile(path.join(personaDir, 'PER_Admin.mermaid'), adminContent);
 
         // --- 2. Requirements ---
-        const reqDir = path.join(this.targetDir, 'discovery', 'requirements');
+        const reqDir = path.join(this.targetDir, 'requirements');
         await fs.ensureDir(reqDir);
 
         const coreReqContent = `---
@@ -126,7 +128,7 @@ requirementDiagram
         await fs.writeFile(path.join(reqDir, 'REQ_Core.mermaid'), coreReqContent);
 
         // --- 3. Journey ---
-        const journeyDir = path.join(this.targetDir, 'discovery', 'journeys');
+        const journeyDir = path.join(this.targetDir, 'journeys');
         await fs.ensureDir(journeyDir);
         
         const journeyContent = `---
