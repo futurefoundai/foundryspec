@@ -101,6 +101,9 @@ export class BuildManager {
         // This is now partially handled by RuleEngine during loadAssets, 
         // but we keep the method for complex inter-file consistency checks if needed.
         await this.validatePersonas(assets);
+        
+        // --- 1.6. Strict Folder Registry Check ---
+        await this.validateFolderRegistry();
 
         // --- 2. Build Global ID Registry ---
         const idToFileMap: Map<string, string> = new Map();
@@ -128,7 +131,15 @@ export class BuildManager {
             };
 
             const id = data.id || data?.traceability?.id;
-            if (id) {
+            const basename = path.basename(relPath, path.extname(relPath));
+            
+            if (relPath.endsWith('.md')) {
+                // Footnote Rule: Map by basename (filename) regardless of internal ID
+                idToFileMap.set(basename, relPath);
+                // Also map internal ID if present, just in case, but basename is primary for footnotes
+                if (id) idToFileMap.set(id, relPath);
+            } else if (id) {
+                // Standard logic for diagrams
                 idToFileMap.set(id, relPath);
                 if (isMermaid) blueprintSet.add(id);
             }
@@ -470,6 +481,13 @@ ${standaloneAssets.map(asset => {
     Found foreign file "` + relPath + `" in a core category.
     Code files, binaries, or other documents must be placed in "docs/others/".`));
                 }
+                
+                // Footnote strict location policy
+                if (ext === '.md' && !relPath.includes('/footnotes/') && relPath !== 'RULES_GUIDE.md') {
+                     throw new Error(chalk.red(`\n❌ Footnote Location Policy:
+    Markdown file "` + relPath + `" must reside in a "footnotes" directory (e.g. docs/components/footnotes/).
+    Only "docs/others/" or root "RULES_GUIDE.md" are exempt.`));
+                }
             }
 
             // Only process Spec Files for the build graph
@@ -669,7 +687,7 @@ ${standaloneAssets.map(asset => {
         console.log(chalk.green('✅ Absolute semantic traceability is valid.'));
     }
 
-    private async validateFrontmatter(assets: ProjectAsset[], directoryBlueprints: Map<string, Set<string>>): Promise<void> {
+    private async validateFrontmatter(assets: ProjectAsset[], _directoryBlueprints: Map<string, Set<string>>): Promise<void> {
         console.log(chalk.blue('🔍 Validating frontmatter...'));
         for (const { relPath, data } of assets) {
             const id = data.id || data.traceability?.id;
@@ -677,18 +695,9 @@ ${standaloneAssets.map(asset => {
                 throw new Error(chalk.red(`\n❌ Metadata error in ${relPath}: Missing title, description, or id (check traceability.id).`));
             }
             if (relPath.endsWith('.md') && !relPath.startsWith('others/')) {
-                 const dir = path.dirname(relPath);
-                 if (!relPath.split('/').includes('footnotes')) {
-                     // Strict policy? User asked for flattened structure.
-                     // Standard: Markdown should ideally support blueprints.
-                     // We check if it is isolated by directory.
-                     const effectiveDir = dir.replace(/\/footnotes$/, '').replace(/^footnotes$/, '.');
-                     const blueprintSet = directoryBlueprints.get(effectiveDir) || new Set();
-                     if (!blueprintSet.has(data.id)) {
-                         // Relaxed for now as we are re-structuring, but logically still sound.
-                         // throw new Error(...)
-                     }
-                 }
+                 // Markdown files are now treated as footnotes (leaf annotations).
+                 // They are exempt from strict graph connectivity validation because
+                 // they are linked via filename convention, not explicit ID graph edges.
             }
         }
     }
@@ -705,6 +714,43 @@ ${standaloneAssets.map(asset => {
         // (Graph traversal logic to ensure no orphans from ROOT)
         // ...
         console.log(chalk.green('✅ Project graph is valid.'));
+    }
+
+    private async validateFolderRegistry(): Promise<void> {
+        console.log(chalk.blue('🔍 Validating folder registry (Strict Policy)...'));
+        const registeredCategories = this.ruleEngine.getHubCategories().map(c => c.path);
+        const allowedSystemFolders = ['others', 'footnotes'];
+        
+
+
+        // Glob returns files, we need directories. Let's start by walking the dir or filtering.
+        // Actually, just globbing directories directly:
+        const dirs = await glob('**/*/', { cwd: this.docsDir, ignore: await this.getIgnoreRules() });
+        
+        for (const dir of dirs) {
+            // glob returns with trailing slash usually, strip it
+            const relPath = dir.replace(/\/$/, '');
+            if (!relPath) continue; // Root
+            
+            // Remove 'footnotes' from the path to check the "real" parent folder
+            // e.g. 'personas/footnotes' -> check 'personas'
+            const cleanPath = relPath.split('/').filter(p => !allowedSystemFolders.includes(p)).join('/');
+            
+            // If the path was ONLY system folders (e.g. docs/others), cleanPath is empty -> Valid
+            if (!cleanPath) continue;
+
+            // Check if the remaining path starts with a registered category
+            const isCovered = registeredCategories.some(cat => cleanPath === cat || cleanPath.startsWith(cat + '/'));
+            
+            if (!isCovered) {
+                 throw new Error(chalk.red(`\n❌ Strict Registry Error:
+    The folder "docs/${relPath}" is NOT registered in your rules configuration.
+    
+    All documentation folders must be explicitly defined in 'default-rules.yaml' (hub.categories) 
+    or be one of the system allowed folders: [${allowedSystemFolders.join(', ')}].`));
+            }
+        }
+        console.log(chalk.green('✅ Folder Registry check passed.'));
     }
 
     async serve(port: number | string = 3000): Promise<void> {

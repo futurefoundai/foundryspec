@@ -156,9 +156,10 @@ async function initApp() {
             const targetId = current.id || current.getAttribute('id');
             const text = current.textContent?.trim() || "";
             const cleanText = text.replace(/^["(\[\{]+|[")\]\}]+$/g, '').trim();
-            const foundId = (targetId && idMap[targetId] && targetId !== 'undefined' ? targetId : null) ||
-                           (text && idMap[text] ? text : null) ||
-                           (cleanText && idMap[cleanText] ? cleanText : null);
+            // Allow interaction even if not in idMap. Use found ID or text as the key.
+            const foundId = (targetId && targetId !== 'undefined' ? targetId : null) ||
+                           (cleanText && cleanText.length < 100 ? cleanText : null);
+            
             if (foundId) { activeNodeId = foundId; break; }
             current = current.parentElement;
         }
@@ -187,17 +188,27 @@ async function initApp() {
         let current = nodeContainer;
         while (current && current !== viewer && current.tagName !== 'svg') {
             const targetId = current.id || current.getAttribute('id');
+            // Check direct ID or clean ID
             if (targetId) {
                 if (idMap[targetId]) { loadDiagram(idMap[targetId]); return; }
                 const cleanId = targetId.split('-').find(part => idMap[part]);
                 if (cleanId) { loadDiagram(idMap[cleanId]); return; }
             }
+            
+            // Check Text content
             let text = current.textContent?.trim() || "";
             const cleanText = text.replace(/^["(\[\{]+|[")\]\}]+$/g, '').trim();
             if ((text && idMap[text]) || (cleanText && idMap[cleanText])) {
                 const targetPath = idMap[text] || idMap[cleanText];
-                if (text.length < 500) { loadDiagram(targetPath); return; }
+                loadDiagram(targetPath); return;
             }
+            // If we are here, the node is "clickable" visually but has no map.
+            // We just stop propagation/don't do anything for navigation to avoid confusion,
+            // or perhaps it just selects? The user said "clickable", but if there's no destination...
+            // Standard action: do nothing for navigation if no map link. 
+            // BUT, we need to ensure we don't block event if it's not a link.
+            // Actually, the loop just looks for a valid link.
+            
             current = current.parentElement;
         }
     });
@@ -289,7 +300,15 @@ async function loadDiagram(filePath) {
                 if (svgEl) { try { panZoomInstance = svgPanZoom(svgEl, { zoomEnabled: true, controlIconsEnabled: true, fit: true, center: true, minZoom: 0.1 }); } catch (e) {} }
             });
         });
-        currentContainer = newContainer; historyStack.push(filePath); updateUI();
+
+        currentContainer = newContainer; 
+        
+        // Only push to history if it's a new path
+        if (historyStack.length === 0 || historyStack[historyStack.length - 1] !== filePath) {
+            historyStack.push(filePath); 
+        }
+        updateUI();
+
         if (svgEl) {
             const links = svgEl.querySelectorAll('a');
             links.forEach(link => { link.addEventListener('click', (e) => { e.preventDefault(); const href = link.getAttribute('href') || link.getAttribute('xlink:href'); if (href) { if (href.startsWith('http') || href.startsWith('mailto')) { window.open(href, '_blank'); } else { const resolved = resolvePath(filePath, href); loadDiagram(resolved); } } }); });

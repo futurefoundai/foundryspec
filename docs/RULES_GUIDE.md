@@ -18,7 +18,7 @@ The Rule Engine processes rules in several phases for every file (`asset`) in yo
 > [!IMPORTANT]
 > **Synthetic Architecture**: Files like `root.mermaid` and category index files (e.g., `personas/personas.mermaid`) are **synthetically generated** by the Build Manager. You should not create these manually in your `docs/` directory, as they will be ignored or overwritten to ensure consistent project navigation.
 
-1.  **Phase 1: Loading**: Rules are loaded from system defaults and local config.
+1.  **Phase 1: Loading**: Rules and Hub definitions are loaded from system defaults and local config.
 2.  **Phase 2: Targeting**: Determines if a rule applies to a specific file based on path or ID.
 3.  **Phase 3: Execution**: Validates syntax, metadata, and structure.
 4.  **Phase 4: Traceability**: Validates the global project graph (linkage).
@@ -28,22 +28,23 @@ The Rule Engine processes rules in several phases for every file (`asset`) in yo
 
 ## YAML Structure
 
-The rules file consists of two main sections: `rules` and `hub`.
+The configuration consists of a `rules` list. The previously separate `hub` section has been merged into the rules logic to ensure strict alignment between folder governance and architectural structure.
 
-### 1. `rules` (Array)
+### `rules` (Array)
 
-Each rule object defines how to validate a specific set of files or nodes.
+Each rule object defines how to validate a specific set of files or nodes, and optionally defines their role in the Hub.
 
 | Field         | Type   | Description                                                                   |
 | :------------ | :----- | :---------------------------------------------------------------------------- |
 | `id`          | string | Unique identifier for the rule.                                               |
 | `name`        | string | Human-readable name.                                                          |
-| `description` | string | **(New)** Rationale for the rule, displayed in build errors.                  |
-| `level`       | enum   | **(New)** Scope of validation: `project`, `folder`, `file`, or `node`.        |
+| `description` | string | Rationale for the rule, displayed in build errors.                            |
+| `level`       | enum   | Scope of validation: `project`, `folder`, `file`, or `node`.                  |
 | `target`      | object | **Required.** Defines which files are affected (see [Targeting](#targeting)). |
 | `type`        | enum   | `structural`, `syntax`, `metadata`, or `traceability`.                        |
 | `enforcement` | enum   | `error` (stops build) or `warning` (logs to console).                         |
-| `checks`      | object | **Required.** The specific validations to perform (see [Checks](#checks)).    |
+| `checks`      | object | **Required.** The specific validations to perform.                            |
+| `hub`         | object | **(New)** Defines this folder as a specialized Category in the Hub.           |
 
 #### Targeting
 
@@ -52,57 +53,51 @@ Rules are applied if _any_ target condition matches:
 - `idPrefix`: Matches the `id` field in a file's frontmatter (e.g., `PER_`).
 - `pathPattern`: Matches the file path using glob-like patterns (e.g., `personas/**/*.mermaid`).
 
-#### Checks
-
-| Field                 | Type     | Description                                                             |
-| :-------------------- | :------- | :---------------------------------------------------------------------- |
-| `mermaidType`         | string   | The required Mermaid diagram type (e.g., `mindmap`, `sequenceDiagram`). |
-| `requiredExtension`   | string   | The required file extension (e.g., `mermaid`, `md`).                    |
-| `requiredFrontmatter` | string[] | List of keys that MUST exist in the Markdown/Mermaid frontmatter.       |
-| `requiredNodes`       | string[] | Specific nodes or labels that must exist in the visual diagram content. |
-| `traceability`        | object   | Validation for project-wide links (e.g., `mustBeLinked: true`).         |
-
-> [!IMPORTANT]
-> **Node-Centric Traceability**: FoundrySpec has transitioned to a 100% entity-centric model. Relationships like `uplink` and `downlinks` are now **node-dependent**, not file-dependent. To ensure your documentation remains traceable, you must define all connections within the `entities` block in your frontmatter.
-
-### Document Structure Example
-
-```yaml
----
-id: 'MY_DOC_ID'
-title: 'My Document'
-entities:
-  - id: 'NODE_01'
-    uplink: 'PARENT_ID'
-    downlinks: ['CHILD_01', 'CHILD_02']
-    requirements: ['REQ_01']
----
-```
-
 ---
 
-### 2. `hub` (Object)
+### Governance Policies
 
-Defines how the FoundrySpec Documentation Hub organizes your content.
+FoundrySpec enforces strict architectural governance to prevent project drift.
 
-#### `categories` (Array)
+#### 1. Folder Registry Policy
 
-| Field      | Type   | Description                                                    |
-| :--------- | :----- | :------------------------------------------------------------- |
-| `id`       | string | Unique category ID.                                            |
-| `title`    | string | Display name in the Navigation Hub.                            |
-| `path`     | string | The directory where this category's files are stored.          |
-| `idPrefix` | string | (Optional) Prefix used to auto-group files into this category. |
+Every directory within your `docs/` folder must be explicitly defined in your configuration via a Rule.
+
+- **Allowed**: Folders targeted by a rule with a `hub` definition (e.g., `personas`).
+- **System Exemptions**: `footnotes` and `others` are automatically allowed.
+- **Violation**: The build will **FAIL** if it detects any "rogue" folder (e.g., `docs/temp_notes`) that is not registered.
+
+#### 2. ID Governance Policy
+
+To ensure consistent referencing, file IDs must strictly match the architectural intent of their folder.
+
+- **Mechanism**: If a rule targets a folder (e.g., `requirements/`) and defines an `idPrefix` (e.g., `REQ_`), all files in that folder **MUST** have an ID starting with `REQ_`.
+- **Violation**: The build will **FAIL** if a file's ID does not match the mandatory prefix for its location.
+
+#### 3. Footnote Policy
+
+- **Location**: Markdown (`.md`) files must reside in a `footnotes/` subdirectory.
+- **Linking**: Linked automatically by filename matching diagram nodes.
+
+#### 4. Filename Consistency Policy
+
+For semantic clarity, the physical filename must match its internal ID.
+
+- **Mechanism**: `basename(filename)` must equal `id`.
+- **Example**: ID `REQ_Login` must be in a file named `REQ_Login.mermaid` (or `REQ_Login.md`).
+- **Violation**: The build will **FAIL** if the filename and ID do not match.
 
 ---
 
 ## Example Rule
 
+A complete rule that governs a folder, enforces syntax, AND registers it in the Hub.
+
 ```yaml
 - id: persona-gate
   name: Persona Architecture Gate
   level: folder
-  description: 'Personas must be mindmaps with Role, Description, and Goals to support consistent user modeling.'
+  description: 'Personas must be mindmaps with Role, Description, and Goals.'
   target:
     idPrefix: PER_
     pathPattern: 'personas/*.mermaid'
@@ -113,4 +108,9 @@ Defines how the FoundrySpec Documentation Hub organizes your content.
     requiredExtension: mermaid
     requiredFrontmatter: [title, description, id]
     requiredNodes: [Role, Description, Goals]
+  hub:
+    id: GRP_Personas
+    title: Personas
 ```
+
+_Note how `hub` defines the category title, while `target.idPrefix` ("PER_") automatically sets the ID Governance policy for this category.\_

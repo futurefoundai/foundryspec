@@ -31,6 +31,11 @@ export interface Rule {
     type: 'structural' | 'syntax' | 'metadata' | 'traceability';
     enforcement: 'error' | 'warning';
     checks: RuleChecks;
+    // Hub Definition: If this rule targets a folder, it can define the Hub Category.
+    hub?: {
+        id: string;
+        title: string;
+    };
 }
 
 export interface HubCategory {
@@ -42,7 +47,4 @@ export interface HubCategory {
 
 export interface RuleSet {
     rules: Rule[];
-    hub?: {
-        categories: HubCategory[];
-    };
 }

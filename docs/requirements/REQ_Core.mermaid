@@ -1,18 +1,20 @@
 ---
-id: "GRP_Core"
+id: "REQ_Core"
 title: Core Requirements
 description: General functional and non-functional requirements.
 classification: Functional
 entities:
-  - id: "GRP_Core"
-    uplink: "GRP_Requirements"
+  - id: "REQ_Core"
+    uplink: 
+      - "GRP_Requirements"
+      - "PER_SystemAnalyst"
     downlinks:
       - "REQ_Functional"
       - "REQ_NonFunctional"
   - id: "REQ_Functional"
     classification: Functional
     uplink: 
-      - "GRP_Core"
+      - "REQ_Core"
       - "PER_SystemAnalyst"
     downlinks:
       - "COMP_CLI"
@@ -22,7 +24,7 @@ entities:
   - id: "REQ_NonFunctional"
     classification: Non-Functional
     uplink: 
-      - "GRP_Core"
+      - "REQ_Core"
       - "PER_CodingAgent"
     downlinks:
       - "COMP_Group"

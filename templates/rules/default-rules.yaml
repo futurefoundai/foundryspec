@@ -4,6 +4,7 @@ rules:
     level: folder
     description: "Personas must be mindmaps with Role, Description, and Goals to support consistent user modeling."
     target:
+      idPrefix: PER_
       pathPattern: "personas/*"
     type: structural
     enforcement: error
@@ -12,12 +13,16 @@ rules:
       requiredExtension: mermaid
       requiredFrontmatter: [title, description, id]
       requiredNodes: [Role, Description, Goals]
+    hub:
+      id: GRP_Personas
+      title: Personas
 
   - id: journey-syntax
     name: Journey Strict Syntax
     level: folder
     description: "Journeys must be sequence diagrams to accurately capture interaction flows."
     target:
+      idPrefix: JRN_
       pathPattern: "journeys/*"
     type: syntax
     enforcement: error
@@ -26,12 +31,16 @@ rules:
       requiredExtension: mermaid
       requiredFrontmatter: [title, description, id]
       requiredNodes: [User, System]
+    hub:
+      id: GRP_Journeys
+      title: Journeys
 
   - id: requirement-syntax
     name: Requirement Syntax
     level: folder
     description: "Requirements must use specific Mermaid syntax for automated traceability."
     target:
+      idPrefix: REQ_
       pathPattern: "requirements/*"
     type: syntax
     enforcement: error
@@ -39,6 +48,54 @@ rules:
       mermaidType: requirementDiagram
       requiredExtension: mermaid
       requiredFrontmatter: [title, description, id]
+    hub:
+      id: GRP_Requirements
+      title: Requirements
+
+  - id: context-registration
+    name: Context Model Registration
+    level: folder
+    description: "Registers Context models for the Hub."
+    target:
+      idPrefix: CTX_
+      pathPattern: "context/*"
+    type: metadata
+    enforcement: error
+    checks:
+      requiredFrontmatter: [title, description, id]
+    hub:
+      id: GRP_Context
+      title: Context
+
+  - id: boundary-registration
+    name: Boundary Definition Registration
+    level: folder
+    description: "Registers Boundary definitions for the Hub."
+    target:
+      idPrefix: BND_
+      pathPattern: "boundaries/*"
+    type: metadata
+    enforcement: error
+    checks:
+      requiredFrontmatter: [title, description, id]
+    hub:
+      id: GRP_Boundaries
+      title: Boundaries
+
+  - id: component-registration
+    name: Component Registration
+    level: folder
+    description: "Registers Components for the Hub."
+    target:
+      idPrefix: COMP_
+      pathPattern: "components/*"
+    type: metadata
+    enforcement: error
+    checks:
+      requiredFrontmatter: [title, description, id]
+    hub:
+      id: GRP_Components
+      title: Components
 
   - id: footnotes-policy
     name: Footnotes Markdown Policy
@@ -74,30 +131,3 @@ rules:
     checks:
       traceability:
         mustBeLinked: true
-
-hub:
-  categories:
-    - id: GRP_Personas
-      title: Personas
-      path: personas
-      idPrefix: PER_
-    - id: GRP_Requirements
-      title: Requirements
-      path: requirements
-      idPrefix: REQ_
-    - id: GRP_Journeys
-      title: Journeys
-      path: journeys
-      idPrefix: JRN_
-    - id: GRP_Context
-      title: Context
-      path: context
-      idPrefix: CTX_
-    - id: GRP_Boundaries
-      title: Boundaries
-      path: boundaries
-      idPrefix: BND_
-    - id: GRP_Components
-      title: Components
-      path: components
-      idPrefix: COMP_

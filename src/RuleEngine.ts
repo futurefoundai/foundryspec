@@ -49,14 +49,7 @@ export class RuleEngine {
             if (data && Array.isArray(data.rules)) {
                 this.rules.push(...data.rules);
             }
-            if (data && data.hub && Array.isArray(data.hub.categories)) {
-                // Merge categories, avoid duplicates by ID
-                for (const cat of data.hub.categories) {
-                    if (!this.hubCategories.find(c => c.id === cat.id)) {
-                        this.hubCategories.push(cat);
-                    }
-                }
-            }
+            // Hub definitions are now embedded in rules, so we don't load data.hub separately.
         } catch (err) {
             console.error(chalk.red(`Failed to load rules from ${rulesPath}:`), err);
         }
@@ -71,6 +64,13 @@ export class RuleEngine {
         for (const rule of applicableRules) {
             this.executeRule(asset, rule, context);
         }
+        
+        // Governance Check: Verify ID matches folder prefix rule
+        // Governance Check: Verify ID matches folder prefix rule
+        this.validateGovernance(asset);
+
+        // Filename Consistency Check: Verify ID matches Filename
+        this.validateFilenameConsistency(asset);
     }
 
     /**
@@ -179,8 +179,76 @@ export class RuleEngine {
     }
 
     getHubCategories(): HubCategory[] {
-        return this.hubCategories;
+        // Derive categories dynamically from rules
+        const computedCategories: HubCategory[] = [];
+        
+        for (const rule of this.rules) {
+            if (rule.hub && rule.target.pathPattern) {
+                // Extract clean path from pattern (e.g., "personas/*" -> "personas")
+                const cleanPath = rule.target.pathPattern.replace(/\/\*+$/, '').replace(/\*$/, '');
+                
+                computedCategories.push({
+                    id: rule.hub.id,
+                    title: rule.hub.title,
+                    path: cleanPath,
+                    // Infer idPrefix from the rule target itself
+                    idPrefix: rule.target.idPrefix
+                });
+            }
+        }
+        console.log(chalk.gray(`Derived ${computedCategories.length} Hub Categories from rules: ${computedCategories.map(c => c.id).join(', ')}`));
+        return computedCategories;
+    }
+
+    private validateGovernance(asset: ProjectAsset): void {
+        const categories = this.getHubCategories();
+        
+        // Find which category this asset belongs to based on path
+        // We match explicitly against the category path
+        const category = categories.find(cat => {
+            return asset.relPath === cat.path || asset.relPath.startsWith(cat.path + '/');
+        });
+
+        if (category && category.idPrefix) {
+            const assetId = asset.data.id;
+            // Skip check if no ID (handled by other rules)
+            if (assetId && !assetId.startsWith(category.idPrefix)) {
+                console.error(chalk.red(`\n❌ Governance Violation: ID Prefix Mismatch
+   File: ${asset.relPath}
+   Category: ${category.title} (${category.path})
+   Rule: IDs must start with "${category.idPrefix}"
+   Found: "${assetId}"`));
+                throw new Error(`Build failed due to Governance Violation.`);
+            }
+        }
     }
 
     // Additional validation methods for traceability, etc. can be added here
+    private validateFilenameConsistency(asset: ProjectAsset): void {
+        // Skip for non-spec files or files without IDs
+        if (!asset.data.id || !asset.relPath) return;
+
+        // Extract filename without extension
+        // e.g. "docs/requirements/REQ_Core.mermaid" -> "REQ_Core"
+        const parts = asset.relPath.split('/');
+        const filename = parts[parts.length - 1];
+        const basename = filename.split('.').slice(0, -1).join('.');
+
+        // Special case: Ignore system files if needed, or enforce strictly everywhere
+        // User requested: "file name and file ID for rule must be the same"
+        // Exceptions? Maybe RULES_GUIDE?
+        if (asset.relPath === 'RULES_GUIDE.md') return;
+
+        // Also ignore if it's not a mermaid or md file
+        if (!asset.relPath.endsWith('.mermaid') && !asset.relPath.endsWith('.md')) return;
+
+        if (asset.data.id !== basename) {
+                console.error(chalk.red(`\n❌ Governance Violation: Filename-ID Mismatch
+   File: ${asset.relPath}
+   ID:   "${asset.data.id}"
+   Name: "${basename}"
+   Rule: The File Name and File ID must be identical.`));
+                throw new Error(`Build failed due to Governance Violation.`);
+        }
+    }
 }
