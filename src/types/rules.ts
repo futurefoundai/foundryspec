@@ -25,6 +25,8 @@ export interface RuleChecks {
 export interface Rule {
     id: string;
     name: string;
+    description?: string;
+    level?: 'project' | 'folder' | 'file' | 'node';
     target: RuleTarget;
     type: 'structural' | 'syntax' | 'metadata' | 'traceability';
     enforcement: 'error' | 'warning';

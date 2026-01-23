@@ -134,17 +134,10 @@ export class BuildManager {
             }
 
             if (isMermaid) {
-                addLinks(data.uplink);
-                addLinks(data.downlinks);
-                addLinks(data.traceability?.uplink);
-                addLinks(data.traceability?.downlinks);
+                // Top-level links removed as requested.
             }
 
-            const entities = [
-                ...(Array.isArray(data.entities) ? data.entities : []),
-                ...(Array.isArray(data.traceability?.relationships) ? data.traceability.relationships : []),
-                ...(Array.isArray(data.traceability?.entities) ? data.traceability.entities : [])
-            ];
+            const entities = Array.isArray(data.entities) ? data.entities : [];
 
             for (const ent of entities) {
                 if (ent.id) {
@@ -171,18 +164,7 @@ export class BuildManager {
                 else if (typeof val === 'string') referencedIds.add(val);
             };
             
-            collect(data.uplink);
-            collect(data.downlinks);
-            collect(data.requirements);
-            collect(data.traceability?.uplink);
-            collect(data.traceability?.downlinks);
-            collect(data.traceability?.requirements);
-
-            const entities = [
-                ...(Array.isArray(data.entities) ? data.entities : []),
-                ...(Array.isArray(data.traceability?.relationships) ? data.traceability.relationships : []),
-                ...(Array.isArray(data.traceability?.entities) ? data.traceability.entities : [])
-            ];
+            const entities = Array.isArray(data.entities) ? data.entities : [];
             for (const ent of entities) {
                 collect(ent.uplink);
                 collect(ent.downlinks);
@@ -269,17 +251,8 @@ export class BuildManager {
                 (catConfig.idPrefix && (a.data.id || '').startsWith(catConfig.idPrefix))
              );
 
-             // Check if the "Index File" already exists (User provided [dir]/[dir].mermaid)
-             const existingIndex = assets.find(a => a.relPath === `${dir}/${dir}.mermaid`);
-             if (existingIndex) {
-                 const id = existingIndex.data.id || existingIndex.data.traceability?.id || catId;
-                 const title = existingIndex.data.title || catTitle;
-                 categories[dir] = { id, title, items: [] };
-                 continue;
-             }
-
              const items = dirAssets.map(a => {
-                 const id = a.data.id || a.data.traceability?.id;
+                 const id = a.data.id;
                  const title = a.data.title || id || path.basename(a.relPath);
                  return { id, title };
              }).filter(i => i.id); // Only list items with IDs
@@ -288,51 +261,76 @@ export class BuildManager {
                  categories[dir] = { id: catId, title: catTitle, items };
                  
                  // Generate Synthetic Index for this Category
-                 let indexMermaid = `---
+                 const indexContent = `---
 title: ${catTitle}
 description: Automatically generated index for ${dir}.
 id: "${catId}"
+entities:
+  - id: "${catId}"
+    downlinks:
+${items.map(i => `      - "${i.id}"`).join('\n')}
 ---
 mindmap
   root(("${catTitle}"))
+${items.map(i => `    ${i.id}("${i.title.replace(/"/g, "'")}")`).join('\n')}
 `;
-                 items.forEach(item => {
-                     const safeTitle = item.title.replace(/"/g, "'");
-                     indexMermaid += `    ${item.id}("${safeTitle}")\n`;
-                 });
-
                  synthetic.push({
                      relPath: `${dir}/${dir}.mermaid`,
                      absPath: '', 
-                     content: indexMermaid,
-                     data: { id: catId, title: catTitle, description: `Index for ${dir}` }
+                     content: indexContent,
+                     data: { 
+                         id: catId, 
+                         title: catTitle, 
+                         description: `Index for ${dir}`,
+                         entities: [{ id: catId, downlinks: items.map(i => i.id) }]
+                     }
                  });
              }
         }
 
-        // 3. Generate root.mermaid (The Navigation Hub)
-        let rootMermaid = `---
+        // 3. Collect Standalone Root Assets (e.g., RULES_GUIDE.md)
+        const standaloneAssets = assets.filter(a => 
+            !a.relPath.includes('/') && 
+            a.relPath !== 'root.mermaid' &&
+            !Object.keys(categories).some(dir => a.relPath === `${dir}/${dir}.mermaid`)
+        );
+
+        // 4. Generate root.mermaid (The Navigation Hub)
+        const sortedCats = Object.values(categories).sort((a, b) => a.title.localeCompare(b.title));
+        const rootDownlinks: string[] = [
+            ...sortedCats.map(c => c.id),
+            ...standaloneAssets.map(a => a.data.id).filter(id => id && id !== 'ROOT')
+        ];
+
+        const rootContent = `---
 title: ${this.projectName} Hub
 description: System-generated navigation entry point.
 id: "ROOT"
+entities:
+  - id: "ROOT"
+    downlinks:
+${rootDownlinks.map(id => `      - "${id}"`).join('\n')}
 ---
 mindmap
   ROOT((${this.projectName}))
+${sortedCats.map(cat => `    ${cat.id}("${cat.title.replace(/"/g, "'")}")`).join('\n')}
+${standaloneAssets.map(asset => {
+    const id = asset.data.id;
+    const title = asset.data.title || id || asset.relPath;
+    return (id && id !== 'ROOT') ? `    ${id}["${title.replace(/"/g, "'")}"]` : '';
+}).filter(l => l).join('\n')}
 `;
-        
-        // Sort categories for consistent order?
-        const sortedCats = Object.values(categories).sort((a, b) => a.title.localeCompare(b.title));
-        
-        for (const cat of sortedCats) {
-             const safeTitle = cat.title.replace(/"/g, "'");
-             rootMermaid += `    ${cat.id}("${safeTitle}")\n`;
-        }
 
         synthetic.push({
             relPath: 'root.mermaid',
             absPath: '', // Synthetic
-            content: rootMermaid,
-            data: { id: 'ROOT', title: `${this.projectName} Hub`, description: 'System-generated' }
+            content: rootContent,
+            data: { 
+                id: 'ROOT', 
+                title: `${this.projectName} Hub`, 
+                description: 'System-generated',
+                entities: [{ id: 'ROOT', downlinks: rootDownlinks }]
+            }
         });
 
         return synthetic;

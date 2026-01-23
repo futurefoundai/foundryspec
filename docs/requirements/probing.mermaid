@@ -3,11 +3,13 @@ id: "REQ_AutomatedProbing"
 title: Automated Design Probing
 description: Requirements for the drift detection system.
 classification: Functional
-uplink: 
-  - "GRP_Requirements"
-  - "PER_SystemAnalyst"
-downlinks:
-  - "COMP_ProbeManager"
+entities:
+  - id: "REQ_AutomatedProbing"
+    uplink: 
+      - "GRP_Requirements"
+      - "PER_SystemAnalyst"
+    downlinks:
+      - "COMP_ProbeManager"
 ---
 
 requirementDiagram

@@ -2,10 +2,18 @@
 id: "COMP_Overview"
 title: Component Architecture
 description: Detailed decomposition of the FoundrySpec engine components.
-uplink: "ROOT"
-requirements:
-  - "REQ_NonFunctional"
 entities:
+  - id: "COMP_Overview"
+    uplink: "ROOT"
+    downlinks:
+      - "COMP_Group"
+      - "COMP_ClickInterceptor"
+      - "COMP_InteractiveComments"
+      - "COMP_BuildManager"
+      - "COMP_ProbeManager"
+      - "COMP_ConfigStore"
+      - "COMP_GitManager"
+      - "COMP_CLI"
   - id: "COMP_Group"
     uplink: "REQ_NonFunctional"
   - id: "COMP_ClickInterceptor"

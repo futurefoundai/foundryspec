@@ -63,6 +63,9 @@ export class RuleEngine {
     }
 
     validateAsset(asset: ProjectAsset, context?: ProjectContext): void {
+        // Skip validation for synthetic assets (e.g., generated root.mermaid)
+        if (!asset.absPath) return;
+
         const applicableRules = this.rules.filter(rule => this.matchesTarget(asset, rule.target));
 
         for (const rule of applicableRules) {
@@ -153,16 +156,20 @@ export class RuleEngine {
 
         // 5. Traceability Check (Orphan Detection)
         if (checks.traceability?.mustBeLinked && context) {
-            const id = asset.data.id || asset.data.traceability?.id;
-            if (id && id !== 'ROOT' && !context.referencedIds.has(id)) {
-                errors.push(`Orphan detected: This document (ID: "${id}") is not linked to by any other document.`);
+            const entities = Array.isArray(asset.data.entities) ? asset.data.entities : [];
+            for (const ent of entities) {
+                if (ent.id && !context.referencedIds.has(ent.id)) {
+                    errors.push(`Orphan detected: Entity (ID: "${ent.id}") within "${asset.relPath}" is not linked to by any other document.`);
+                }
             }
         }
 
         if (errors.length > 0) {
             const color = enforcement === 'error' ? chalk.red : chalk.yellow;
             const prefix = enforcement === 'error' ? '❌' : '⚠️';
-            console.error(color(`\n${prefix} Rule violation: ${rule.name} (Rule ID: ${rule.id}) in ${asset.relPath}`));
+            const description = rule.description ? ` (${rule.description})` : '';
+            
+            console.error(color(`\n${prefix} Rule violation: ${rule.name}${description}\n   Rule ID: ${rule.id} | Level: ${rule.level || 'file'} | File: ${asset.relPath}`));
             errors.forEach(err => console.error(color(`   - ${err}`)));
             
             if (enforcement === 'error') {

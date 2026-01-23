@@ -1,7 +1,10 @@
 ---
+id: RULES-GUIDE
 title: Rule Engine Documentation
 description: A comprehensive guide to the FoundrySpec Rule Engine and YAML configuration.
-id: RULES-GUIDE
+entities:
+  - id: RULES-GUIDE
+    uplink: ROOT
 ---
 
 # FoundrySpec Rule Engine Documentation
@@ -10,11 +13,16 @@ The Rule Engine allows you to enforce structural, syntax, and metadata integrity
 
 ## How it works
 
-The Rule Engine processes rules in three phases for every file (`asset`) in your project:
+The Rule Engine processes rules in several phases for every file (`asset`) in your project.
 
-1.  **Targeting**: Determines if a rule should run on a specific file.
-2.  **Execution**: Validates the file against syntax, metadata, and structural requirements.
-3.  **Enforcement**: Reports warnings or terminates the build on errors.
+> [!IMPORTANT]
+> **Synthetic Architecture**: Files like `root.mermaid` and category index files (e.g., `personas/personas.mermaid`) are **synthetically generated** by the Build Manager. You should not create these manually in your `docs/` directory, as they will be ignored or overwritten to ensure consistent project navigation.
+
+1.  **Phase 1: Loading**: Rules are loaded from system defaults and local config.
+2.  **Phase 2: Targeting**: Determines if a rule applies to a specific file based on path or ID.
+3.  **Phase 3: Execution**: Validates syntax, metadata, and structure.
+4.  **Phase 4: Traceability**: Validates the global project graph (linkage).
+5.  **Phase 5: Enforcement**: Logs warnings or fails the build on errors.
 
 ---
 
@@ -24,12 +32,14 @@ The rules file consists of two main sections: `rules` and `hub`.
 
 ### 1. `rules` (Array)
 
-Each rule object defines how to validate a specific set of files.
+Each rule object defines how to validate a specific set of files or nodes.
 
 | Field         | Type   | Description                                                                   |
 | :------------ | :----- | :---------------------------------------------------------------------------- |
 | `id`          | string | Unique identifier for the rule.                                               |
 | `name`        | string | Human-readable name.                                                          |
+| `description` | string | **(New)** Rationale for the rule, displayed in build errors.                  |
+| `level`       | enum   | **(New)** Scope of validation: `project`, `folder`, `file`, or `node`.        |
 | `target`      | object | **Required.** Defines which files are affected (see [Targeting](#targeting)). |
 | `type`        | enum   | `structural`, `syntax`, `metadata`, or `traceability`.                        |
 | `enforcement` | enum   | `error` (stops build) or `warning` (logs to console).                         |
@@ -50,6 +60,24 @@ Rules are applied if _any_ target condition matches:
 | `requiredExtension`   | string   | The required file extension (e.g., `mermaid`, `md`).                    |
 | `requiredFrontmatter` | string[] | List of keys that MUST exist in the Markdown/Mermaid frontmatter.       |
 | `requiredNodes`       | string[] | Specific nodes or labels that must exist in the visual diagram content. |
+| `traceability`        | object   | Validation for project-wide links (e.g., `mustBeLinked: true`).         |
+
+> [!IMPORTANT]
+> **Node-Centric Traceability**: FoundrySpec has transitioned to a 100% entity-centric model. Relationships like `uplink` and `downlinks` are now **node-dependent**, not file-dependent. To ensure your documentation remains traceable, you must define all connections within the `entities` block in your frontmatter.
+
+### Document Structure Example
+
+```yaml
+---
+id: 'MY_DOC_ID'
+title: 'My Document'
+entities:
+  - id: 'NODE_01'
+    uplink: 'PARENT_ID'
+    downlinks: ['CHILD_01', 'CHILD_02']
+    requirements: ['REQ_01']
+---
+```
 
 ---
 
@@ -73,6 +101,8 @@ Defines how the FoundrySpec Documentation Hub organizes your content.
 ```yaml
 - id: persona-gate
   name: Persona Architecture Gate
+  level: folder
+  description: 'Personas must be mindmaps with Role, Description, and Goals to support consistent user modeling.'
   target:
     idPrefix: PER_
     pathPattern: 'personas/*.mermaid'
@@ -80,6 +110,7 @@ Defines how the FoundrySpec Documentation Hub organizes your content.
   enforcement: error
   checks:
     mermaidType: mindmap
+    requiredExtension: mermaid
     requiredFrontmatter: [title, description, id]
-    requiredNodes: [Role, Goals]
+    requiredNodes: [Role, Description, Goals]
 ```

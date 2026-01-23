@@ -3,27 +3,46 @@ id: "GRP_Core"
 title: Core Requirements
 description: General functional and non-functional requirements.
 classification: Functional
-uplink: "GRP_Requirements"
-downlinks:
-  - "REQ_Functional"
-  - "REQ_NonFunctional"
 entities:
+  - id: "GRP_Core"
+    uplink: "GRP_Requirements"
+    downlinks:
+      - "REQ_Functional"
+      - "REQ_NonFunctional"
   - id: "REQ_Functional"
     classification: Functional
     uplink: 
       - "GRP_Core"
       - "PER_SystemAnalyst"
+    downlinks:
+      - "COMP_CLI"
+      - "COMP_GitManager"
+      - "COMP_ClickInterceptor"
+      - "CTX_System"
   - id: "REQ_NonFunctional"
     classification: Non-Functional
     uplink: 
       - "GRP_Core"
       - "PER_CodingAgent"
+    downlinks:
+      - "COMP_Group"
   - id: "REQ_DynamicRoot"
     classification: Functional
     uplink: "REQ_Functional"
+    downlinks:
+      - "REQ_SyntheticHub"
+  - id: "REQ_SyntheticHub"
+    classification: Functional
+    title: Synthetic Navigation Hub
+    description: The system must automatically generate root and category indices to eliminate manual maintenance.
+    uplink: "REQ_DynamicRoot"
+    downlinks:
+      - "COMP_BuildManager"
   - id: "REQ_ZeroConfig"
     classification: Functional
     uplink: "REQ_Functional"
+    downlinks:
+      - "COMP_ConfigStore"
 ---
 
 requirementDiagram
@@ -36,14 +55,21 @@ requirementDiagram
 
     requirement Dynamic_Root {
         id: "REQ_DynamicRoot"
-        text: "The system shall automatically generate a navigation root and category indices from the folder structure, requiring no manual index maintenance."
+        text: "The system shall automatically generate a navigation root and category indices from the folder structure."
         risk: Medium
+        verifymethod: Test
+    }
+
+    requirement Synthetic_Hub {
+        id: "REQ_SyntheticHub"
+        text: "The build process must synthesize root.mermaid and folder_name.mermaid files dynamically to ensure 100% reachability without manual index files."
+        risk: Low
         verifymethod: Test
     }
 
     requirement Zero_Config {
         id: "REQ_ZeroConfig"
-        text: "The system shall operate without project-level configuration files, relying on a global store and unique project identity markers (.foundryid)."
+        text: "The system shall operate without project-level configuration files."
         risk: Medium
         verifymethod: Test
     }
@@ -57,3 +83,4 @@ requirementDiagram
 
     Functional -contains-> Dynamic_Root
     Functional -contains-> Zero_Config
+    Dynamic_Root -contains-> Synthetic_Hub

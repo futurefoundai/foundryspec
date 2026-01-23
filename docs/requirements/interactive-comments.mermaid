@@ -3,12 +3,13 @@ id: "REQ_InteractiveComments"
 title: Interactive Comments
 description: Requirements for the user feedback system.
 classification: Functional
-uplink: 
-  - "GRP_Requirements"
-  - "PER_SystemAnalyst"
-downlinks:
-  - "COMP_InteractiveComments"
 entities:
+  - id: "REQ_InteractiveComments"
+    uplink: 
+      - "GRP_Requirements"
+      - "PER_SystemAnalyst"
+    downlinks:
+      - "COMP_InteractiveComments"
   - id: "REQ_DeterministicIdentity"
     classification: Functional
     uplink: "REQ_InteractiveComments"

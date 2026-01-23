@@ -2,10 +2,15 @@
 id: "CTX_Group"
 title: System Context
 description: High-level system landscape.
-uplink: "ROOT"
 entities:
+  - id: "CTX_Group"
+    uplink: "ROOT"
+    downlinks:
+      - "CTX_System"
   - id: "CTX_System"
     uplink: "REQ_Functional"
+    downlinks:
+      - "BND_App"
 ---
 
 C4Context

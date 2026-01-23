@@ -2,8 +2,11 @@
 id: "BND_Group"
 title: Technical Boundaries
 description: Boundary decomposition.
-uplink: "ROOT"
 entities:
+  - id: "BND_Group"
+    uplink: "ROOT"
+    downlinks:
+      - "BND_App"
   - id: "BND_App"
     uplink: "CTX_System"
 ---
