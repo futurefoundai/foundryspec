@@ -8,10 +8,9 @@
 import fs from 'fs-extra';
 import yaml from 'js-yaml';
 import chalk from 'chalk';
-import { ProjectAsset, DiagramAnalysis } from './types/assets.js';
+import { ProjectAsset } from './types/assets.js';
 import { 
     RuleTarget, 
-    RuleChecks, 
     Rule, 
     HubCategory, 
     RuleSet 

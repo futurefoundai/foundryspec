@@ -1,9 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { RuleEngine } from '../src/RuleEngine';
-import { ProjectAsset } from '../src/types/foundry';
+import { ProjectAsset } from '../src/types/assets';
 import fs from 'fs-extra';
-import yaml from 'js-yaml';
-
 vi.mock('fs-extra');
 
 describe('RuleEngine', () => {

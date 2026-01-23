@@ -11,9 +11,3 @@ export interface ProjectAsset {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     data: any; // Frontmatter data is loosely typed
 }
-
-export interface DiagramAnalysis {
-    nodes: string[];
-    relationships: { from: string; to: string; label?: string }[];
-    type: string;
-}

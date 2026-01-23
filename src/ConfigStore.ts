@@ -14,7 +14,7 @@ import fs from "fs-extra";
 import path from "path";
 import os from "os";
 
-import { ExternalSpec, ProjectConfig, GlobalStore } from './types/config.js';
+import { ProjectConfig, GlobalStore } from './types/config.js';
 
 // TODO: Move type definitions to a special file
 /**

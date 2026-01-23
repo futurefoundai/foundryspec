@@ -16,7 +16,6 @@ import chalk from 'chalk';
 import crypto from 'crypto';
 import { fileURLToPath } from 'url';
 import { ConfigStore } from './ConfigStore.js';
-import { ProjectConfig } from './types/config.js';
 import { CategoryTemplate } from './types/scaffold.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
