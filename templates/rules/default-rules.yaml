@@ -8,6 +8,7 @@ rules:
     enforcement: error
     checks:
       mermaidType: mindmap
+      requiredExtension: mermaid
       requiredFrontmatter: [title, description, id]
       requiredNodes: [Role, Description, Goals]
 
@@ -20,6 +21,7 @@ rules:
     enforcement: error
     checks:
       mermaidType: sequenceDiagram
+      requiredExtension: mermaid
       requiredFrontmatter: [title, description, id]
       requiredNodes: [User, System]
 
@@ -32,6 +34,17 @@ rules:
     enforcement: warning
     checks:
       mermaidType: requirementDiagram
+      requiredExtension: mermaid
+      requiredFrontmatter: [title, description, id]
+
+  - id: footnotes-policy
+    name: Footnotes Markdown Policy
+    target:
+      pathPattern: "**/footnotes/*.md"
+    type: structural
+    enforcement: error
+    checks:
+      requiredExtension: md
       requiredFrontmatter: [title, description, id]
 
   - id: core-metadata

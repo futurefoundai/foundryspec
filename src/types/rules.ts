@@ -13,6 +13,7 @@ export interface RuleChecks {
     mermaidType?: string;
     requiredNodes?: string[];
     requiredFrontmatter?: string[];
+    requiredExtension?: string;
     traceability?: {
         linksToPersona?: boolean;
         requiresImplementation?: boolean;

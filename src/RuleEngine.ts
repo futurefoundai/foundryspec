@@ -66,17 +66,26 @@ export class RuleEngine {
         }
     }
 
+    /**
+     * Determines if a rule applies to a specific asset based on its ID or file path.
+     */
     private matchesTarget(asset: ProjectAsset, target: RuleTarget): boolean {
+        // 1. Logical ID Match: Check if the asset's frontmatter ID starts with the required prefix (e.g., "REQ-")
         if (target.idPrefix && asset.data.id?.startsWith(target.idPrefix)) {
             return true;
         }
+
+        // 2. Physical Path Match: Check if the file's location matches a glob-like pattern (e.g., "discovery/journeys/**")
         if (target.pathPattern) {
-            // Simple glob-like matching (can be improved)
+            // Simple glob-to-regex conversion:
+            // ** matches any directory depth (.*)
+            // * matches any character except '/' ([^/]*)
             const regex = new RegExp(target.pathPattern.replace(/\*\*/g, '.*').replace(/\*/g, '[^/]*'));
             if (regex.test(asset.relPath)) {
                 return true;
             }
         }
+
         return false;
     }
 
@@ -100,7 +109,15 @@ export class RuleEngine {
             }
         }
 
-        // 3. Structural Check
+        // 3. File Extension Check
+        if (checks.requiredExtension) {
+            const ext = asset.relPath.split('.').pop();
+            if (ext?.toLowerCase() !== checks.requiredExtension.replace(/^\./, '').toLowerCase()) {
+                errors.push(`File must have extension ".${checks.requiredExtension.replace(/^\./, '')}". Found ".${ext}"`);
+            }
+        }
+
+        // 4. Structural Check
         if (checks.requiredNodes && checks.mermaidType) {
             const analyzer = this.analyzers[checks.mermaidType];
             if (analyzer) {
