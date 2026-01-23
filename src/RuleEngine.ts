@@ -23,6 +23,10 @@ import {
     RequirementAnalyzer 
 } from './analyzers/index.js';
 
+export interface ProjectContext {
+    referencedIds: Set<string>;
+}
+
 export class RuleEngine {
     private rules: Rule[] = [];
     private hubCategories: HubCategory[] = [];
@@ -58,11 +62,11 @@ export class RuleEngine {
         }
     }
 
-    validateAsset(asset: ProjectAsset): void {
+    validateAsset(asset: ProjectAsset, context?: ProjectContext): void {
         const applicableRules = this.rules.filter(rule => this.matchesTarget(asset, rule.target));
 
         for (const rule of applicableRules) {
-            this.executeRule(asset, rule);
+            this.executeRule(asset, rule, context);
         }
     }
 
@@ -80,7 +84,16 @@ export class RuleEngine {
             // Simple glob-to-regex conversion:
             // ** matches any directory depth (.*)
             // * matches any character except '/' ([^/]*)
-            const regex = new RegExp(target.pathPattern.replace(/\*\*/g, '.*').replace(/\*/g, '[^/]*'));
+            // {a,b} matches brace expansion (a|b)
+            const pattern = target.pathPattern
+                .replace(/\./g, '\\.')
+                .replace(/\*\*\//g, '(.*\\/)?')
+                .replace(/\*\*/g, '.*')
+                .replace(/\*/g, '[^/]*')
+                .replace(/\{/g, '(')
+                .replace(/\}/g, ')')
+                .replace(/,/g, '|');
+            const regex = new RegExp('^' + pattern + '$');
             if (regex.test(asset.relPath)) {
                 return true;
             }
@@ -89,7 +102,7 @@ export class RuleEngine {
         return false;
     }
 
-    private executeRule(asset: ProjectAsset, rule: Rule): void {
+    private executeRule(asset: ProjectAsset, rule: Rule, context?: ProjectContext): void {
         const { checks, enforcement } = rule;
         const errors: string[] = [];
 
@@ -135,6 +148,14 @@ export class RuleEngine {
                         errors.push(`Missing required node (fallback check): "${node}"`);
                     }
                 }
+            }
+        }
+
+        // 5. Traceability Check (Orphan Detection)
+        if (checks.traceability?.mustBeLinked && context) {
+            const id = asset.data.id || asset.data.traceability?.id;
+            if (id && id !== 'ROOT' && !context.referencedIds.has(id)) {
+                errors.push(`Orphan detected: This document (ID: "${id}") is not linked to by any other document.`);
             }
         }
 

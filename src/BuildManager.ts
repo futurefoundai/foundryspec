@@ -162,6 +162,39 @@ export class BuildManager {
         const codeMap = await this.scanCodebase();
 
         // --- 4. Centralized Validation ---
+        const referencedIds: Set<string> = new Set();
+        for (const asset of assets) {
+            const { data } = asset;
+            const collect = (val: string | string[] | undefined) => {
+                if (!val) return;
+                if (Array.isArray(val)) val.forEach(v => { if (typeof v === 'string') referencedIds.add(v); });
+                else if (typeof val === 'string') referencedIds.add(val);
+            };
+            
+            collect(data.uplink);
+            collect(data.downlinks);
+            collect(data.requirements);
+            collect(data.traceability?.uplink);
+            collect(data.traceability?.downlinks);
+            collect(data.traceability?.requirements);
+
+            const entities = [
+                ...(Array.isArray(data.entities) ? data.entities : []),
+                ...(Array.isArray(data.traceability?.relationships) ? data.traceability.relationships : []),
+                ...(Array.isArray(data.traceability?.entities) ? data.traceability.entities : [])
+            ];
+            for (const ent of entities) {
+                collect(ent.uplink);
+                collect(ent.downlinks);
+                collect(ent.requirements);
+            }
+        }
+
+        // Perform Rule-Based Validation with project context
+        for (const asset of assets) {
+            this.ruleEngine.validateAsset(asset, { referencedIds });
+        }
+
         await this.validateFrontmatter(assets, directoryBlueprints);
         await this.validateProjectGraph(assets);
         await this.validateTraceability(assets, idToFileMap, codeMap);
@@ -447,9 +480,6 @@ mindmap
                 const { data, content } = matter(raw);
 
                 assets.push({ relPath, absPath, content, data });
-                
-                // --- Rule-Based Validation ---
-                this.ruleEngine.validateAsset(assets[assets.length - 1]);
             }
         }
 

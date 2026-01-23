@@ -2,8 +2,7 @@ rules:
   - id: persona-gate
     name: Persona Architecture Gate
     target:
-      idPrefix: PER_
-      pathPattern: "personas/*.mermaid"
+      pathPattern: "personas/*"
     type: structural
     enforcement: error
     checks:
@@ -15,8 +14,7 @@ rules:
   - id: journey-syntax
     name: Journey Strict Syntax
     target:
-      idPrefix: JRN_
-      pathPattern: "journeys/*.mermaid"
+      pathPattern: "journeys/*"
     type: syntax
     enforcement: error
     checks:
@@ -28,10 +26,9 @@ rules:
   - id: requirement-syntax
     name: Requirement Syntax
     target:
-      idPrefix: REQ_
-      pathPattern: "requirements/*.mermaid"
+      pathPattern: "requirements/*"
     type: syntax
-    enforcement: warning
+    enforcement: error
     checks:
       mermaidType: requirementDiagram
       requiredExtension: mermaid
@@ -40,7 +37,7 @@ rules:
   - id: footnotes-policy
     name: Footnotes Markdown Policy
     target:
-      pathPattern: "**/footnotes/*.md"
+      pathPattern: "**/footnotes/*"
     type: structural
     enforcement: error
     checks:
@@ -55,6 +52,16 @@ rules:
     enforcement: error
     checks:
       requiredFrontmatter: [title, description, id]
+
+  - id: global-traceability
+    name: Global Document Traceability
+    target:
+      pathPattern: "**/*.{mermaid,md}"
+    type: traceability
+    enforcement: error
+    checks:
+      traceability:
+        mustBeLinked: true
 
 hub:
   categories:

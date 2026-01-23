@@ -17,6 +17,7 @@ export interface RuleChecks {
     traceability?: {
         linksToPersona?: boolean;
         requiresImplementation?: boolean;
+        mustBeLinked?: boolean;
         allowedDownlinkPrefixes?: string[];
     };
 }
