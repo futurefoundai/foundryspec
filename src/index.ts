@@ -376,6 +376,63 @@ uplink: "${groupId}"
     });
 
 program
+    .command('remove')
+    .description('Remove a governed component folder and its mapping rules')
+    .argument('<category>', 'Name or slug of the category (e.g., "Payments")')
+    .option('-f, --force', 'Bypass confirmation', false)
+    .action(async (category: string, options: { force: boolean }) => {
+        try {
+            const root = process.cwd();
+            const idPath = path.join(root, '.foundryid');
+            if (!await fs.pathExists(idPath)) throw new Error('No .foundryid found.');
+            const id = (await fs.readFile(idPath, 'utf8')).trim();
+
+            const slug = category.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+            const ruleId = `${slug}-registration`;
+            const dirPath = path.join(root, 'docs', slug);
+
+            if (!options.force) {
+                const confirm = await inquirer.prompt([
+                    {
+                        type: 'confirm',
+                        name: 'ok',
+                        message: `This will delete the directory "docs/${slug}" and its governance rule. Continue?`,
+                        default: false
+                    }
+                ]);
+                if (!confirm.ok) return;
+            }
+
+            // 1. Remove Rule from Global Store
+            const customRulesPath = store.getRulesPath(id);
+            if (await fs.pathExists(customRulesPath)) {
+                const content = await fs.readFile(customRulesPath, 'utf8');
+                const customRules = yaml.load(content) as RuleSet || { rules: [] };
+                if (customRules.rules) {
+                    const originalCount = customRules.rules.length;
+                    customRules.rules = customRules.rules.filter(r => r.id !== ruleId);
+                    if (customRules.rules.length < originalCount) {
+                        await fs.writeFile(customRulesPath, yaml.dump(customRules));
+                        console.log(chalk.green(`✅ Governance rule "${ruleId}" removed.`));
+                    }
+                }
+            }
+
+            // 2. Delete Folder
+            if (await fs.pathExists(dirPath)) {
+                await fs.remove(dirPath);
+                console.log(chalk.green(`✅ Directory "docs/${slug}" deleted.`));
+            }
+
+            console.log(chalk.cyan(`\nRun 'foundryspec build' to update the hub.`));
+
+        } catch (err: unknown) {
+            const msg = err instanceof Error ? err.message : String(err);
+            console.error(chalk.red('\n❌ Failed to remove category:'), msg);
+        }
+    });
+
+program
     .command('pull')
     .description('Incorporate external specs from a Git repository')
     .argument('<url>', 'Remote Git repository URL')

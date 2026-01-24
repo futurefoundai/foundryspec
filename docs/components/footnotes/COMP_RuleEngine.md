@@ -111,3 +111,15 @@ A complete rule that governs a folder, enforces syntax, AND registers it in the 
 ```
 
 _Note how `hub` defines the category title, while `target.idPrefix` ("PER_") automatically sets the ID Governance policy for this category.\_
+
+---
+
+## Command Reference
+
+### `add <category>`
+
+Launches the Governance Wizard to bootstrap a new category with a starter diagram and a corresponding rule.
+
+### `remove <category>`
+
+The inverse of `add`. Cleans up a category by removing its governance rule from global storage and deleting its documentation directory.
