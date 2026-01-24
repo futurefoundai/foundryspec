@@ -1,6 +1,5 @@
 import { Command } from 'commander';
 import chalk from 'chalk';
-import path from 'path';
 import { ScaffoldManager } from '../ScaffoldManager.js';
 import { ProbeManager } from '../ProbeManager.js';
 import { BuildManager } from '../BuildManager.js';
@@ -61,7 +60,7 @@ export function registerCoreCommands(program: Command, findProjectRoot: (dir: st
         .command('build')
         .description('Generate the static documentation hub')
         .action(async () => {
-            console.log(chalk.blue('\n🛠️  Building documentation hub...'));
+            console.log(chalk.blue('\n.. Building documentation hub...'));
             try {
                 const root = await findProjectRoot(process.cwd());
                 const builder = new BuildManager(root);
