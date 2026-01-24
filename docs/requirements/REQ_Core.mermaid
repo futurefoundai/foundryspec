@@ -22,6 +22,8 @@ entities:
       - "COMP_GitManager"
       - "COMP_ClickInterceptor"
       - "CTX_System"
+      - "REQ_SmartInterception"
+      - "REQ_EntityVerification"
   - id: "REQ_NonFunctional"
     classification: Non-Functional
     uplink: 
@@ -51,6 +53,16 @@ entities:
     uplink: REQ_Core
     downlinks:
       - COMP_CLI
+  - id: REQ_SmartInterception
+    classification: Functional
+    uplink: REQ_Functional
+    downlinks:
+      - COMP_ClickInterceptor
+  - id: REQ_EntityVerification
+    classification: Functional
+    uplink: REQ_Functional
+    downlinks:
+      - COMP_RuleEngine
 ---
 
 requirementDiagram
@@ -60,6 +72,23 @@ requirementDiagram
         risk: Low
         verifymethod: Test
     }
+
+    requirement Smart_Interception {
+        id: "REQ_SmartInterception"
+        text: "The system shall automatically resolve architectural IDs from diagram participant groups for seamless navigation."
+        risk: Low
+        verifymethod: Test
+    }
+
+    requirement Entity_Verification {
+        id: "REQ_EntityVerification"
+        text: "The system shall ensure all interaction flows reference only valid, documented architectural entities."
+        risk: Medium
+        verifymethod: Test
+    }
+
+    Functional -contains-> Smart_Interception
+    Functional -contains-> Entity_Verification
 
     requirement Safe_Removal {
         id: "REQ_SafeRemoval"
