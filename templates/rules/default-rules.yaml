@@ -50,7 +50,7 @@ rules:
       mermaidType: requirementDiagram
       requiredExtension: mermaid
       traceability:
-        mustTraceTo: [PER_]
+        mustTraceTo: [PER_, REQ_]
         mustHaveDownlink: [FEAT_, COMP_, CTX_, BND_, REQ_]
     hub:
       id: GRP_Requirements
