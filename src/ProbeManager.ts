@@ -116,10 +116,7 @@ export class ProbeManager {
             if (data.id) ids.add(data.id);
             
             // 1. Extract from Frontmatter Entities
-            const entities = [
-                ...(Array.isArray(data.entities) ? data.entities : []),
-                ...(Array.isArray(data.traceability?.entities) ? data.traceability.entities : [])
-            ];
+            const entities = Array.isArray(data.entities) ? data.entities : [];
             
             entities.forEach((e: { id?: string }) => {
                 if (e.id) ids.add(e.id);
