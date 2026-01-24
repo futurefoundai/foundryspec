@@ -18,6 +18,7 @@ import fs from 'fs-extra';
 import { fileURLToPath } from 'url';
 import inquirer from 'inquirer';
 import yaml from 'js-yaml';
+import { glob } from 'glob';
 
 // Import managers using .js extension for ESM compatibility
 import { ScaffoldManager } from './ScaffoldManager.js';
@@ -391,12 +392,85 @@ program
             const ruleId = `${slug}-registration`;
             const dirPath = path.join(root, 'docs', slug);
 
+            // --- Safety Check: Dependency Analysis ---
+            console.log(chalk.blue(`🔍 Checking dependencies for category "${category}"...`));
+            
+            // 1. Identify IDs "owned" by this category
+            const ownedIds: Set<string> = new Set();
+            if (await fs.pathExists(dirPath)) {
+                const targetFiles = await glob('**/*.{mermaid,md}', { cwd: dirPath });
+                for (const f of targetFiles) {
+                    const content = await fs.readFile(path.join(dirPath, f), 'utf8');
+                    const fm = content.match(/^---\s*\n([\s\S]*?)\n---/);
+                    if (fm) {
+                        try {
+                            const data = yaml.load(fm[1]) as Record<string, unknown>;
+                            const id = (data.id as string) || (data.traceability as Record<string, unknown>)?.id;
+                            if (typeof id === 'string') ownedIds.add(id);
+                        } catch {
+                            // Skip invalid YAML
+                        }
+                    }
+                }
+            }
+
+            // 2. Scan project for incoming references
+            const allFiles = await glob('docs/**/*.{mermaid,md}', { cwd: root });
+            const incomingRefs: { file: string, targetId: string }[] = [];
+            
+            for (const f of allFiles) {
+                // Skip the folder we are trying to remove
+                if (f.startsWith(`docs/${slug}/`)) continue;
+
+                const content = await fs.readFile(path.join(root, f), 'utf8');
+                const fm = content.match(/^---\s*\n([\s\S]*?)\n---/);
+                if (fm) {
+                    try {
+                        const data = yaml.load(fm[1]) as Record<string, unknown>;
+                        const check = (val: unknown) => {
+                            if (!val) return;
+                            const vals = Array.isArray(val) ? val : [val];
+                            vals.forEach(v => {
+                                if (typeof v === 'string' && ownedIds.has(v)) {
+                                    incomingRefs.push({ file: f, targetId: v });
+                                }
+                            });
+                        };
+
+                        check(data.uplink || (data.traceability as Record<string, unknown>)?.uplink);
+                        check(data.downlinks || (data.traceability as Record<string, unknown>)?.downlinks);
+                        check(data.requirements);
+
+                        if (Array.isArray(data.entities)) {
+                            data.entities.forEach((ent: Record<string, unknown>) => {
+                                check(ent.uplink);
+                                check(ent.downlinks);
+                                check(ent.requirements);
+                            });
+                        }
+                    } catch {
+                        // Skip invalid YAML
+                    }
+                }
+            }
+
+            if (incomingRefs.length > 0 && !options.force) {
+                console.error(chalk.red(`\n❌ Cannot remove category "${category}". It is required by other documents:`));
+                incomingRefs.forEach(ref => {
+                    console.error(chalk.yellow(`   - ${ref.file} references node "${ref.targetId}"`));
+                });
+                console.error(chalk.cyan(`\nFix these dependencies or use --force to override (not recommended).`));
+                return;
+            }
+
             if (!options.force) {
                 const confirm = await inquirer.prompt([
                     {
                         type: 'confirm',
                         name: 'ok',
-                        message: `This will delete the directory "docs/${slug}" and its governance rule. Continue?`,
+                        message: incomingRefs.length > 0 
+                            ? chalk.yellow(`⚠️  WARNING: This category is still referenced (see above). Force removal?`)
+                            : `This will delete "docs/${slug}" and its governance rule. Continue?`,
                         default: false
                     }
                 ]);
