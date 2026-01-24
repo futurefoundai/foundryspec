@@ -311,11 +311,6 @@ export class RuleEngine {
         const filename = parts[parts.length - 1];
         const basename = filename.split('.').slice(0, -1).join('.');
 
-        // Special case: Ignore system files if needed, or enforce strictly everywhere
-        // User requested: "file name and file ID for rule must be the same"
-        // Exceptions? Maybe RULES_GUIDE?
-        if (asset.relPath === 'RULES_GUIDE.md') return;
-
         // Also ignore if it's not a mermaid or md file
         if (!asset.relPath.endsWith('.mermaid') && !asset.relPath.endsWith('.md')) return;
 
