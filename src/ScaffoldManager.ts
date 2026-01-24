@@ -16,6 +16,7 @@ import chalk from 'chalk';
 import crypto from 'crypto';
 import { fileURLToPath } from 'url';
 import { ConfigStore } from './ConfigStore.js';
+import { GitManager } from './GitManager.js';
 import { CategoryTemplate } from './types/scaffold.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -191,6 +192,15 @@ graph TD
 
         await fs.writeFile(path.join(process.cwd(), '.foundryid'), projectId.trim());
         await this.ensureGitignore(process.cwd());
+
+        // --- INSTALL GITOPS HOOKS ---
+        try {
+            // Using process.cwd() as root since we are in init
+            const gitMan = new GitManager(process.cwd());
+            await gitMan.installHooks();
+        } catch (err: unknown) {
+            console.warn(chalk.yellow(`\n⚠️  Could not install Git hooks (is this a git repo?): ${err}`));
+        }
     }
 
     async ensureGitignore(dir: string): Promise<void> {
