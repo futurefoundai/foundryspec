@@ -1,90 +1,42 @@
-# FoundrySpec 🛠️
+# FoundrySpec ⚙️
 
-**The Documentation Engine for AI-Human Collaborative System Design.**
+**The Intent-Driven Development (IDD) Infrastructure for AI-Human Synergy.**
 
-FoundrySpec is not just a documentation tool; it is a **Living Digital Twin** of your system's architectural intent. Designed for the era of AI-assisted engineering, FoundrySpec ensures that your documentation remains the **Single Source of Truth (SSoT)**—a centralized, authoritative reference point that both humans and AI Agents can trust to avoid data fragmentation and drift.
-
----
-
-## 🚀 Why FoundrySpec?
-
-In a world of rapid AI development, traditional documentation fails because it is **unstructured, ambiguous, and stale**. This leads to AI hallucinations, context fragmentation, and architectural decay.
-
-FoundrySpec solves this by providing:
-
-- 🤖 **AI-First Design:** Optimized for LLM context windows. Structured, machine-readable specifications (Mermaid + Markdown).
-- 🗺️ **Discovery-First Workflow:** Mandates a "Discovery Phase" (Personas, Journeys, Requirements) before a single line of code is written.
-- 🔗 **Zero-Question Traceability:** Link high-level requirements directly to code components using implementation markers.
-- ⚡ **Zero-Config Auto-Discovery:** Automated category management and project-wide graph validation.
-- 👀 **Hot-Reload Dev Experience:** Real-time feedback loop. Edit your diagrams and see changes instantly in the Documentation Hub.
+FoundrySpec is not just a documentation tool; it is **Active Architectural Infrastructure**. It serves as the **Single Source of Truth (SSoT)** for system intent, providing a high-fidelity context layer that both **Humans and AI Agents** use to build, validate, and evolve complex software without architectural drift.
 
 ---
 
-## 🛠️ CLI Commands
+## 🚀 The IDD Advantage
 
-FoundrySpec provides a comprehensive toolset for managing your documentation lifecycle:
+In the era of AI-assisted engineering, traditional documentation is a liability—it's often stale, unstructured, and disconnected from the code. FoundrySpec pivots the workflow to **Intent-First**:
 
-| Command   | Description                                                           |
-| :-------- | :-------------------------------------------------------------------- |
-| `init`    | Scaffold a new FoundrySpec documentation project.                     |
-| `build`   | Generate the static documentation hub with full graph validation.     |
-| `serve`   | Locally serve the documentation hub with hot-reloading.               |
-| `add`     | Add a new documentation category (e.g., `foundryspec add security`).  |
-| `changes` | Generate a report of recent spec changes and implementation tasks.    |
-| `deploy`  | Scaffold GitHub Actions for automatic deployment to GH Pages.         |
-| `pull`    | Incorporate external specs from a Git repository.                     |
-| `sync`    | Synchronize all external specs from remote repositories.              |
-| `upgrade` | Update local project templates and workflows to the latest standards. |
-| `help`    | Display the AI Agent Guide or specific workflow instructions.         |
+- 🧠 **Common Context Layer:** A machine-readable and human-beautiful bridge (Mermaid + Markdown) that ensures AI Agents and developers are always looking at the same map.
+- 🛡️ **Architectural Governance:** Active enforcement via GitOps hooks. If the code drifts from the design, the build fails.
+- 📡 **Automated Design Probes:** Continuous monitoring of implementation markers to ensure 100% traceability from requirement to source code.
+- 🗺️ **Active Discovery Hub:** A dynamic, multi-destination exploration environment that synthesizes complex system relationships into an intuitive navigation hub.
+- ⚡ **Zero-Latency Feedback:** Hot-reloading documentation that lives _inside_ your dev loop, not in a separate wiki.
 
 ---
 
-## 🧠 Dynamic Documentation Engine
+## 🛠️ The FoundrySpec Toolchain
 
-FoundrySpec now features a **Dynamic Root Infrastructure**.
+FoundrySpec provides the infrastructure to manage the entire lifecycle of architectural intent:
 
-- **Auto-Discovery:** The build engine automatically scans your `docs/` folder. Each top-level directory becomes a category in the Root Hub.
-- **Synthetic Indexing:** If you don't provide an index file (e.g., `context/context.mermaid`), FoundrySpec generates one for you, listing all diagrams in that folder.
-- **Discovery Hub:** The `discovery` folder is special. It automatically collects and aggregates your Personas, Requirements, and Journeys into a central view.
-
-## ⚙️ Configuration
-
-FoundrySpec is **Zero-Config** by default.
-
-- **Project Identity:** A `.foundryid` file is generated on `init`. Do not delete this.
-- **Global Config:** Your projects and external references are managed in `~/.foundryspec/projects.json`.
-- **No more Config Files:** We have deprecated `foundry.config.json` in favor of this global, managed approach.
-
-## 🚀 Getting Started
-
-### Installation
-
-```bash
-npm install -g @futurefoundaihq/foundryspec
-```
-
-### Initialize a New Project
-
-```bash
-foundryspec init "My Awesome Project"
-cd foundryspec
-foundryspec build   # Generates your static Documentation Hub
-foundryspec serve   # Starts the local preview server
-```
-
-## 🖋️ The Footnote Policy (Optional)
-
-Footnotes are **not compulsory**. They are supplemental assets used only when a diagram node requires deeper prose or technical specification.
-
-1. **Diagrams First:** All architectural nodes are defined in `.mermaid` files.
-2. **Markdown as Supplement:** If you choose to add detail, `.md` files must reside in a `footnotes/` subdirectory.
-3. **Strict Addressing:** A footnote's `id` must match a node ID in its parent directory's diagrams.
+| Command   | Infrastructure Role                                                |
+| :-------- | :----------------------------------------------------------------- |
+| `init`    | Scaffold a new IDD project with architectural guardrails.          |
+| `probe`   | **Active Drift Detection**: Scan code vs. spec for alignment.      |
+| `build`   | Synthesize the Living Digital Twin and validate graph integrity.   |
+| `serve`   | Launch the interactive Hub with real-time intent visualization.    |
+| `changes` | Generate AI-ready impact reports for pending architectural shifts. |
+| `deploy`  | Automate governance via CI/CD (GitHub Actions).                    |
+| `sync`    | Federated Design: Synchronize intent across multiple repositories. |
 
 ---
 
-## 🔗 Implementation Markers
+## 🔗 Intent-to-Code Traceability
 
-Bridge the gap between design and code. While the AI focuses on intent, the **FoundrySpec Build Engine** handles the heavy lifting of traceability validation. Add markers to your code to link it to the spec:
+FoundrySpec forces a hard link between your design and your codebase. Use **Implementation Markers** to gate your architectural integrity:
 
 ```typescript
 /**
@@ -93,26 +45,45 @@ Bridge the gap between design and code. While the AI focuses on intent, the **Fo
 export class AuthService { ... }
 ```
 
-Run `foundryspec build` to validate that all code markers resolve to existing IDs in your documentation.
+When you run `foundryspec probe` (triggered automatically via pre-commit hooks), the engine verifies that every piece of high-level intent in your diagrams has a corresponding implementation footprint.
 
 ---
 
-## 🤖 For AI Agents (Jules, Gemini, etc.)
+## 🤖 AI-Human Orchestration
 
-FoundrySpec provides a **Structured Context Layer**. When working in a FoundrySpec-enabled repository:
+FoundrySpec is optimized for **Collaborative Engineering**:
 
-1.  **Consult Discovery:** Understand the user's intent and personas.
-2.  **Verify Traceability:** Check which requirements your task satisfies.
-3.  **Align with Architecture:** Ensure your implementation matches the Boundary and Component diagrams.
-4.  **Sync Design:** Use `foundryspec changes` to identify what parts of the code need updating after a design change.
+1.  **For Humans:** A beautiful, searchable exploration hub with "Implementation Traceability" boxes for every requirement.
+2.  **For AI Agents:** A structured, predictable file layout and CLI that allows agents to understand project context instantly, reducing hallucinations and onboarding time.
+3.  **For the System:** A set of codified rules (`default-rules.yaml`) that define the boundaries, data models, and sequences that the software _must_ adhere to.
 
 ---
 
-## 📜 License
+## 🏗️ Getting Started with IDD
+
+### Installation
+
+```bash
+npm install -g @futurefoundaihq/foundryspec
+```
+
+### Initialize and Govern
+
+```bash
+# Initialize project and install GitOps hooks
+foundryspec init "Project Name"
+cd project-name
+foundryspec build
+
+# Code with intent
+git commit -m "feat: implement auth" # Triggers architectural probe
+```
+
+---
+
+## 📜 License & Vision
 
 Distributed under the **GNU Affero General Public License v3.0 (AGPLv3)**.
-Commercial use requires a separate license from **FutureFoundAI**.
+FoundrySpec is built to mitigate **Architectural Inertia** and empower the next generation of intent-governed software systems.
 
----
-
-**Build the future. Document with Intent. Use FoundrySpec.**
+**Define the Intent. Govern the Implementation. Build with FoundrySpec.**
