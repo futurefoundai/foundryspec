@@ -15,40 +15,56 @@ import path from 'path';
 import chalk from 'chalk';
 import { glob } from 'glob';
 import matter from 'gray-matter';
-import { RuleEngine } from './RuleEngine.js';
+import { fileURLToPath } from 'url';
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
+import { RuleEngine } from './RuleEngine.js';
+import { ConfigStore } from './ConfigStore.js';
+import { ProjectAsset } from './types/assets.js';
 import { ProbeResult } from './types/probe.js';
 
 // @foundryspec/start COMP_ProbeManager
 export class ProbeManager {
-    private specDir: string;
-    private projectDir: string;
+    private projectRoot: string;
+    private docsDir: string;
     private ruleEngine: RuleEngine;
+    private configStore: ConfigStore;
+    private projectId: string = '';
 
-    constructor(specDir: string = process.cwd()) {
-        this.specDir = path.resolve(specDir);
-        this.projectDir = path.basename(this.specDir) === 'foundryspec' 
-            ? path.dirname(this.specDir) 
-            : this.specDir;
+    constructor(projectRoot: string = process.cwd()) {
+        this.projectRoot = path.resolve(projectRoot);
+        this.docsDir = path.join(this.projectRoot, 'docs');
         this.ruleEngine = new RuleEngine();
+        this.configStore = new ConfigStore();
+    }
+
+    private async resolveProject(): Promise<void> {
+        const idPath = path.join(this.projectRoot, '.foundryid');
+        if (!await fs.pathExists(idPath)) {
+            throw new Error('Project not initialized. Run "foundryspec init".');
+        }
+        this.projectId = (await fs.readFile(idPath, 'utf8')).trim();
     }
 
     async runProbe(): Promise<void> {
+        await this.resolveProject();
         console.log(chalk.blue('📡 Initiating Automated Design Probe...'));
         
-        const assetsDir = path.join(this.specDir, 'assets');
-        if (!await fs.pathExists(assetsDir)) {
-            throw new Error('Assets directory not found. Are you in a FoundrySpec project?');
+        if (!await fs.pathExists(this.docsDir)) {
+            throw new Error('Documentation directory (docs/) not found.');
         }
 
         // Load Rules
-        const systemRulesPath = path.resolve(this.specDir, '../templates/rules/default-rules.yaml');
+        const systemRulesPath = path.resolve(__dirname, '../templates/rules/default-rules.yaml');
         await this.ruleEngine.loadRules(systemRulesPath);
+
+        const projectRulesPath = this.configStore.getRulesPath(this.projectId);
+        await this.ruleEngine.loadRules(projectRulesPath);
 
         const issues: ProbeResult[] = [];
 
         // 1. Load all Spec IDs
-        const specIds = await this.loadSpecIds(assetsDir);
+        const specIds = await this.loadSpecIds(this.docsDir);
         console.log(chalk.gray(`Loaded ${specIds.size} architectural nodes from spec.`));
 
         // 2. Scan Codebase for Implementation Markers
@@ -71,7 +87,8 @@ export class ProbeManager {
 
         // Check B: Code exists but no spec (Orphaned Code)
         for (const [id, files] of codeMap) {
-            if (!specIds.has(id)) {
+            // We ignore personas from this check as they are not "implemented" in code usually
+            if (!specIds.has(id) && !id.startsWith('PER_')) {
                 issues.push({
                     id,
                     type: 'ORPHAN_SPEC',
@@ -85,12 +102,12 @@ export class ProbeManager {
         this.reportResults(issues);
     }
 
-    private async loadSpecIds(assetsDir: string): Promise<Set<string>> {
+    private async loadSpecIds(docsDir: string): Promise<Set<string>> {
         const ids = new Set<string>();
-        const files = await glob('**/*.mermaid', { cwd: assetsDir, nodir: true });
+        const files = await glob('**/*.mermaid', { cwd: docsDir, nodir: true });
 
         for (const file of files) {
-            const content = await fs.readFile(path.join(assetsDir, file), 'utf8');
+            const content = await fs.readFile(path.join(docsDir, file), 'utf8');
             const { data } = matter(content);
 
             if (data.id) ids.add(data.id);
@@ -109,10 +126,10 @@ export class ProbeManager {
 
     private async scanCodebase(): Promise<Map<string, string[]>> {
         const idToFiles: Map<string, string[]> = new Map();
-        const ignoreRules = ['node_modules/**', 'dist/**', '.git/**', 'foundryspec/dist/**'];
+        const ignoreRules = ['node_modules/**', 'dist/**', '.git/**', 'foundryspec/dist/**', 'docs/**'];
 
         const files = await glob('**/*.{ts,js,py,go,java,c,cpp,cs,rb,php,rs,swift}', {
-            cwd: this.projectDir,
+            cwd: this.projectRoot,
             nodir: true,
             ignore: ignoreRules
         });
@@ -120,7 +137,7 @@ export class ProbeManager {
         const markerRegex = new RegExp('@' + 'foundryspec(?:\\/start)?\\s+(?:REQUIREMENT\\s+)?([\\w\\-]+)', 'g');
 
         await Promise.all(files.map(async (file) => {
-            const content = await fs.readFile(path.join(this.projectDir, file), 'utf8');
+            const content = await fs.readFile(path.join(this.projectRoot, file), 'utf8');
             let match;
             markerRegex.lastIndex = 0;
             while ((match = markerRegex.exec(content)) !== null) {
