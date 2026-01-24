@@ -20,7 +20,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 import { RuleEngine } from './RuleEngine.js';
 import { ConfigStore } from './ConfigStore.js';
-import { ProjectAsset } from './types/assets.js';
+
 import { ProbeResult } from './types/probe.js';
 
 // @foundryspec/start COMP_ProbeManager
@@ -156,7 +156,7 @@ export class ProbeManager {
         return null;
     }
 
-    private async scanCodebase(): Promise<Map<string, string[]>> {
+    public async scanCodebase(): Promise<Map<string, string[]>> {
         const idToFiles: Map<string, string[]> = new Map();
         const ignoreRules = ['node_modules/**', 'dist/**', '.git/**', 'foundryspec/dist/**', 'docs/**'];
 

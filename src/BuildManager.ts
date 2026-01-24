@@ -25,6 +25,7 @@ import { ProjectAsset } from './types/assets.js';
 import { FoundryConfig } from './types/config.js';
 import { ConfigStore } from './ConfigStore.js';
 import { RuleEngine } from './RuleEngine.js';
+import { ProbeManager } from './ProbeManager.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -159,7 +160,8 @@ export class BuildManager {
         }
 
         // --- 3. Scan Codebase ---
-        const codeMap = await this.scanCodebase();
+        const probeManager = new ProbeManager(this.projectRoot);
+        const codeMap = await probeManager.scanCodebase();
 
         // --- 4. Centralized Validation ---
         const referencedIds: Set<string> = new Set();
@@ -557,50 +559,7 @@ ${standaloneAssets.map(asset => {
         return assets;
     }
 
-    private async getIgnoreRules(): Promise<string[]> {
-        const ignoreFile = path.join(this.projectRoot, '.foundryspecignore');
-        const defaultIgnores = ['node_modules/**', 'dist/**', '.git/**', 'docs/**', 'foundryspec/**'];
-        
-        if (await fs.pathExists(ignoreFile)) {
-            const content = await fs.readFile(ignoreFile, 'utf8');
-            const userIgnores = content.split('\n')
-                .map(line => line.trim())
-                .filter(line => line && !line.startsWith('#'));
-            return [...defaultIgnores, ...userIgnores];
-        }
-        return defaultIgnores;
-    }
 
-    private async scanCodebase(): Promise<Map<string, string[]>> {
-        console.log(chalk.blue('🔍 Scanning codebase for markers...'));
-        const idToFiles: Map<string, string[]> = new Map();
-        const ignoreRules = await this.getIgnoreRules();
-
-        const files = await glob('**/*.{ts,js,py,go,java,c,cpp,cs,rb,php,rs,swift}', {
-            cwd: this.projectRoot,
-            nodir: true,
-            ignore: ignoreRules
-        });
-
-        const markerRegex = /@foundryspec(?:\/start)?\s+(?:REQUIREMENT\s+)?([\w-]+)/g;
-
-        await Promise.all(files.map(async (file) => {
-            const content = await fs.readFile(path.join(this.projectRoot, file), 'utf8');
-            let match;
-            markerRegex.lastIndex = 0;
-            while ((match = markerRegex.exec(content)) !== null) {
-                const id = match[1];
-                if (!idToFiles.has(id)) idToFiles.set(id, []);
-                if (!idToFiles.get(id)!.includes(file)) {
-                    idToFiles.get(id)!.push(file);
-                }
-            }
-        }));
-
-        const count = Array.from(idToFiles.keys()).length;
-        console.log(chalk.green(`✅ Scanned codebase. Found ${count} integrated components.`));
-        return idToFiles;
-    }
 
     // --- Validation Logic (Semantic) ---
 
@@ -616,6 +575,20 @@ ${standaloneAssets.map(asset => {
     }
 
 
+
+    private async getIgnoreRules(): Promise<string[]> {
+        const ignoreFile = path.join(this.projectRoot, '.foundryspecignore');
+        const defaultIgnores = ['node_modules/**', 'dist/**', '.git/**', 'docs/**', 'foundryspec/**'];
+        
+        if (await fs.pathExists(ignoreFile)) {
+            const content = await fs.readFile(ignoreFile, 'utf8');
+            const userIgnores = content.split('\n')
+                .map(line => line.trim())
+                .filter(line => line && !line.startsWith('#'));
+            return [...defaultIgnores, ...userIgnores];
+        }
+        return defaultIgnores;
+    }
 
     private async validateFolderRegistry(): Promise<void> {
         console.log(chalk.blue('🔍 Validating folder registry (Strict Policy)...'));
