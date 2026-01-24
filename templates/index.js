@@ -179,7 +179,7 @@ async function initApp() {
     document.getElementById('menu-add-comment').addEventListener('click', () => openCommentOverlay(true));
     if (saveCommentBtn) saveCommentBtn.addEventListener('click', saveComment);
 
-    // @foundryspec COMP_ClickInterceptor
+    // @foundryspec/start COMP_ClickInterceptor
     // Left-Click Listener (Navigation)
     viewer.addEventListener('click', (e) => {
         let target = e.target;
@@ -214,12 +214,13 @@ async function initApp() {
             current = current.parentElement;
         }
     });
+    // @foundryspec/end
 
     backButton.addEventListener('click', () => { if (historyStack.length > 1) { historyStack.pop(); loadDiagram(historyStack.pop()); } });
     injectCustomCSS(); await fetchComments(); startSync(); loadDiagram('assets/root.mermaid');
 }
 
-// @foundryspec COMP_InteractiveComments
+// @foundryspec/start COMP_InteractiveComments
 function openCommentOverlay(focusInput) {
     if (contextMenu) contextMenu.style.display = 'none';
     commentList.innerHTML = '';
@@ -247,10 +248,9 @@ function openCommentOverlay(focusInput) {
     renderSet('Comments in this View', localComments, true);
     renderSet('Comments from other Views', otherComments, false);
     if (localComments.length === 0 && otherComments.length === 0) { commentList.innerHTML = '<div style="color: #64748b; font-size: 0.8rem; margin-bottom: 0.5rem;">No feedback yet.</div>'; }
-    commentOverlay.style.display = 'block';
-    commentOverlay.style.left = contextMenu.style.left; commentOverlay.style.top = contextMenu.style.top;
     if (focusInput && newCommentInput) newCommentInput.focus();
 }
+// @foundryspec/end
 
 async function saveComment() {
     const content = newCommentInput.value.trim();

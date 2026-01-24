@@ -31,7 +31,7 @@ export interface ProjectContext {
     idToFileMap: Map<string, string>;
 }
 
-// @foundryspec COMP_RuleEngine
+// @foundryspec/start COMP_RuleEngine
 export class RuleEngine {
     private rules: Rule[] = [];
     private hubCategories: HubCategory[] = [];
@@ -329,3 +329,4 @@ export class RuleEngine {
         }
     }
 }
+// @foundryspec/end
