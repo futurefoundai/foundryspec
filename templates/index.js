@@ -56,21 +56,31 @@ async function startSync() {
     }, 2000);
 }
 
-function applyCursors(container) {
-    // Clear existing badges
-    container.querySelectorAll('.node-badge').forEach(b => b.remove());
-
-    const nodes = container.querySelectorAll('.nodes .node, .cluster, .mindmap-node, text, .requirementBox, .edgeLabel, .actor, g[id*="actor"], g[name]');
-    nodes.forEach(node => {
-        let text = node.textContent?.trim() || "";
-        const id = node.id || node.getAttribute('id') || node.getAttribute('name');
+function resolveActiveNodeId(el) {
+    let current = el;
+    while (current && current !== viewer && current.tagName !== 'svg') {
+        const targetId = current.id || current.getAttribute('id') || current.getAttribute('name');
+        const text = current.textContent?.trim() || "";
         const cleanText = text.replace(/^["(\[\{]+|[")\]\}]+$/g, '').trim();
         
-        const matchingId = (id && idMap[id] ? id : null) || 
-                          (text && idMap[text] ? text : null) || 
-                          (cleanText && idMap[cleanText] ? cleanText : null);
+        const key = (targetId && idMap[targetId] ? targetId : null) || 
+                    (idMap[text] ? text : null) || 
+                    (idMap[cleanText] ? cleanText : null) ||
+                    (targetId && targetId !== 'undefined' ? targetId : null) ||
+                    (cleanText.length < 50 ? cleanText : null);
 
-        if (matchingId && matchingId !== 'undefined') {
+        if (key && key !== 'undefined') return key;
+        current = current.parentElement;
+    }
+    return null;
+}
+
+function applyCursors(container) {
+    container.querySelectorAll('.node-badge').forEach(b => b.remove());
+    const nodes = container.querySelectorAll('.node, .mindmap-node, .cluster, .requirementBox, text, .edgeLabel, .actor, g[id*="actor"], g[name]');
+    nodes.forEach(node => {
+        const matchingId = resolveActiveNodeId(node);
+        if (matchingId) {
             const usi = getUSI(matchingId, currentViewPath);
             if (!usi) return;
             const hasLocal = commentsRegistry[usi] && commentsRegistry[usi].length > 0;
@@ -151,27 +161,13 @@ async function initApp() {
 
     // Right-Click Listener (Context Menu)
     viewer.addEventListener('contextmenu', (e) => {
-        // Find node even if click is slightly offset or on a child element
-        const node = e.target.closest('.node, .mindmap-node, .cluster, .requirementBox, text, .edgeLabel');
+        const node = e.target.closest('.node, .mindmap-node, .cluster, .requirementBox, text, .edgeLabel, .actor, g[name], g[id*="actor"]');
         if (!node) return;
 
         e.preventDefault();
-        activeNodeId = null;
+        activeNodeId = resolveActiveNodeId(node);
 
-        let current = node;
-        while (current && current !== viewer && current.tagName !== 'svg') {
-            const targetId = current.id || current.getAttribute('id');
-            const text = current.textContent?.trim() || "";
-            const cleanText = text.replace(/^["(\[\{]+|[")\]\}]+$/g, '').trim();
-            // Allow interaction even if not in idMap. Use found ID or text as the key.
-            const foundId = (targetId && targetId !== 'undefined' ? targetId : null) ||
-                           (cleanText && cleanText.length < 100 ? cleanText : null);
-            
-            if (foundId) { activeNodeId = foundId; break; }
-            current = current.parentElement;
-        }
-
-        if (activeNodeId && activeNodeId !== 'undefined') {
+        if (activeNodeId) {
             contextMenu.style.display = 'block';
             contextMenu.style.left = `${e.clientX}px`; contextMenu.style.top = `${e.clientY}px`;
         }
@@ -181,10 +177,11 @@ async function initApp() {
         if (contextMenu && !contextMenu.contains(e.target)) contextMenu.style.display = 'none'; 
     });
 
-    document.getElementById('menu-comments').addEventListener('click', (e) => openCommentOverlay(false, e.clientX, e.clientY));
-    document.getElementById('menu-data').addEventListener('click', (e) => openCategoryModal('DATA', e.clientX, e.clientY));
-    document.getElementById('menu-sequence').addEventListener('click', (e) => openCategoryModal('SEQ', e.clientX, e.clientY));
-    document.getElementById('menu-flow').addEventListener('click', (e) => openCategoryModal('FLOW', e.clientX, e.clientY));
+    document.getElementById('menu-comments').addEventListener('click', (e) => openSidebar(activeNodeId, 'comments'));
+    document.getElementById('menu-footnotes').addEventListener('click', (e) => handleFootnoteSelection(activeNodeId, e.clientX, e.clientY));
+    document.getElementById('menu-data').addEventListener('click', (e) => openSidebar(activeNodeId, 'design', 'DATA'));
+    document.getElementById('menu-sequence').addEventListener('click', (e) => openSidebar(activeNodeId, 'design', 'SEQ'));
+    document.getElementById('menu-flow').addEventListener('click', (e) => openSidebar(activeNodeId, 'design', 'FLOW'));
     
     if (saveCommentBtn) saveCommentBtn.addEventListener('click', saveComment);
 
@@ -196,35 +193,22 @@ async function initApp() {
         const nodeContainer = target.closest('.node, .mindmap-node, .cluster, .requirementBox, text, .edgeLabel, .actor, g[name], g[id*="actor"]');
         if (!nodeContainer) return;
 
-        let current = nodeContainer;
-        while (current && current !== viewer && current.tagName !== 'svg') {
-            const targetId = current.id || current.getAttribute('id') || current.getAttribute('name');
-            const text = current.textContent?.trim() || "";
-            const cleanText = text.replace(/^["(\[\{]+|[")\]\}]+$/g, '').trim();
-            
-            const key = (targetId && idMap[targetId] ? targetId : null) || 
-                        (idMap[text] ? text : null) || 
-                        (idMap[cleanText] ? cleanText : null);
+        const key = resolveActiveNodeId(nodeContainer);
 
-            if (key) {
-                const rawTargets = idMap[key];
-                // Handle legacy string format or new array format
-                const targets = Array.isArray(rawTargets) ? rawTargets : [{ path: rawTargets, title: key, type: 'diagram' }];
-                
-                if (targets.length === 1) {
-                    loadDiagram(targets[0].path);
-                } else {
-                    openNavigationModal(key, targets);
-                }
-                return;
-            }
+        if (key && idMap[key]) {
+            const rawTargets = idMap[key];
+            const targets = Array.isArray(rawTargets) ? rawTargets : [{ path: rawTargets, title: key, type: 'diagram' }];
             
-            current = current.parentElement;
+            if (targets.length === 1) {
+                loadDiagram(targets[0].path);
+            } else {
+                openNavigationModal(key, targets);
+            }
+            return;
         }
     });
-    // @foundryspec/end
 
-    backButton.addEventListener('click', () => { if (historyStack.length > 1) { historyStack.pop(); loadDiagram(historyStack.pop()); } });
+    backButton.addEventListener('click', () => { if (historyStack.length > 1) { historyStack.pop(); loadDiagram(historyStack.pop(), true); } });
     injectCustomCSS(); await fetchComments(); startSync(); loadDiagram('assets/root.mermaid');
 }
 
@@ -238,7 +222,7 @@ function openCommentOverlay(focusInput, x, y) {
         .filter(key => key.includes(`#${activeNodeId}@`) && key !== currentUsi)
         .reduce((arr, key) => arr.concat(commentsRegistry[key]), []);
 
-    const renderSet = (title, items, isLocal) => {
+    const renderSet = (title, items, isLocal, usi) => {
         if (items.length === 0) return;
         const h3 = document.createElement('h3');
         h3.style.color = isLocal ? '#38bdf8' : '#94a3b8';
@@ -247,13 +231,19 @@ function openCommentOverlay(focusInput, x, y) {
         commentList.appendChild(h3);
         items.forEach(c => {
             const header = document.createElement('div'); header.className = 'comment-header';
-            header.innerHTML = `<span class="comment-author">${c.author}</span><span style="color: #64748b; font-size: 0.7rem;">${new Date(c.timestamp).toLocaleDateString()}</span>`;
+            header.innerHTML = `
+                <span class="comment-author">${c.author}</span>
+                <div style="display:flex; align-items:center; gap:0.5rem;">
+                    <span style="color: #64748b; font-size: 0.7rem;">${new Date(c.timestamp).toLocaleDateString()}</span>
+                    ${isLocal ? `<button onclick="resolveComment('${usi}', '${c.id}')" style="background:none; border:none; color:#10b981; cursor:pointer; font-size:1rem; padding:0; display:flex;" title="Resolve & Delete">✓</button>` : ''}
+                </div>
+            `;
             const textDiv = document.createElement('div'); textDiv.className = 'comment-text';
             textDiv.style.marginBottom = '1rem'; textDiv.textContent = c.content;
             commentList.appendChild(header); commentList.appendChild(textDiv);
         });
     };
-    renderSet('Comments in this View', localComments, true);
+    renderSet('Comments in this View', localComments, true, currentUsi);
     renderSet('Comments from other Views', otherComments, false);
     if (localComments.length === 0 && otherComments.length === 0) { commentList.innerHTML = '<div style="color: #64748b; font-size: 0.8rem; margin-bottom: 0.5rem;">No feedback yet.</div>'; }
     
@@ -265,6 +255,30 @@ function openCommentOverlay(focusInput, x, y) {
 
     commentOverlay.style.display = 'block';
     if (focusInput && newCommentInput) newCommentInput.focus();
+}
+
+async function resolveComment(usi, id) {
+    if (!confirm('Resolve and remove this comment?')) return;
+    try {
+        const response = await fetch('/api/comments/resolve', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ compositeKey: usi, id })
+        });
+        if (response.ok) {
+            commentsRegistry[usi] = commentsRegistry[usi].filter(c => c.id !== id);
+            if (commentsRegistry[usi].length === 0) delete commentsRegistry[usi];
+            
+            const sidebar = document.getElementById('context-sidebar');
+            if (sidebar && sidebar.classList.contains('open')) {
+                renderSidebarContent();
+            } else {
+                openCommentOverlay();
+            }
+            
+            if (currentContainer) applyCursors(currentContainer);
+        }
+    } catch (e) { console.error('[FoundrySpec] Failed to resolve comment.', e); }
 }
 // @foundryspec/end COMP_InteractiveComments
 
@@ -360,7 +374,16 @@ async function saveComment() {
     try {
         const response = await fetch('/api/comments', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...newComment, compositeKey: usi }) });
         if (!response.ok) throw new Error('Failed to save');
-        newCommentInput.value = ''; closeCommentOverlay();
+        newCommentInput.value = ''; 
+        
+        // Refresh UI
+        const sidebar = document.getElementById('context-sidebar');
+        if (sidebar && sidebar.classList.contains('open')) {
+            renderSidebarContent();
+        } else {
+            closeCommentOverlay();
+        }
+        
         if (currentContainer) applyCursors(currentContainer);
     } catch (e) { console.error('[FoundrySpec] Failed to sync comment with server.', e); }
 }
@@ -398,25 +421,147 @@ function openNavigationModal(title, targets) {
     navModalBackdrop.classList.add('open');
 }
 
-function openCategoryModal(typePrefix, x, y) {
-    if (!activeNodeId) return;
-    const targets = (idMap[activeNodeId] || []).filter(t => t.type.startsWith(typePrefix));
+// @foundryspec/start COMP_SidebarControllers
+function openSidebar(nodeId, tab = 'comments', filter = null) {
+    if (contextMenu) contextMenu.style.display = 'none';
+    activeNodeId = nodeId;
+    sidebarCurrentTab = tab;
+    
+    // UI Update
+    const sidebar = document.getElementById('context-sidebar');
+    const title = document.getElementById('sidebar-title');
+    sidebar.classList.add('open');
+    title.innerText = nodeId;
+
+    switchSidebarTab(tab, filter);
+}
+
+function closeSidebar() {
+    document.getElementById('context-sidebar').classList.remove('open');
+}
+
+function switchSidebarTab(tab, filter = null) {
+    sidebarCurrentTab = tab;
+    document.querySelectorAll('.tab-btn').forEach(b => {
+        b.classList.toggle('active', b.innerText.toLowerCase().includes(tab));
+    });
+    renderSidebarContent(filter);
+}
+
+function handleFootnoteSelection(nodeId, x, y) {
+    if (contextMenu) contextMenu.style.display = 'none';
+    const targets = (idMap[nodeId] || []).filter(t => t.type === 'footnote' || t.path.endsWith('.md'));
     
     if (targets.length > 0) {
-        openNavigationModal(`${activeNodeId} ${typePrefix}`, targets);
+        if (targets.length === 1) {
+            // Footnotes stay in modals
+            loadDiagram(targets[0].path);
+        } else {
+            openNavigationModal(`${nodeId} Footnotes`, targets);
+        }
     } else {
-        // AI Collaboration Prompt if none found
+        // No footnote detected -> Sidebar prompt
+        openSidebar(nodeId, 'comments');
+        if (newCommentInput) {
+            newCommentInput.value = `[AI PROMPT] This node "${nodeId}" lacks technical documentation. Please generate informative footnotes summarizing its role and implementation details.`;
+            newCommentInput.focus();
+        }
+    }
+}
+
+async function renderSidebarContent(filter = null) {
+    const content = document.getElementById('sidebar-content');
+    content.innerHTML = '';
+
+    if (sidebarCurrentTab === 'comments') {
+        const usi = getUSI(activeNodeId, currentViewPath);
+        const localComments = commentsRegistry[usi] || [];
+        const otherComments = Object.keys(commentsRegistry)
+            .filter(key => key.includes(`#${activeNodeId}@`) && key !== usi)
+            .reduce((arr, key) => arr.concat(commentsRegistry[key]), []);
+
+        const listDiv = document.createElement('div');
+        listDiv.className = 'sidebar-comment-list';
+
+        const renderBatch = (title, items, isLocal, u) => {
+            if (items.length === 0) return;
+            const h4 = document.createElement('h4');
+            h4.style.fontSize = '0.7rem'; h4.style.textTransform = 'uppercase';
+            h4.style.color = isLocal ? 'var(--accent)' : 'var(--text-secondary)';
+            h4.style.margin = '1rem 0 0.5rem 0'; h4.innerText = title;
+            listDiv.appendChild(h4);
+
+            items.forEach(c => {
+                const card = document.createElement('div');
+                card.className = 'comment-text';
+                card.innerHTML = `
+                    <div class="comment-header">
+                        <span class="comment-author">${c.author}</span>
+                        <div style="display:flex; align-items:center; gap:0.5rem;">
+                            <span style="font-size:0.65rem; color:var(--text-secondary)">${new Date(c.timestamp).toLocaleDateString()}</span>
+                            ${isLocal ? `<button onclick="resolveComment('${u}', '${c.id}')" style="background:none; border:none; color:#10b981; cursor:pointer; font-size:1rem; padding:0; display:flex;">✓</button>` : ''}
+                        </div>
+                    </div>
+                    <div>${c.content}</div>
+                `;
+                listDiv.appendChild(card);
+            });
+        };
+
+        renderBatch('This View', localComments, true, usi);
+        renderBatch('Other Views', otherComments, false);
+
+        if (localComments.length === 0 && otherComments.length === 0) {
+            listDiv.innerHTML = '<div style="color:var(--text-secondary); margin-bottom:1rem; opacity:0.6;">No feedback yet. Enter a prompt to collaborate with AI.</div>';
+        }
+        content.appendChild(listDiv);
+
+    } else if (sidebarCurrentTab === 'design') {
+        // Technical Design (Data, Seq, Flow)
+        const allTargets = idMap[activeNodeId] || [];
+        const filtered = filter ? allTargets.filter(t => t.type.toUpperCase().startsWith(filter)) : allTargets.filter(t => ['DATA', 'SEQ', 'FLOW'].some(p => t.type.toUpperCase().startsWith(p)));
+
+        if (filtered.length > 0) {
+            filtered.forEach(t => {
+                const item = document.createElement('div');
+                item.className = 'design-item';
+                item.onclick = () => { closeSidebar(); loadDiagram(t.path); };
+                item.innerHTML = `
+                    <div style="font-size:1.2rem; color:var(--accent)">${t.type.startsWith('DATA') ? '📊' : t.type.startsWith('SEQ') ? '↔️' : '🌲'}</div>
+                    <div>
+                        <div style="font-weight:600; font-size:0.85rem;">${t.title}</div>
+                        <div style="font-size:0.7rem; color:var(--text-secondary)">${t.type}</div>
+                    </div>
+                `;
+                content.appendChild(item);
+            });
+        }
+        
+        // Always show AI prompt if something specific was requested or as a general option
         const prompts = {
             DATA: `[AI PROMPT] Generate a DATA_ model for node ${activeNodeId}. Use erDiagram syntax.`,
             SEQ: `[AI PROMPT] Generate a SEQ_ diagram for node ${activeNodeId}. Use sequenceDiagram syntax.`,
             FLOW: `[AI PROMPT] Generate a FLOW_ flowchart for node ${activeNodeId}.`
         };
-        if (newCommentInput) {
-            newCommentInput.value = prompts[typePrefix] || "";
-            openCommentOverlay(true, x, y);
-        }
+
+        Object.keys(prompts).forEach(key => {
+            if (filter && filter !== key) return;
+            const promptBox = document.createElement('div');
+            promptBox.className = 'ai-prompt-box';
+            promptBox.innerHTML = `
+                <div class="ai-prompt-text">${prompts[key]}</div>
+                <button onclick="copyPrompt('${prompts[key]}')" style="background:var(--accent); color:#fff; border:none; padding:4px 8px; border-radius:4px; font-size:0.7rem; cursor:pointer;">Copy Prompt</button>
+            `;
+            content.appendChild(promptBox);
+        });
     }
 }
+
+function copyPrompt(text) {
+    navigator.clipboard.writeText(text);
+    alert('Prompt copied to clipboard! Paste it into the comments to request generation.');
+}
+// @foundryspec/end COMP_SidebarControllers
 
 function closeNavModal(e) {
     if (e && e.target !== navModalBackdrop) return;
@@ -438,14 +583,15 @@ function resolvePath(base, relative) {
     return stack.join('/');
 }
 
-async function loadDiagram(filePath) {
+async function loadDiagram(filePath, isBack = false) {
     try {
         const response = await fetch(filePath); if (!response.ok) throw new Error(`File not found: ${filePath}`);
         let content = await response.text(); 
         currentViewPath = filePath.replace(/\\/g, '/');
         content = content.replace(/^---[\s\S]*?---\s*/, '');
         if (filePath.endsWith('.md')) {
-            modalTitle.innerText = filePath.split('/').pop(); let html = marked.parse(content);
+            modalTitle.innerText = filePath.split('/').pop().replace(/\.(mermaid|md)$/, "");
+            let html = marked.parse(content);
             
             // Find the ID associated with this file path
             const possibleId = Object.keys(idMap).find(id => 
@@ -464,13 +610,19 @@ async function loadDiagram(filePath) {
             modalBody.innerHTML = html; modalBackdrop.classList.add('open'); return;
         }
         const { svg } = await mermaid.render('mermaid-svg-' + Date.now(), content);
-        const newContainer = document.createElement('div'); newContainer.className = 'diagram-container initial'; newContainer.innerHTML = svg;
+        const newContainer = document.createElement('div'); newContainer.className = 'diagram-container ' + (isBack ? 'initial-reverse' : 'initial'); newContainer.innerHTML = svg;
         const svgEl = newContainer.querySelector('svg'); if (svgEl) { svgEl.style.width = '100%'; svgEl.style.height = '100%'; svgEl.style.maxWidth = 'none'; }
         viewer.appendChild(newContainer); applyCursors(newContainer);
-        if (currentContainer) { const oldContainer = currentContainer; oldContainer.classList.add('fade-out'); setTimeout(() => { if (oldContainer.parentNode) oldContainer.parentNode.removeChild(oldContainer); }, 400); }
+        if (currentContainer) { 
+            const oldContainer = currentContainer; 
+            oldContainer.classList.add(isBack ? 'fade-out-reverse' : 'fade-out'); 
+            setTimeout(() => { 
+                if (oldContainer.parentNode) oldContainer.parentNode.removeChild(oldContainer); 
+            }, 800); 
+        }
         requestAnimationFrame(() => {
             requestAnimationFrame(() => {
-                newContainer.classList.remove('initial'); newContainer.classList.add('fade-in');
+                newContainer.classList.remove(isBack ? 'initial-reverse' : 'initial'); newContainer.classList.add('fade-in');
                 if (svgEl) { try { panZoomInstance = svgPanZoom(svgEl, { zoomEnabled: true, controlIconsEnabled: true, fit: true, center: true, minZoom: 0.1 }); } catch (e) {} }
             });
         });
@@ -495,6 +647,39 @@ async function loadDiagram(filePath) {
     }
 }
 
-function updateUI() { if (backButton) backButton.style.display = historyStack.length > 1 ? 'block' : 'none'; if (breadcrumbs) breadcrumbs.innerHTML = historyStack.map(p => p.split('/').pop()).join(' > '); }
+function updateUI() { 
+    if (backButton) backButton.style.display = historyStack.length > 1 ? 'block' : 'none'; 
+    if (breadcrumbs) {
+        breadcrumbs.innerHTML = '';
+        historyStack.forEach((path, index) => {
+            const span = document.createElement('span');
+            span.className = 'breadcrumb-item';
+            span.innerText = path.split('/').pop().replace(/\.(mermaid|md)$/, "");
+            span.style.cursor = index < historyStack.length - 1 ? 'pointer' : 'default';
+            span.style.color = index === historyStack.length - 1 ? 'var(--text-primary)' : 'var(--text-secondary)';
+            span.style.fontWeight = index === historyStack.length - 1 ? '600' : '400';
+            
+            if (index < historyStack.length - 1) {
+                span.onmouseover = () => span.style.color = 'var(--accent)';
+                span.onmouseout = () => span.style.color = 'var(--text-secondary)';
+                span.onclick = () => {
+                    const stepsToPop = historyStack.length - 1 - index;
+                    for (let i = 0; i < stepsToPop; i++) historyStack.pop();
+                    loadDiagram(historyStack.pop(), true);
+                };
+            }
+            
+            breadcrumbs.appendChild(span);
+            if (index < historyStack.length - 1) {
+                const sep = document.createElement('span');
+                sep.innerText = ' > ';
+                sep.style.padding = '0 0.5rem';
+                sep.style.color = 'var(--border)';
+                sep.style.opacity = '0.5';
+                breadcrumbs.appendChild(sep);
+            }
+        });
+    }
+}
 function closeModal(e) { if (e && e.target !== modalBackdrop) return; modalBackdrop.classList.remove('open'); }
 window.closeModal = closeModal; initApp();

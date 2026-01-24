@@ -40,9 +40,10 @@ FoundrySpec forces a hard link between your design and your codebase. Use **Impl
 
 ```typescript
 /**
- * @foundryspec REQ_UserAuthentication
+ * @foundryspec/start REQ_UserAuthentication
  */
 export class AuthService { ... }
+// @foundryspec/end
 ```
 
 When you run `foundryspec probe` (triggered automatically via pre-commit hooks), the engine verifies that every piece of high-level intent in your diagrams has a corresponding implementation footprint.
@@ -72,7 +73,6 @@ npm install -g @futurefoundaihq/foundryspec
 ```bash
 # Initialize project and install GitOps hooks
 foundryspec init "Project Name"
-cd project-name
 foundryspec build
 
 # Code with intent

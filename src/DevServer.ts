@@ -68,7 +68,21 @@ export class DevServer {
 
         // HTTP Server
         const server = http.createServer(async (req, res) => {
-            // API: Comments
+            // Interceptor: foundry.comments.json (Internal Storage Mapping)
+            if (req.url && req.url.includes('foundry.comments.json')) {
+                const commentsPath = this.configStore.getCommentsPath(this.projectId!);
+                if (await fs.pathExists(commentsPath)) {
+                    const data = await fs.readFile(commentsPath);
+                    res.writeHead(200, { 'Content-Type': 'application/json' });
+                    res.end(data);
+                } else {
+                    res.writeHead(200, { 'Content-Type': 'application/json' });
+                    res.end('{}');
+                }
+                return;
+            }
+
+            // API: Comments (Create)
             if (req.url === '/api/comments' && req.method === 'POST') {
                 let body = '';
                 req.on('data', chunk => body += chunk.toString());
@@ -84,6 +98,28 @@ export class DevServer {
                         if (!registry[key]) registry[key] = [];
                         registry[key].push(payload);
                         await fs.writeJson(commentsPath, registry, { spaces: 2 });
+                        res.writeHead(200); res.end(JSON.stringify({ status: 'ok' }));
+                    } catch { res.writeHead(500); res.end('Error'); }
+                });
+                return;
+            }
+
+            // API: Comments (Resolve/Delete)
+            if (req.url === '/api/comments/resolve' && req.method === 'POST') {
+                let body = '';
+                req.on('data', chunk => body += chunk.toString());
+                req.on('end', async () => {
+                    try {
+                        const { compositeKey, id } = JSON.parse(body);
+                        const commentsPath = this.configStore.getCommentsPath(this.projectId!);
+                        if (await fs.pathExists(commentsPath)) {
+                            const registry = await fs.readJson(commentsPath);
+                            if (registry[compositeKey]) {
+                                registry[compositeKey] = registry[compositeKey].filter((c: { id: string }) => c.id !== id);
+                                if (registry[compositeKey].length === 0) delete registry[compositeKey];
+                                await fs.writeJson(commentsPath, registry, { spaces: 2 });
+                            }
+                        }
                         res.writeHead(200); res.end(JSON.stringify({ status: 'ok' }));
                     } catch { res.writeHead(500); res.end('Error'); }
                 });

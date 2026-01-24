@@ -509,9 +509,11 @@ ${standaloneAssets.map(asset => {
             const id = asset.data?.id;
             const title = asset.data?.title || id || path.basename(asset.relPath);
             const relPath = `${assetsDir}/${asset.relPath}`;
+            
+            // Determine type more robustly for context menu filtering
+            const type = asset.relPath.includes('/footnotes/') || asset.relPath.endsWith('.md') ? 'footnote' : (id ? id.split('_')[0] : 'asset');
 
             if (id) {
-                const type = id.split('_')[0] || 'asset';
                 addTarget(id, {
                    path: relPath,
                    title: title,
@@ -530,7 +532,7 @@ ${standaloneAssets.map(asset => {
                 addTarget(asset.data.title, {
                     path: relPath,
                     title: title,
-                    type: 'asset'
+                    type: type
                 });
             }
         }
