@@ -5,6 +5,8 @@ description: The AI system that operates the FoundrySpec CLI.
 entities:
   - id: "PER_CodingAgent"
     uplink: "GRP_Personas"
+    downlinks:
+      - "JRN_AutomatedEvolution"
 ---
 mindmap
   PER_CodingAgent((Coding Agent))

@@ -5,6 +5,8 @@ description: The human domain expert who guides the system design.
 entities:
   - id: "PER_SystemAnalyst"
     uplink: "GRP_Personas"
+    downlinks:
+      - "JRN_SpecCleanup"
 ---
 mindmap
   PER_SystemAnalyst((System Analyst))
