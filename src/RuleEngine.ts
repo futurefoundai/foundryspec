@@ -138,10 +138,15 @@ export class RuleEngine {
         }
 
         // 3. File Extension Check
+        // Universal Exemption: Footnotes are always Markdown, regardless of domain rules
         if (checks.requiredExtension) {
-            const ext = asset.relPath.split('.').pop();
-            if (ext?.toLowerCase() !== checks.requiredExtension.replace(/^\./, '').toLowerCase()) {
-                errors.push(`File must have extension ".${checks.requiredExtension.replace(/^\./, '')}". Found ".${ext}"`);
+            const isFootnote = asset.relPath.includes('/footnotes/') || asset.relPath.startsWith('footnotes/');
+            
+            if (!isFootnote) {
+                const ext = asset.relPath.split('.').pop();
+                if (ext?.toLowerCase() !== checks.requiredExtension.replace(/^\./, '').toLowerCase()) {
+                    errors.push(`File must have extension ".${checks.requiredExtension.replace(/^\./, '')}". Found ".${ext}"`);
+                }
             }
         }
 
