@@ -182,17 +182,60 @@ export class RuleEngine {
             }
         }
         
-        // 6. One-Per-File Check
+        // 6. One-Per-File Check (with Single Parent Governance)
         if (checks.onePerFile && rule.target.idPrefix) {
+            const definedEntities: string[] = [];
+            
+            // A. Check explicit sub-entities
             const entities = Array.isArray(asset.data.entities) ? asset.data.entities : [];
-            const matchingNodes = entities.filter((ent: Record<string, unknown>) => 
-                typeof ent.id === 'string' && ent.id.startsWith(rule.target.idPrefix!)
-            );
-            if (matchingNodes.length !== 1) {
+            entities.forEach((ent: Record<string, unknown>) => {
+                if (typeof ent.id === 'string' && ent.id.startsWith(rule.target.idPrefix!)) {
+                    definedEntities.push(ent.id);
+                }
+            });
+
+            // B. Check File ID (Primary Entity)
+            // If the file itself has an ID matching the prefix, it counts as the entity.
+            if (asset.data.id && asset.data.id.startsWith(rule.target.idPrefix)) {
+                if (!definedEntities.includes(asset.data.id)) {
+                    definedEntities.push(asset.data.id);
+                }
+            }
+
+            // Validation 1: Definitional Uniqueness
+            if (definedEntities.length !== 1) {
                 errors.push(
-                    `Expected exactly 1 node with prefix "${rule.target.idPrefix}", found ${matchingNodes.length}. ` +
-                    `Each file must contain exactly one entity of this type.`
+                    `Ambiguous Definition: Found ${definedEntities.length} entities with prefix "${rule.target.idPrefix}" in this file.\n` +
+                    `   Matches: [${definedEntities.join(', ')}]\n` +
+                    `   Rule: This file type must define EXACTLY ONE primary entity.`
                 );
+            } 
+            
+            // Validation 2: Single Parent (Strict Ownership)
+            // "Only one node in an external file can link to this particular file"
+            else if (context) {
+                const entityId = definedEntities[0];
+                const node = context.nodeMap.get(entityId);
+                
+                if (node) {
+                    // In BuildManager, 'uplinks' stores the parents (nodes that this node points UP to).
+                    // If strict hierarchy is followed, this node should point to exactly 1 parent.
+                    // (Or if we look at it inversely: exactly 1 node should claim this as a child).
+                    // Given the user constraint: "one node... can link to this", we check uplinks/parents.
+                    
+                    const parents = node.uplinks;
+                    if (parents.length > 1) {
+                        errors.push(
+                            `Shared Ownership Violation: Entity "${entityId}" is linked to by ${parents.length} parents: [${parents.join(', ')}].\n` +
+                            `   Rule: This entity must belong to exactly ONE parent node in a diagram (Single Responsibility).`
+                        );
+                    } else if (parents.length === 0) {
+                        // Optional: Warn about orphans here? Or leave it to Traceability check?
+                        // User "linking is not allowed" implies >1 is bad. 0 might be "Orphan" rule.
+                        // We will strictly enforce "EXACTLY ONE" if we want to be safe, but typically 0 is handled by 'mustBeLinked'.
+                        // Let's stick to preventing > 1 for "onePerFile" context.
+                    }
+                }
             }
         }
         
