@@ -17,12 +17,8 @@ jobs:
       with:
         node-version: '20.x'
         
-    - name: Install FoundrySpec
-      # In a real scenario, this would install from npm. 
-      # Since we are self-hosting for now, we assume local or install from git.
-      # Ideally: run: npm install -g @futurefoundaihq/foundryspec
-      # For template purposes, we'll assume it's a project dependency or globally available.
-      run: npm install && npm run build # Mocking setup for now
+    - name: Install Dependencies
+      run: npm ci
       
     - name: 📡 Probe for Drift
       run: npx foundryspec probe
