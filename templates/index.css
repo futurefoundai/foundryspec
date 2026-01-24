@@ -219,7 +219,7 @@ g[class*="mindmap-node-l3"] > text,
   stroke: var(--text-primary) !important;
   stroke-width: 1.5px !important;
 }
-.node .label {
+.node .label, .nodeLabel {
   color: var(--text-primary) !important;
   font-family: "Inter", sans-serif !important;
 }

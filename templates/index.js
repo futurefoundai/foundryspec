@@ -59,11 +59,12 @@ function applyCursors(container) {
     // Clear existing badges
     container.querySelectorAll('.node-badge').forEach(b => b.remove());
 
-    const nodes = container.querySelectorAll('.nodes .node, .cluster, .mindmap-node, text, .requirementBox, .edgeLabel');
+    const nodes = container.querySelectorAll('.nodes .node, .cluster, .mindmap-node, text, .requirementBox, .edgeLabel, .actor, g[id*="actor"], g[name]');
     nodes.forEach(node => {
         let text = node.textContent?.trim() || "";
-        const id = node.id || node.getAttribute('id');
+        const id = node.id || node.getAttribute('id') || node.getAttribute('name');
         const cleanText = text.replace(/^["(\[\{]+|[")\]\}]+$/g, '').trim();
+        
         const matchingId = (id && idMap[id] ? id : null) || 
                           (text && idMap[text] ? text : null) || 
                           (cleanText && idMap[cleanText] ? cleanText : null);
@@ -182,7 +183,7 @@ async function initApp() {
     viewer.addEventListener('click', (e) => {
         let target = e.target;
         if (target.closest('a')) return;
-        const nodeContainer = target.closest('.node, .mindmap-node, .cluster, .requirementBox, text, .edgeLabel');
+        const nodeContainer = target.closest('.node, .mindmap-node, .cluster, .requirementBox, text, .edgeLabel, .actor, g[name], g[id*="actor"]');
         if (!nodeContainer) return;
 
         let current = nodeContainer;
