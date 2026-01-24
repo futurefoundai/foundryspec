@@ -48,6 +48,10 @@ export class RuleEngine {
 
     constructor() {}
 
+    public getAnalyzers(): Record<string, DiagramAnalyzer> {
+        return this.analyzers;
+    }
+
     async loadRules(rulesPath: string): Promise<void> {
         if (!await fs.pathExists(rulesPath)) return;
         

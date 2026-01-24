@@ -108,10 +108,11 @@ export class ProbeManager {
 
         for (const file of files) {
             const content = await fs.readFile(path.join(docsDir, file), 'utf8');
-            const { data } = matter(content);
+            const { data, content: body } = matter(content);
 
             if (data.id) ids.add(data.id);
             
+            // 1. Extract from Frontmatter Entities
             const entities = [
                 ...(Array.isArray(data.entities) ? data.entities : []),
                 ...(Array.isArray(data.traceability?.entities) ? data.traceability.entities : [])
@@ -120,8 +121,39 @@ export class ProbeManager {
             entities.forEach((e: { id?: string }) => {
                 if (e.id) ids.add(e.id);
             });
+
+            // 2. Extract from Mermaid Diagram Content (Granular Nodes)
+            // We reuse the RuleEngine analyzers if available, or simple parsing
+            // Check for rules definition to know diagram type or infer from frontmatter/content
+            const firstLine = body.trim().split('\n')[0];
+            const diagramType = this.inferDiagramType(firstLine);
+            
+            if (diagramType) {
+                const analyzers = this.ruleEngine.getAnalyzers();
+                if (analyzers[diagramType]) {
+                    const analysis = analyzers[diagramType].analyze(body);
+                    analysis.nodes.forEach(node => {
+                        // Filter for architectural IDs only (Start with uppercase standard prefixes or known patterns)
+                        const islikelyId = /^[A-Z]{2,}_[A-Za-z0-9]+/.test(node);
+                        if (islikelyId) {
+                            ids.add(node);
+                        }
+                    });
+                }
+            }
         }
         return ids;
+    }
+
+    private inferDiagramType(firstLine: string): string | null {
+        if (!firstLine) return null;
+        if (firstLine.startsWith('sequenceDiagram')) return 'sequenceDiagram';
+        if (firstLine.startsWith('classDiagram')) return 'classDiagram';
+        if (firstLine.startsWith('C4Context')) return 'C4Context';
+        if (firstLine.startsWith('C4Container')) return 'C4Container';
+        if (firstLine.startsWith('C4Component')) return 'C4Component';
+        if (firstLine.startsWith('requirementDiagram')) return 'requirementDiagram';
+        return null;
     }
 
     private async scanCodebase(): Promise<Map<string, string[]>> {
