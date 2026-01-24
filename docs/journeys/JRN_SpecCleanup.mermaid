@@ -6,15 +6,15 @@ uplink: "PER_SystemAnalyst"
 ---
 
 sequenceDiagram
-    participant User as System Analyst
-    participant System as FoundrySpec CLI
+    participant PER_SystemAnalyst as System Analyst
+    participant COMP_CLI as FoundrySpec CLI
     
-    User->>System: foundryspec remove <category>
-    System->>System: Scan for dependencies
+    PER_SystemAnalyst->>COMP_CLI: foundryspec remove <category>
+    COMP_CLI->>COMP_CLI: Scan for dependencies
     alt Has Dependencies
-        System-->>User: Error: blocked
+        COMP_CLI-->>PER_SystemAnalyst: Error: blocked
     else Safe
-        System->>System: Delete directory
-        System->>System: Remove rule
-        System-->>User: Success
+        COMP_CLI->>COMP_CLI: Delete directory
+        COMP_CLI->>COMP_CLI: Remove rule
+        COMP_CLI-->>PER_SystemAnalyst: Success
     end

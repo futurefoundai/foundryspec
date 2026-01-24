@@ -30,7 +30,7 @@ rules:
     checks:
       mermaidType: sequenceDiagram
       requiredExtension: mermaid
-      requiredNodes: [User, System]
+      allowedNodePrefixes: [PER_, CTX_, BND_, COMP_]
       traceability:
         mustTraceTo: [PER_]
     hub:

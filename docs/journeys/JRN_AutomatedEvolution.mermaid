@@ -6,12 +6,12 @@ uplink: "PER_CodingAgent"
 ---
 
 sequenceDiagram
-    participant User as Coding Agent
-    participant System as FoundrySpec Engine
+    participant PER_CodingAgent as Coding Agent
+    participant COMP_RuleEngine as FoundrySpec Engine
     
-    User->>System: foundryspec build
-    System->>System: validateAsset(new_node)
-    System-->>User: Error: Linkage violation
-    User->>User: self-correct(missing_links)
-    User->>System: foundryspec build
-    System-->>User: Success: 100% Integrity
+    PER_CodingAgent->>COMP_RuleEngine: foundryspec build
+    COMP_RuleEngine->>COMP_RuleEngine: validateAsset(new_node)
+    COMP_RuleEngine-->>PER_CodingAgent: Error: Linkage violation
+    PER_CodingAgent->>PER_CodingAgent: self-correct(missing_links)
+    PER_CodingAgent->>COMP_RuleEngine: foundryspec build
+    COMP_RuleEngine-->>PER_CodingAgent: Success: 100% Integrity

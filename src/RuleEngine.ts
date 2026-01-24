@@ -28,6 +28,7 @@ import {
 export interface ProjectContext {
     referencedIds: Set<string>;
     nodeMap: Map<string, { uplinks: string[], downlinks: string[] }>;
+    idToFileMap: Map<string, string>;
 }
 
 export class RuleEngine {
@@ -159,8 +160,24 @@ export class RuleEngine {
                 }
             }
         }
-
-        // 5. Traceability Check (Advanced)
+        
+        // 5. Allowed Node Prefixes Check (Entity Verification)
+        if (checks.allowedNodePrefixes && checks.mermaidType) {
+            const analyzer = this.analyzers[checks.mermaidType];
+            if (analyzer) {
+                const analysis = analyzer.analyze(asset.content);
+                for (const node of analysis.nodes) {
+                    const hasValidPrefix = checks.allowedNodePrefixes.some(p => node.startsWith(p));
+                    if (!hasValidPrefix) {
+                        errors.push(`Invalid node ID: "${node}". Must start with one of: [${checks.allowedNodePrefixes.join(', ')}]`);
+                    } else if (context && !context.idToFileMap.has(node)) {
+                        errors.push(`Reference error: Node "${node}" exists in diagram but has no corresponding documentation file.`);
+                    }
+                }
+            }
+        }
+        
+        // 6. Traceability Check (Advanced)
         if (checks.traceability && context) {
             const { nodeMap, referencedIds } = context;
             const entities = [

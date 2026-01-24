@@ -22,6 +22,7 @@ export interface RuleChecks {
         mustHaveDownlink?: string[];
         allowedDownlinkPrefixes?: string[];
     };
+    allowedNodePrefixes?: string[];
 }
 
 export interface Rule {

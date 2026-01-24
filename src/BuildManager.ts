@@ -229,7 +229,7 @@ export class BuildManager {
 
         // Perform Rule-Based Validation with project context
         for (const asset of assets) {
-            this.ruleEngine.validateAsset(asset, { referencedIds, nodeMap });
+            this.ruleEngine.validateAsset(asset, { referencedIds, nodeMap, idToFileMap });
         }
 
         // Semantic Code Check (kept here until migrated to a rule for code parsing)
