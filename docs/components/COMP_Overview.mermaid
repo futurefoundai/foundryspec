@@ -31,6 +31,12 @@ entities:
       - "REQ_Functional"
   - id: "COMP_CLI"
     uplink: "REQ_Functional"
+    downlinks:
+      - "COMP_DevServer"
+    requirements:
+      - "REQ_Functional"
+  - id: "COMP_DevServer"
+    uplink: "REQ_Functional"
     requirements:
       - "REQ_Functional"
   - id: "COMP_RuleEngine"
@@ -71,6 +77,13 @@ classDiagram
         +SidebarUI
     }
 
+    class COMP_DevServer {
+        <<Component>>
+        +FileWatcher
+        +ApiHandler
+        +StaticServer
+    }
+
     class COMP_ConfigStore {
         <<Component>>
         +GlobalState
@@ -97,9 +110,11 @@ classDiagram
     
     COMP_CLI --> COMP_BuildManager : triggers
     COMP_CLI --> COMP_ProbeManager : triggers
+    COMP_CLI --> COMP_DevServer : starts
     COMP_CLI --> COMP_GitManager : uses
     COMP_BuildManager --> COMP_ConfigStore : uses
     COMP_BuildManager --> COMP_RuleEngine : orchestrates
     COMP_ProbeManager --> COMP_BuildManager : uses
     COMP_BuildManager --> COMP_Group : uses template
+    COMP_DevServer --> COMP_BuildManager : triggers rebuild
 

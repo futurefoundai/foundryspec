@@ -14,11 +14,9 @@ import fs from 'fs-extra';
 import path from 'path';
 import chalk from 'chalk';
 import { glob } from 'glob';
-import * as http from 'http';
 import puppeteer from 'puppeteer';
 import { createRequire } from 'module';
 import matter from 'gray-matter';
-import serveHandler from 'serve-handler';
 
 import { fileURLToPath } from 'url';
 import { ProjectAsset } from './types/assets.js';
@@ -626,72 +624,6 @@ ${standaloneAssets.map(asset => {
         }
         console.log(chalk.green('✅ Folder Registry check passed.'));
     }
-
-    async serve(port: number | string = 3000): Promise<void> {
-        await this.resolveProject();
-        if (!this.projectId) throw new Error("ID fail");
-
-        const outputDir = this.configStore.getBuildDir(this.projectId);
-        if (!await fs.pathExists(outputDir) || !await fs.pathExists(path.join(outputDir, 'index.html'))) {
-            console.log(chalk.yellow(`\n⚠️  Internal build not found. Building now...`));
-            await this.build();
-        }
-
-        console.log(chalk.cyan(`👀 Watching for changes in ${this.docsDir}...`));
-        let isBuilding = false;
-        fs.watch(this.docsDir, { recursive: true }, async (eventType, filename) => {
-             if (filename && !isBuilding && !filename.startsWith('.')) {
-                 isBuilding = true;
-                 console.log(chalk.blue(`\n🔄 Change detected in ${filename}. Rebuilding...`));
-                 try { await this.build(); } 
-                 catch (err: unknown) { 
-                     const msg = err instanceof Error ? err.message : String(err);
-                     console.error(chalk.red(`\n❌ Rebuild failed: ${msg}`)); 
-                 } 
-                 finally { isBuilding = false; }
-             }
-        });
-
-        // TODO: This ought to be worked on as it is very key
-        const server = http.createServer(async (req, res) => {
-            // API: Comments
-            if (req.url === '/api/comments' && req.method === 'POST') {
-                let body = '';
-                req.on('data', chunk => body += chunk.toString());
-                req.on('end', async () => {
-                    try {
-                        const payload = JSON.parse(body);
-                        // Using ConfigStore to get the path
-                        const commentsPath = this.configStore.getCommentsPath(this.projectId!);
-                        
-                        let registry: Record<string, unknown[]> = {};
-                        if (await fs.pathExists(commentsPath)) registry = await fs.readJson(commentsPath);
-                        
-                        const key = payload.compositeKey;
-                        // ... validation ...
-                        if (!registry[key]) registry[key] = [];
-                        registry[key].push(payload);
-                        await fs.writeJson(commentsPath, registry, { spaces: 2 });
-                        res.writeHead(200); res.end(JSON.stringify({ status: 'ok' }));
-                    } catch { res.writeHead(500); res.end('Error'); }
-                });
-                return;
-            }
-
-            // API: Sync Check
-             if (req.url === '/api/sync' && req.method === 'GET') {
-                const commentsPath = this.configStore.getCommentsPath(this.projectId!);
-                const stats = await fs.pathExists(commentsPath) ? await fs.stat(commentsPath) : { mtimeMs: 0 };
-                res.writeHead(200, { 'Content-Type': 'application/json' });
-                res.end(JSON.stringify({ lastModified: stats.mtimeMs }));
-                return;
-             }
-
-            return serveHandler(req, res, { public: outputDir });
-        });
-
-        server.listen(Number(port), () => {
-            console.log(chalk.green(`\n🚀 Documentation Hub live at: http://localhost:${port}`));
-        });
-    }
 }
+
+

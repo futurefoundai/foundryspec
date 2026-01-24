@@ -1,0 +1,24 @@
+#!/bin/sh
+# FoundrySpec GitOps Policy: Pre-Commit
+# Enforces architectural integrity before allowing commits.
+
+echo "🛡️  FoundrySpec GitOps: Verifying Architectural Integrity..."
+
+# 1. Check for Drift
+# We run the probe command. If it fails (exit code 1), we block the commit.
+if ! npx foundryspec probe; then
+    echo "❌ GitOps Policy Violation: Architectural Drift Detected."
+    echo "   Please run 'foundryspec design-feature' or update your spec/code to match."
+    exit 1
+fi
+
+# 2. Check for Integrity & Broken Links
+# We run the build command. If it fails (exit code 1), we block the commit.
+if ! npx foundryspec build; then
+    echo "❌ GitOps Policy Violation: Build Integrity Check Failed."
+    echo "   Please fix broken links or syntax errors in your specification."
+    exit 1
+fi
+
+echo "✅ Integrity Checks Passed. Committing..."
+exit 0

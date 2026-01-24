@@ -1,0 +1,31 @@
+name: FoundrySpec Integrity Check
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  validate-specs:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Use Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+        
+    - name: Install FoundrySpec
+      # In a real scenario, this would install from npm. 
+      # Since we are self-hosting for now, we assume local or install from git.
+      # Ideally: run: npm install -g @futurefoundaihq/foundryspec
+      # For template purposes, we'll assume it's a project dependency or globally available.
+      run: npm install && npm run build # Mocking setup for now
+      
+    - name: 📡 Probe for Drift
+      run: npx foundryspec probe
+      
+    - name: 🏗️ Verify Build Integrity
+      run: npx foundryspec build

@@ -250,7 +250,74 @@ function openCommentOverlay(focusInput) {
     if (localComments.length === 0 && otherComments.length === 0) { commentList.innerHTML = '<div style="color: #64748b; font-size: 0.8rem; margin-bottom: 0.5rem;">No feedback yet.</div>'; }
     if (focusInput && newCommentInput) newCommentInput.focus();
 }
-// @foundryspec/end
+// @foundryspec/end COMP_InteractiveComments
+
+// --- Theme & Search ---
+function toggleTheme() {
+    document.body.classList.toggle('dark-mode');
+    const isDark = document.body.classList.contains('dark-mode');
+    localStorage.setItem('theme', isDark ? 'dark' : 'light');
+    document.getElementById('theme-toggle').innerHTML = isDark ? '&#9790;' : '&#9728;';
+}
+
+function initTheme() {
+    const saved = localStorage.getItem('theme');
+    if (saved === 'dark') {
+        document.body.classList.add('dark-mode');
+        document.getElementById('theme-toggle').innerHTML = '&#9790;'; // Moon
+    }
+}
+
+// Search Logic
+const searchInput = document.getElementById('search-input');
+if (searchInput) {
+    const resultsContainer = document.createElement('div');
+    resultsContainer.id = 'search-results';
+    resultsContainer.style.cssText = `
+        position: absolute; top: 60px; right: 20px; background: white; border: 1px solid #ccc;
+        border-radius: 4px; max-height: 300px; overflow-y: auto; width: 300px; z-index: 1000;
+        display: none; box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    `;
+    document.getElementById('header').appendChild(resultsContainer);
+
+    searchInput.addEventListener('input', (e) => {
+        const query = e.target.value.toLowerCase();
+        resultsContainer.innerHTML = '';
+        if (query.length < 2) { resultsContainer.style.display = 'none'; return; }
+
+        const matches = Object.keys(idMap).filter(k => k.toLowerCase().includes(query) && !k.endsWith('_code'));
+        if (matches.length > 0) {
+            resultsContainer.style.display = 'block';
+            matches.forEach(match => {
+                const item = document.createElement('div');
+                item.textContent = match;
+                item.style.cssText = 'padding: 8px; cursor: pointer; border-bottom: 1px solid #eee; color: #333;';
+                item.onmouseover = () => item.style.background = '#f0f9ff';
+                item.onmouseout = () => item.style.background = 'transparent';
+                item.onclick = () => {
+                    const mapped = idMap[match];
+                    const target = Array.isArray(mapped) ? mapped[0] : mapped;
+                    loadDiagram(target);
+                    resultsContainer.style.display = 'none';
+                    searchInput.value = '';
+                };
+                resultsContainer.appendChild(item);
+            });
+        } else {
+            resultsContainer.style.display = 'none';
+        }
+    });
+    
+    // Hide search on outside click
+    document.addEventListener('click', (e) => {
+        if (e.target !== searchInput && e.target !== resultsContainer) {
+            resultsContainer.style.display = 'none';
+        }
+    });
+}
+
+// Initialize
+initTheme();
 
 async function saveComment() {
     const content = newCommentInput.value.trim();

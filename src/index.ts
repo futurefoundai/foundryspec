@@ -25,9 +25,9 @@ import { ScaffoldManager } from './ScaffoldManager.js';
 import { BuildManager } from './BuildManager.js';
 import { GitManager } from './GitManager.js';
 import { FileChange } from './types/git.js';
-import { ProbeManager } from './ProbeManager.js';
 import { ConfigStore } from './ConfigStore.js';
 import { Rule, RuleSet } from './types/rules.js';
+import { DevServer } from './DevServer.js';
 
 /**
  * @foundryspec COMP_CLI
@@ -52,44 +52,6 @@ program
     .description('Documentation engine for human-AI collaborative system analysis and design')
     .version(packageJson.version);
 
-// --- CORE COMMANDS ---
-
-program
-    .command('init')
-    .description('Scaffold a new FoundrySpec documentation project')
-    .argument('[project-name]', 'Name of the project', 'My Spec Project')
-    .action(async (projectName: string) => {
-        console.log(chalk.blue(`\n🚀 Initializing FoundrySpec project: ${projectName}...`));
-        try {
-            const scaffold = new ScaffoldManager(projectName);
-            await scaffold.init();
-            console.log(chalk.green(`\n✅ Project "${projectName}" initialized successfully!`));
-            console.log(chalk.cyan(`\nNext steps:`));
-            console.log(`  foundryspec build`);
-            console.log(`  foundryspec serve`);
-            console.log(`  foundryspec serve`);
-        } catch (err: unknown) {
-            const msg = err instanceof Error ? err.message : String(err);
-            console.error(chalk.red('\n❌ Error during initialization:'), msg);
-            process.exit(1);
-        }
-    });
-
-program
-    .command('probe')
-    .description('Analyze the project for drift between Spec and Implementation')
-    .action(async () => {
-        try {
-            const root = await findProjectRoot(process.cwd());
-            const prober = new ProbeManager(root);
-            await prober.runProbe();
-        } catch (err: unknown) {
-            const msg = err instanceof Error ? err.message : String(err);
-            console.error(chalk.red('\n❌ Probe failed:'), msg);
-            process.exit(1);
-        }
-    });
-
 program
     .command('serve')
     .description('Locally serve the generated documentation hub')
@@ -97,11 +59,33 @@ program
     .action(async (options: { port: string }) => {
         try {
             const root = await findProjectRoot(process.cwd());
-            const builder = new BuildManager(root);
-            await builder.serve(options.port);
+            const server = new DevServer(root);
+            await server.serve(options.port);
         } catch (err: unknown) {
             const msg = err instanceof Error ? err.message : String(err);
             console.error(chalk.red('\n❌ Serve failed:'), msg);
+        }
+    });
+
+program
+    .command('gitops')
+    .description('Manage GitOps integration and enforcement policies')
+    .argument('<action>', 'Action to perform (install, check)')
+    .action(async (action: string) => {
+        try {
+            const root = await findProjectRoot(process.cwd());
+            const gitManager = new GitManager(root);
+            
+            if (action === 'install') {
+                await gitManager.installHooks();
+            } else if (action === 'ci') {
+                await gitManager.installCI();
+            } else {
+                console.error(chalk.red(`Unknown action: ${action}`));
+            }
+        } catch (err: unknown) {
+            const msg = err instanceof Error ? err.message : String(err);
+            console.error(chalk.red('\n❌ GitOps action failed:'), msg);
         }
     });
 

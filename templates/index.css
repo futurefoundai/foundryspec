@@ -26,19 +26,17 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    /* Dark Mode (Blueprint) */
-    --bg-primary: #0f172a; /* Deep Blueprint Slate */
+    /* Auto Dark Mode (System Preference) - Default if no toggle used */
+    --bg-primary: #0f172a;
     --bg-secondary: #1e293b;
-    --accent: #38bdf8; /* Cyan Highlight */
+    --accent: #38bdf8;
     --accent-glow: rgba(56, 189, 248, 0.2);
-    --text-primary: #f1f5f9; /* Chalk White */
+    --text-primary: #f1f5f9;
     --text-secondary: #94a3b8;
     --border: #334155;
-    --grid-color: rgba(255, 255, 255, 0.05); /* White Grid Lines */
+    --grid-color: rgba(255, 255, 255, 0.05);
     --card-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
     --glass: rgba(15, 23, 42, 0.85);
-
-    /* Palette for Nodes */
     --node-root: #f8fafc;
     --node-l1-fill: #1e293b;
     --node-l1-stroke: #94a3b8;
@@ -47,6 +45,27 @@
     --node-l3-fill: #1e293b;
     --node-l3-stroke: #334155;
   }
+}
+
+/* Explicit Dark Mode Override (JS Toggle) */
+body.dark-mode {
+    --bg-primary: #0f172a;
+    --bg-secondary: #1e293b;
+    --accent: #38bdf8;
+    --accent-glow: rgba(56, 189, 248, 0.2);
+    --text-primary: #f1f5f9;
+    --text-secondary: #94a3b8;
+    --border: #334155;
+    --grid-color: rgba(255, 255, 255, 0.05);
+    --card-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+    --glass: rgba(15, 23, 42, 0.85);
+    --node-root: #f8fafc;
+    --node-l1-fill: #1e293b;
+    --node-l1-stroke: #94a3b8;
+    --node-l2-fill: #0f172a;
+    --node-l2-stroke: #475569;
+    --node-l3-fill: #1e293b;
+    --node-l3-stroke: #334155;
 }
 
 body {
