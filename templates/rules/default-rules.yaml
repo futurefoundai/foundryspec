@@ -55,13 +55,14 @@ rules:
   - id: context-registration
     name: Context Model Registration
     level: folder
-    description: "Registers Context models for the Hub."
+    description: "Registers Context models for the Hub. Context models must be C4Context diagrams."
     target:
       idPrefix: CTX_
       pathPattern: "context/*"
-    type: metadata
+    type: syntax
     enforcement: error
     checks:
+      mermaidType: C4Context
       traceability:
         mustHaveDownlink: [BND_, COMP_, FEAT_]
     hub:
@@ -71,13 +72,14 @@ rules:
   - id: boundary-registration
     name: Boundary Definition Registration
     level: folder
-    description: "Registers Boundary definitions for the Hub."
+    description: "Registers Boundary definitions for the Hub. Boundary models must be C4Container diagrams."
     target:
       idPrefix: BND_
       pathPattern: "boundaries/*"
-    type: metadata
+    type: syntax
     enforcement: error
     checks:
+      mermaidType: C4Container
       traceability:
         mustTraceTo: [CTX_]
     hub:
@@ -87,13 +89,14 @@ rules:
   - id: component-registration
     name: Component Registration
     level: folder
-    description: "Registers Components for the Hub."
+    description: "Registers Components for the Hub. Component models must be classDiagrams."
     target:
       idPrefix: COMP_
       pathPattern: "components/*"
-    type: metadata
+    type: syntax
     enforcement: error
     checks:
+      mermaidType: classDiagram
       traceability:
         mustTraceTo: [CTX_, REQ_, BND_]
     hub:

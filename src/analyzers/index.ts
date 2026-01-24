@@ -10,3 +10,4 @@ export * from './SequenceAnalyzer.js';
 export * from './FlowchartAnalyzer.js';
 export * from './RequirementAnalyzer.js';
 export * from './ClassAnalyzer.js';
+export * from './C4Analyzer.js';
