@@ -185,8 +185,8 @@ export class RuleEngine {
         // 6. One-Per-File Check
         if (checks.onePerFile && rule.target.idPrefix) {
             const entities = Array.isArray(asset.data.entities) ? asset.data.entities : [];
-            const matchingNodes = entities.filter((ent: any) => 
-                ent.id && ent.id.startsWith(rule.target.idPrefix!)
+            const matchingNodes = entities.filter((ent: Record<string, unknown>) => 
+                typeof ent.id === 'string' && ent.id.startsWith(rule.target.idPrefix!)
             );
             if (matchingNodes.length !== 1) {
                 errors.push(
@@ -199,9 +199,9 @@ export class RuleEngine {
         // 7. Access Control Check
         if (checks.accessControl?.allowedReferencers && context) {
             const entities = Array.isArray(asset.data.entities) ? asset.data.entities : [];
-            const nodeId = entities.find((ent: any) => 
-                ent.id && ent.id.startsWith(rule.target.idPrefix || '')
-            )?.id;
+            const nodeId = entities.find((ent: Record<string, unknown>) => 
+                typeof ent.id === 'string' && ent.id.startsWith(rule.target.idPrefix || '')
+            )?.id as string | undefined;
             
             if (nodeId && context.nodeMap.has(nodeId)) {
                 const node = context.nodeMap.get(nodeId)!;

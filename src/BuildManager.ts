@@ -472,20 +472,66 @@ ${standaloneAssets.map(asset => {
         const templateContent = await fs.readFile(templatePath, 'utf8');
         
         const assetsDir = config.build?.assetsDir || 'assets';
-        const mapObj: Record<string, string | string[]> = {};
-        
-        idToSpecFile.forEach((v, k) => {
-            // Ensure we use forward slashes for URLs and prepend assets dir
-            mapObj[k] = `${assetsDir}/${v}`;
+        interface NavigationTarget { path: string; title: string; type: string; }
+        const mapObj: Record<string, NavigationTarget[]> = {};
+
+        const addTarget = (id: string, target: NavigationTarget) => {
+            if (!mapObj[id]) mapObj[id] = [];
+            // Avoid duplicates
+            if (!mapObj[id].some((t: NavigationTarget) => t.path === target.path)) {
+                mapObj[id].push(target);
+            }
+        };
+
+        // 1. Map IDs to their primary diagrams
+        idToSpecFile.forEach((v, id) => {
+            const type = id.split('_')[0] || 'diagram';
+            addTarget(id, {
+                path: `${assetsDir}/${v}`,
+                title: `${id} Diagram`,
+                type
+            });
         });
 
+        // 2. Map Code assignments
         codeMap.forEach((files, id) => {
-            mapObj[`${id}_code`] = files;
+            files.forEach(file => {
+                addTarget(id, {
+                    path: file,
+                    title: `Code: ${path.basename(file)}`,
+                    type: 'code'
+                });
+            });
         });
 
+        // 3. Map additional assets (including Data, Sequences, Flows)
         for (const asset of assets) {
-            if (asset.data?.title) {
-                mapObj[asset.data.title] = `${assetsDir}/${asset.relPath}`;
+            const id = asset.data?.id;
+            const title = asset.data?.title || id || path.basename(asset.relPath);
+            const relPath = `${assetsDir}/${asset.relPath}`;
+
+            if (id) {
+                const type = id.split('_')[0] || 'asset';
+                addTarget(id, {
+                   path: relPath,
+                   title: title,
+                   type: type
+                });
+
+                // Also map the title itself back to the path for searchability
+                if (asset.data.title) {
+                    addTarget(asset.data.title, {
+                        path: relPath,
+                        title: title,
+                        type: type
+                    });
+                }
+            } else if (asset.data?.title) {
+                addTarget(asset.data.title, {
+                    path: relPath,
+                    title: title,
+                    type: 'asset'
+                });
             }
         }
 

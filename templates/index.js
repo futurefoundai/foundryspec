@@ -3,6 +3,7 @@ let historyStack = [];
 let currentContainer = null;
 let panZoomInstance = null;
 let viewer, backButton, breadcrumbs, modalBackdrop, modalBody, modalTitle;
+let navModalBackdrop, navModalBody, navModalTitle;
 let contextMenu, commentOverlay, commentList, newCommentInput, saveCommentBtn;
 let activeNodeId = null;
 let currentViewPath = 'root.mermaid';
@@ -26,7 +27,7 @@ async function injectCustomCSS() {
                 link.rel = 'stylesheet'; link.href = file;
                 document.head.appendChild(link);
             }
-        } catch (e) {}
+        } catch (e) { /* silent fail for optional css */ }
     }
 }
 
@@ -133,6 +134,11 @@ async function initApp() {
     commentList = document.getElementById('comment-list');
     newCommentInput = document.getElementById('new-comment-input');
     saveCommentBtn = document.getElementById('save-comment-btn');
+    
+    // Navigation Modal
+    navModalBackdrop = document.getElementById('nav-modal-backdrop');
+    navModalBody = document.getElementById('nav-modal-body');
+    navModalTitle = document.getElementById('nav-modal-title');
 
     const mermaidReady = typeof mermaid !== 'undefined';
     const domReady = !!(backButton && viewer);
@@ -175,8 +181,11 @@ async function initApp() {
         if (contextMenu && !contextMenu.contains(e.target)) contextMenu.style.display = 'none'; 
     });
 
-    document.getElementById('menu-view-comments').addEventListener('click', () => openCommentOverlay(false));
-    document.getElementById('menu-add-comment').addEventListener('click', () => openCommentOverlay(true));
+    document.getElementById('menu-comments').addEventListener('click', (e) => openCommentOverlay(false, e.clientX, e.clientY));
+    document.getElementById('menu-data').addEventListener('click', (e) => openCategoryModal('DATA', e.clientX, e.clientY));
+    document.getElementById('menu-sequence').addEventListener('click', (e) => openCategoryModal('SEQ', e.clientX, e.clientY));
+    document.getElementById('menu-flow').addEventListener('click', (e) => openCategoryModal('FLOW', e.clientX, e.clientY));
+    
     if (saveCommentBtn) saveCommentBtn.addEventListener('click', saveComment);
 
     // @foundryspec/start COMP_ClickInterceptor
@@ -190,26 +199,25 @@ async function initApp() {
         let current = nodeContainer;
         while (current && current !== viewer && current.tagName !== 'svg') {
             const targetId = current.id || current.getAttribute('id') || current.getAttribute('name');
-            // Check direct ID or clean ID
-            if (targetId) {
-                if (idMap[targetId]) { loadDiagram(idMap[targetId]); return; }
-                const cleanId = targetId.split('-').find(part => idMap[part]);
-                if (cleanId) { loadDiagram(idMap[cleanId]); return; }
-            }
-            
-            // Check Text content
-            let text = current.textContent?.trim() || "";
+            const text = current.textContent?.trim() || "";
             const cleanText = text.replace(/^["(\[\{]+|[")\]\}]+$/g, '').trim();
-            if ((text && idMap[text]) || (cleanText && idMap[cleanText])) {
-                const targetPath = idMap[text] || idMap[cleanText];
-                loadDiagram(targetPath); return;
+            
+            const key = (targetId && idMap[targetId] ? targetId : null) || 
+                        (idMap[text] ? text : null) || 
+                        (idMap[cleanText] ? cleanText : null);
+
+            if (key) {
+                const rawTargets = idMap[key];
+                // Handle legacy string format or new array format
+                const targets = Array.isArray(rawTargets) ? rawTargets : [{ path: rawTargets, title: key, type: 'diagram' }];
+                
+                if (targets.length === 1) {
+                    loadDiagram(targets[0].path);
+                } else {
+                    openNavigationModal(key, targets);
+                }
+                return;
             }
-            // If we are here, the node is "clickable" visually but has no map.
-            // We just stop propagation/don't do anything for navigation to avoid confusion,
-            // or perhaps it just selects? The user said "clickable", but if there's no destination...
-            // Standard action: do nothing for navigation if no map link. 
-            // BUT, we need to ensure we don't block event if it's not a link.
-            // Actually, the loop just looks for a valid link.
             
             current = current.parentElement;
         }
@@ -221,7 +229,7 @@ async function initApp() {
 }
 
 // @foundryspec/start COMP_InteractiveComments
-function openCommentOverlay(focusInput) {
+function openCommentOverlay(focusInput, x, y) {
     if (contextMenu) contextMenu.style.display = 'none';
     commentList.innerHTML = '';
     const currentUsi = getUSI(activeNodeId, currentViewPath);
@@ -248,6 +256,14 @@ function openCommentOverlay(focusInput) {
     renderSet('Comments in this View', localComments, true);
     renderSet('Comments from other Views', otherComments, false);
     if (localComments.length === 0 && otherComments.length === 0) { commentList.innerHTML = '<div style="color: #64748b; font-size: 0.8rem; margin-bottom: 0.5rem;">No feedback yet.</div>'; }
+    
+    if (x && y) {
+       commentOverlay.style.left = `${x}px`;
+       commentOverlay.style.top = `${y}px`;
+       commentOverlay.style.position = 'fixed';
+    }
+
+    commentOverlay.style.display = 'block';
     if (focusInput && newCommentInput) newCommentInput.focus();
 }
 // @foundryspec/end COMP_InteractiveComments
@@ -259,14 +275,22 @@ function toggleTheme() {
     localStorage.setItem('theme', isDark ? 'dark' : 'light');
     document.getElementById('theme-toggle').innerHTML = isDark ? '&#9790;' : '&#9728;';
 }
+window.toggleTheme = toggleTheme;
 
 function initTheme() {
     const saved = localStorage.getItem('theme');
-    if (saved === 'dark') {
+    const toggleBtn = document.getElementById('theme-toggle');
+    const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    
+    if (saved === 'dark' || (!saved && systemDark)) {
         document.body.classList.add('dark-mode');
-        document.getElementById('theme-toggle').innerHTML = '&#9790;'; // Moon
+        if (toggleBtn) toggleBtn.innerHTML = '&#9790;'; // Moon
+    } else {
+        document.body.classList.remove('dark-mode');
+        if (toggleBtn) toggleBtn.innerHTML = '&#9728;'; // Sun
     }
 }
+window.initTheme = initTheme;
 
 // Search Logic
 const searchInput = document.getElementById('search-input');
@@ -274,9 +298,9 @@ if (searchInput) {
     const resultsContainer = document.createElement('div');
     resultsContainer.id = 'search-results';
     resultsContainer.style.cssText = `
-        position: absolute; top: 60px; right: 20px; background: white; border: 1px solid #ccc;
+        position: absolute; top: 60px; right: 20px; background: var(--bg-secondary); border: 1px solid var(--border);
         border-radius: 4px; max-height: 300px; overflow-y: auto; width: 300px; z-index: 1000;
-        display: none; box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        display: none; box-shadow: var(--card-shadow);
     `;
     document.getElementById('header').appendChild(resultsContainer);
 
@@ -285,19 +309,25 @@ if (searchInput) {
         resultsContainer.innerHTML = '';
         if (query.length < 2) { resultsContainer.style.display = 'none'; return; }
 
-        const matches = Object.keys(idMap).filter(k => k.toLowerCase().includes(query) && !k.endsWith('_code'));
+        const matches = Object.keys(idMap).filter(k => k.toLowerCase().includes(query));
         if (matches.length > 0) {
             resultsContainer.style.display = 'block';
             matches.forEach(match => {
                 const item = document.createElement('div');
+                item.className = 'search-item';
                 item.textContent = match;
-                item.style.cssText = 'padding: 8px; cursor: pointer; border-bottom: 1px solid #eee; color: #333;';
-                item.onmouseover = () => item.style.background = '#f0f9ff';
+                item.style.cssText = 'padding: 8px; cursor: pointer; border-bottom: 1px solid var(--border); color: var(--text-primary);';
+                item.onmouseover = () => item.style.background = 'var(--bg-primary)';
                 item.onmouseout = () => item.style.background = 'transparent';
                 item.onclick = () => {
-                    const mapped = idMap[match];
-                    const target = Array.isArray(mapped) ? mapped[0] : mapped;
-                    loadDiagram(target);
+                    const rawTargets = idMap[match];
+                    const targets = Array.isArray(rawTargets) ? rawTargets : [{ path: rawTargets, title: match, type: 'diagram' }];
+                    
+                    if (targets.length === 1) {
+                        loadDiagram(targets[0].path);
+                    } else {
+                        openNavigationModal(match, targets);
+                    }
                     resultsContainer.style.display = 'none';
                     searchInput.value = '';
                 };
@@ -338,6 +368,70 @@ async function saveComment() {
 function closeCommentOverlay() { commentOverlay.style.display = 'none'; }
 window.closeCommentOverlay = closeCommentOverlay;
 
+function openNavigationModal(title, targets) {
+    if (!navModalBackdrop) return;
+    navModalTitle.innerText = `Targets for ${title}`;
+    navModalBody.innerHTML = '';
+    
+    // Final defense
+    const targetArray = Array.isArray(targets) ? targets : (targets ? [targets] : []);
+    
+    targetArray.forEach(t => {
+        const item = document.createElement('div');
+        item.className = 'nav-item';
+        const rawTarget = typeof t === 'string' ? { path: t, title: title, type: 'diagram' } : t;
+        const icon = getIconForType(rawTarget.type);
+        item.innerHTML = `
+            <div class="nav-item-icon">${icon}</div>
+            <div class="nav-item-content">
+                <span class="nav-item-title">${rawTarget.title}</span>
+                <span class="nav-item-type">${rawTarget.type}</span>
+            </div>
+        `;
+        item.onclick = () => {
+            loadDiagram(rawTarget.path);
+            closeNavModal();
+        };
+        navModalBody.appendChild(item);
+    });
+    
+    navModalBackdrop.classList.add('open');
+}
+
+function openCategoryModal(typePrefix, x, y) {
+    if (!activeNodeId) return;
+    const targets = (idMap[activeNodeId] || []).filter(t => t.type.startsWith(typePrefix));
+    
+    if (targets.length > 0) {
+        openNavigationModal(`${activeNodeId} ${typePrefix}`, targets);
+    } else {
+        // AI Collaboration Prompt if none found
+        const prompts = {
+            DATA: `[AI PROMPT] Generate a DATA_ model for node ${activeNodeId}. Use erDiagram syntax.`,
+            SEQ: `[AI PROMPT] Generate a SEQ_ diagram for node ${activeNodeId}. Use sequenceDiagram syntax.`,
+            FLOW: `[AI PROMPT] Generate a FLOW_ flowchart for node ${activeNodeId}.`
+        };
+        if (newCommentInput) {
+            newCommentInput.value = prompts[typePrefix] || "";
+            openCommentOverlay(true, x, y);
+        }
+    }
+}
+
+function closeNavModal(e) {
+    if (e && e.target !== navModalBackdrop) return;
+    if (navModalBackdrop) navModalBackdrop.classList.remove('open');
+}
+window.closeNavModal = closeNavModal;
+
+function getIconForType(type) {
+    const icons = {
+        COMP: '📦', BND: '🌐', CTX: '📐', REQ: '✅', 
+        DATA: '💾', SEQ: '🔄', FLOW: '📊', CODE: '💻', PER: '👤'
+    };
+    return icons[type] || '📄';
+}
+
 function resolvePath(base, relative) {
     const stack = base.split('/'); const parts = relative.split('/'); stack.pop();
     for (let i = 0; i < parts.length; i++) { if (parts[i] === '.') continue; if (parts[i] === '..') stack.pop(); else stack.push(parts[i]); }
@@ -352,10 +446,20 @@ async function loadDiagram(filePath) {
         content = content.replace(/^---[\s\S]*?---\s*/, '');
         if (filePath.endsWith('.md')) {
             modalTitle.innerText = filePath.split('/').pop(); let html = marked.parse(content);
-            const possibleId = Object.keys(idMap).find(k => idMap[k] === filePath);
-            if (possibleId && idMap[`${possibleId}_code`]) {
-                const codeFiles = idMap[`${possibleId}_code`];
-                html += `<div class="implementation-box" style="margin-top: 2rem; padding: 1.5rem; background: rgba(56, 189, 248, 0.05); border: 1px solid rgba(56, 189, 248, 0.2); border-radius: 8px;"><h3 style="margin-top: 0; color: #38bdf8; font-family: 'Outfit'; font-size: 1rem;">Implementation Traceability</h3><p style="font-size: 0.9rem; color: #94a3b8; margin-bottom: 1rem;">This requirement is implemented in the following codebase locations:</p><ul style="list-style: none; padding: 0; margin: 0;">${codeFiles.map(f => `<li style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; font-family: monospace; font-size: 0.85rem; color: #f8fafc;"><span style="color: #38bdf8;">📁</span> ${f}</li>`).join('')}</ul></div>`;
+            
+            // Find the ID associated with this file path
+            const possibleId = Object.keys(idMap).find(id => 
+                idMap[id].some(target => target.path === filePath)
+            );
+
+            if (possibleId) {
+                const codeFiles = idMap[possibleId]
+                   .filter(t => t.type === 'code')
+                   .map(t => t.path);
+
+                if (codeFiles.length > 0) {
+                   html += `<div class="implementation-box" style="margin-top: 2rem; padding: 1.5rem; background: rgba(56, 189, 248, 0.05); border: 1px solid rgba(56, 189, 248, 0.2); border-radius: 8px;"><h3 style="margin-top: 0; color: #38bdf8; font-family: 'Outfit'; font-size: 1rem;">Implementation Traceability</h3><p style="font-size: 0.9rem; color: #94a3b8; margin-bottom: 1rem;">This requirement is implemented in the following codebase locations:</p><ul style="list-style: none; padding: 0; margin: 0;">${codeFiles.map(f => `<li style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; font-family: monospace; font-size: 0.85rem; color: var(--text-primary);"><span style="color: #38bdf8;">📁</span> ${f}</li>`).join('')}</ul></div>`;
+                }
             }
             modalBody.innerHTML = html; modalBackdrop.classList.add('open'); return;
         }

@@ -159,9 +159,6 @@ rules:
         allowedReferencers: [COMP_, BND_, CTX_, SEQ_, FLOW_]
       traceability:
         mustBeLinked: true
-    hub:
-      id: GRP_Data
-      title: Data Models
 
   - id: sequence-registration
     name: Sequence Registration
@@ -180,9 +177,6 @@ rules:
       traceability:
         mustTraceTo: [COMP_, BND_, CTX_]
         mustBeLinked: true
-    hub:
-      id: GRP_Sequences
-      title: Sequences
 
   - id: flow-registration
     name: Flow Registration
@@ -200,7 +194,4 @@ rules:
       allowedNodePrefixes: [COMP_, BND_, DATA_, SEQ_]
       traceability:
         mustBeLinked: true
-    hub:
-      id: GRP_Flows
-      title: Flows
 

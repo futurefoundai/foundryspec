@@ -24,6 +24,7 @@ entities:
       - "CTX_System"
       - "REQ_SmartInterception"
       - "REQ_EntityVerification"
+      - "REQ_MultiDestinationNav"
   - id: "REQ_NonFunctional"
     classification: Non-Functional
     uplink: 
@@ -87,6 +88,13 @@ entities:
     uplink: REQ_Functional
     downlinks:
       - COMP_RuleEngine
+  - id: REQ_MultiDestinationNav
+    classification: Functional
+    title: Multi-Destination Navigation
+    description: The system shall provide a selection modal when a node corresponds to multiple architectural views.
+    uplink: REQ_Functional
+    downlinks:
+      - COMP_ClickInterceptor
 ---
 
 requirementDiagram
@@ -111,8 +119,16 @@ requirementDiagram
         verifymethod: Test
     }
 
+    requirement Multi_Destination_Nav {
+        id: "REQ_MultiDestinationNav"
+        text: "The system shall provide a selection modal when a node corresponds to multiple architectural views (e.g. Data, Sequence, Flow)."
+        risk: Low
+        verifymethod: Test
+    }
+
     Functional -contains-> Smart_Interception
     Functional -contains-> Entity_Verification
+    Functional -contains-> Multi_Destination_Nav
 
     requirement Safe_Removal {
         id: "REQ_SafeRemoval"
