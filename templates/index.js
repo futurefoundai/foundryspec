@@ -179,6 +179,7 @@ async function initApp() {
     document.getElementById('menu-add-comment').addEventListener('click', () => openCommentOverlay(true));
     if (saveCommentBtn) saveCommentBtn.addEventListener('click', saveComment);
 
+    // @foundryspec COMP_ClickInterceptor
     // Left-Click Listener (Navigation)
     viewer.addEventListener('click', (e) => {
         let target = e.target;
@@ -218,6 +219,7 @@ async function initApp() {
     injectCustomCSS(); await fetchComments(); startSync(); loadDiagram('assets/root.mermaid');
 }
 
+// @foundryspec COMP_InteractiveComments
 function openCommentOverlay(focusInput) {
     if (contextMenu) contextMenu.style.display = 'none';
     commentList.innerHTML = '';

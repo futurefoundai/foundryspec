@@ -75,6 +75,9 @@ export class ProbeManager {
         // Check A: Spec exists but no code (Missing Implementation)
         // We filter for functional components/features only (COMP_*, FEAT_*)
         for (const id of specIds) {
+            // Ignore specialized documentation-only components
+            if (id === 'COMP_Overview') continue;
+
             if ((id.startsWith('COMP_') || id.startsWith('FEAT_')) && !codeMap.has(id)) {
                 issues.push({
                     id,
