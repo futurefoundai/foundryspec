@@ -188,7 +188,7 @@ async function initApp() {
 
         let current = nodeContainer;
         while (current && current !== viewer && current.tagName !== 'svg') {
-            const targetId = current.id || current.getAttribute('id');
+            const targetId = current.id || current.getAttribute('id') || current.getAttribute('name');
             // Check direct ID or clean ID
             if (targetId) {
                 if (idMap[targetId]) { loadDiagram(idMap[targetId]); return; }
