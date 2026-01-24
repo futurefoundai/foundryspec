@@ -30,7 +30,31 @@ entities:
       - "REQ_Core"
       - "PER_CodingAgent"
     downlinks:
+      - "REQ_Integrity"
+      - "REQ_LocalFirst"
+      - "REQ_ZeroMaintenance"
+      - "REQ_Performance"
+  - id: "REQ_Integrity"
+    classification: Non-Functional
+    uplink: "REQ_NonFunctional"
+    downlinks:
+      - "COMP_RuleEngine"
+  - id: "REQ_LocalFirst"
+    classification: Non-Functional
+    uplink: "REQ_NonFunctional"
+    downlinks:
+      - "CTX_System"
+  - id: "REQ_ZeroMaintenance"
+    classification: Non-Functional
+    uplink: "REQ_NonFunctional"
+    downlinks:
+      - "COMP_BuildManager"
       - "COMP_Group"
+  - id: "REQ_Performance"
+    classification: Non-Functional
+    uplink: "REQ_NonFunctional"
+    downlinks:
+      - "COMP_BuildManager"
   - id: "REQ_DynamicRoot"
     classification: Functional
     uplink: "REQ_Functional"
@@ -121,12 +145,45 @@ requirementDiagram
         verifymethod: Test
     }
 
-    requirement Non_Functional {
-        id: "REQ_NonFunctional"
-        text: "System shall perform efficiently."
+    requirement Integrity_Guarantee {
+        id: "REQ_Integrity"
+        text: "The system shall guarantee 100% reachability from the Hub Root for all documentation nodes."
+        risk: High
+        verifymethod: Test
+    }
+
+    requirement Local_First {
+        id: "REQ_LocalFirst"
+        text: "The system shall support full build and serve capabilities without external internet dependencies."
+        risk: Medium
+        verifymethod: Test
+    }
+
+    requirement Zero_Maintenance {
+        id: "REQ_ZeroMaintenance"
+        text: "The system shall eliminate manual indexing through dynamic folder-to-hub synthesis."
         risk: Low
         verifymethod: Test
     }
+
+    requirement Build_Performance {
+        id: "REQ_Performance"
+        text: "The system shall build a documentation hub with 50+ diagrams in under 30 seconds."
+        risk: Medium
+        verifymethod: Test
+    }
+
+    requirement Non_Functional {
+        id: "REQ_NonFunctional"
+        text: "The system core shall adhere to strict quality and performance standards."
+        risk: Low
+        verifymethod: Test
+    }
+
+    Non_Functional -contains-> Integrity_Guarantee
+    Non_Functional -contains-> Local_First
+    Non_Functional -contains-> Zero_Maintenance
+    Non_Functional -contains-> Build_Performance
 
     Functional -contains-> Dynamic_Root
     Functional -contains-> Zero_Config
