@@ -18,6 +18,8 @@ export interface RuleChecks {
         linksToPersona?: boolean;
         requiresImplementation?: boolean;
         mustBeLinked?: boolean;
+        mustTraceTo?: string[];
+        mustHaveDownlink?: string[];
         allowedDownlinkPrefixes?: string[];
     };
 }

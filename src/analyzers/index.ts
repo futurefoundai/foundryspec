@@ -9,3 +9,4 @@ export * from './MindmapAnalyzer.js';
 export * from './SequenceAnalyzer.js';
 export * from './FlowchartAnalyzer.js';
 export * from './RequirementAnalyzer.js';
+export * from './ClassAnalyzer.js';

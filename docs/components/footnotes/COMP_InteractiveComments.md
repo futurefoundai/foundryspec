@@ -2,11 +2,6 @@
 id: 'COMP_InteractiveComments'
 title: Interactive Comments Component
 description: Frontend and Backend logic for handling node-level feedback.
-entities:
-  - id: 'COMP_InteractiveComments'
-    uplink: 'BND_App'
-    requirements:
-      - 'REQ_InteractiveComments'
 ---
 
 # Interactive Comments (L3)

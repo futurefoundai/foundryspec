@@ -86,6 +86,14 @@ export class ConfigStore {
   }
 
   /**
+   * Returns the path to the internal rules file.
+   * ~/.foundryspec/storage/<id>/rules.yaml
+   */
+  getRulesPath(id: string): string {
+    return path.join(this.getStorageDir(id), "rules.yaml");
+  }
+
+  /**
    * Lists all registered projects.
    */
   async listProjects(): Promise<ProjectConfig[]> {

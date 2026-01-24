@@ -2,11 +2,6 @@
 id: 'COMP_ClickInterceptor'
 title: Click Interceptor
 description: Frontend event bus for diagram navigation and footnote activation.
-entities:
-  - id: 'COMP_ClickInterceptor'
-    uplink: 'BND_App'
-    requirements:
-      - 'REQ_Functional'
 ---
 
 # Click Interceptor (L3)

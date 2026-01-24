@@ -3,17 +3,6 @@ id: "COMP_Overview"
 title: Component Architecture
 description: Detailed decomposition of the FoundrySpec engine components.
 entities:
-  - id: "COMP_Overview"
-    uplink: "ROOT"
-    downlinks:
-      - "COMP_Group"
-      - "COMP_ClickInterceptor"
-      - "COMP_InteractiveComments"
-      - "COMP_BuildManager"
-      - "COMP_ProbeManager"
-      - "COMP_ConfigStore"
-      - "COMP_GitManager"
-      - "COMP_CLI"
   - id: "COMP_Group"
     uplink: "REQ_NonFunctional"
   - id: "COMP_ClickInterceptor"
@@ -44,6 +33,10 @@ entities:
     uplink: "REQ_Functional"
     requirements:
       - "REQ_Functional"
+  - id: "COMP_RuleEngine"
+    uplink: "COMP_BuildManager"
+    requirements:
+      - "REQ_Core"
 ---
 
 classDiagram
@@ -95,16 +88,18 @@ classDiagram
         +CommandRegistry
         +Entrypoint
     }
-    
-    class ROOT {
-        <<Entry>>
+
+    class COMP_RuleEngine {
+        <<Component>>
+        +ValidationEngine
+        +Scanner
     }
     
-    ROOT --> COMP_Group : defines
-    ROOT --> COMP_BuildManager : defines
-    ROOT --> COMP_ProbeManager : defines
-    ROOT --> COMP_ClickInterceptor : defines
-    ROOT --> COMP_InteractiveComments : defines
-    ROOT --> COMP_ConfigStore : defines
-    ROOT --> COMP_GitManager : defines
-    ROOT --> COMP_CLI : defines
+    COMP_CLI --> COMP_BuildManager : triggers
+    COMP_CLI --> COMP_ProbeManager : triggers
+    COMP_CLI --> COMP_GitManager : uses
+    COMP_BuildManager --> COMP_ConfigStore : uses
+    COMP_BuildManager --> COMP_RuleEngine : orchestrates
+    COMP_ProbeManager --> COMP_BuildManager : uses
+    COMP_BuildManager --> COMP_Group : uses template
+

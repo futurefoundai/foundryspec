@@ -11,7 +11,6 @@ rules:
     checks:
       mermaidType: mindmap
       requiredExtension: mermaid
-      requiredFrontmatter: [title, description, id]
       requiredNodes: [Role, Description, Goals]
     hub:
       id: GRP_Personas
@@ -29,7 +28,6 @@ rules:
     checks:
       mermaidType: sequenceDiagram
       requiredExtension: mermaid
-      requiredFrontmatter: [title, description, id]
       requiredNodes: [User, System]
     hub:
       id: GRP_Journeys
@@ -47,7 +45,9 @@ rules:
     checks:
       mermaidType: requirementDiagram
       requiredExtension: mermaid
-      requiredFrontmatter: [title, description, id]
+      traceability:
+        mustTraceTo: [PER_]
+        mustHaveDownlink: [FEAT_, COMP_, CTX_, BND_, REQ_]
     hub:
       id: GRP_Requirements
       title: Requirements
@@ -62,7 +62,8 @@ rules:
     type: metadata
     enforcement: error
     checks:
-      requiredFrontmatter: [title, description, id]
+      traceability:
+        mustHaveDownlink: [BND_, COMP_, FEAT_]
     hub:
       id: GRP_Context
       title: Context
@@ -77,7 +78,8 @@ rules:
     type: metadata
     enforcement: error
     checks:
-      requiredFrontmatter: [title, description, id]
+      traceability:
+        mustTraceTo: [CTX_]
     hub:
       id: GRP_Boundaries
       title: Boundaries
@@ -92,7 +94,8 @@ rules:
     type: metadata
     enforcement: error
     checks:
-      requiredFrontmatter: [title, description, id]
+      traceability:
+        mustTraceTo: [CTX_, REQ_, BND_]
     hub:
       id: GRP_Components
       title: Components

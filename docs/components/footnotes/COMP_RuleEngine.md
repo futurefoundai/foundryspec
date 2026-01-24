@@ -1,10 +1,7 @@
 ---
-id: RULES-GUIDE
+id: COMP_RuleEngine
 title: Rule Engine Documentation
 description: A comprehensive guide to the FoundrySpec Rule Engine and YAML configuration.
-entities:
-  - id: RULES-GUIDE
-    uplink: ROOT
 ---
 
 # FoundrySpec Rule Engine Documentation

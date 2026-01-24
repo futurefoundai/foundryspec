@@ -20,11 +20,13 @@ import {
     MindmapAnalyzer, 
     SequenceAnalyzer, 
     FlowchartAnalyzer, 
-    RequirementAnalyzer 
+    RequirementAnalyzer,
+    ClassAnalyzer
 } from './analyzers/index.js';
 
 export interface ProjectContext {
     referencedIds: Set<string>;
+    nodeMap: Map<string, { uplinks: string[], downlinks: string[] }>;
 }
 
 export class RuleEngine {
@@ -35,7 +37,8 @@ export class RuleEngine {
         'sequenceDiagram': new SequenceAnalyzer(),
         'graph': new FlowchartAnalyzer(),
         'flowchart': new FlowchartAnalyzer(),
-        'requirementDiagram': new RequirementAnalyzer()
+        'requirementDiagram': new RequirementAnalyzer(),
+        'classDiagram': new ClassAnalyzer()
     };
 
     constructor() {}
@@ -65,7 +68,6 @@ export class RuleEngine {
             this.executeRule(asset, rule, context);
         }
         
-        // Governance Check: Verify ID matches folder prefix rule
         // Governance Check: Verify ID matches folder prefix rule
         this.validateGovernance(asset);
 
@@ -106,7 +108,7 @@ export class RuleEngine {
     }
 
     private executeRule(asset: ProjectAsset, rule: Rule, context?: ProjectContext): void {
-        const { checks, enforcement } = rule;
+        const { checks = {}, enforcement } = rule;
         const errors: string[] = [];
 
         // 1. Syntax Check
@@ -154,12 +156,66 @@ export class RuleEngine {
             }
         }
 
-        // 5. Traceability Check (Orphan Detection)
-        if (checks.traceability?.mustBeLinked && context) {
-            const entities = Array.isArray(asset.data.entities) ? asset.data.entities : [];
+        // 5. Traceability Check (Advanced)
+        if (checks.traceability && context) {
+            const { nodeMap, referencedIds } = context;
+            const entities = [
+                 // Check only explicit entities, treating File ID as metadata container by default
+                ...(Array.isArray(asset.data.entities) ? asset.data.entities : [])
+            ];
+
             for (const ent of entities) {
-                if (ent.id && !context.referencedIds.has(ent.id)) {
-                    errors.push(`Orphan detected: Entity (ID: "${ent.id}") within "${asset.relPath}" is not linked to by any other document.`);
+                if (!ent.id) continue;
+
+                // A. Orphan Check
+                if (checks.traceability.mustBeLinked && !referencedIds.has(ent.id)) {
+                    errors.push(`Orphan detected: Node "${ent.id}" is not linked to by any other document.`);
+                }
+
+                // B. Recursive Uplink Check (mustTraceTo)
+                if (checks.traceability.mustTraceTo && checks.traceability.mustTraceTo.length > 0) {
+                    const traceTargets = checks.traceability.mustTraceTo;
+                    const canReach = (currentId: string, visited: Set<string>): boolean => {
+                        if (currentId === 'ROOT') return true; // Ultimate anchor is always valid
+                        if (traceTargets.some(prefix => currentId.startsWith(prefix))) return true;
+                        if (visited.has(currentId)) return false;
+                        
+                        visited.add(currentId);
+                        const node = nodeMap.get(currentId);
+                        if (!node) return false;
+
+                        return node.uplinks.some(upid => canReach(upid, visited));
+                    };
+
+                    if (!canReach(ent.id, new Set())) {
+                        errors.push(`Traceability Error: Node "${ent.id}" fails to trace back to any of: [${traceTargets.join(', ')}].`);
+                    }
+                }
+
+                // C. Downlink Check (mustHaveDownlink)
+                if (checks.traceability.mustHaveDownlink && checks.traceability.mustHaveDownlink.length > 0) {
+                    const node = nodeMap.get(ent.id);
+                    const implemented = node?.downlinks.some(d => 
+                        checks.traceability!.mustHaveDownlink!.some(prefix => d.startsWith(prefix))
+                    );
+                    
+                    // Also check if we are "implemented by" something (uplink FROM below)
+                    // The graph might be bi-directional in the context map, typically uplinks from children = downlinks for parent.
+                    // But context.nodeMap usually stores raw links. BuildManager assembles the full graph.
+                    // Assuming nodeMap.downlinks contains ALL incoming connections from children? 
+                    // Actually, BuildManager populates downlinks based on what it finds.
+                    
+                    if (!implemented) {
+                         // Check reverse references (if something lists US as an uplink)
+                         // This requires searching the whole map, or relying on BuildManager to have populated bi-directional links.
+                         const hasImplementer = Array.from(nodeMap.entries()).some(([nid, n]) => 
+                            n.uplinks.includes(ent.id) && checks.traceability!.mustHaveDownlink!.some(prefix => nid.startsWith(prefix))
+                         );
+
+                         if (!hasImplementer) {
+                             errors.push(`Implementation Gap: Node "${ent.id}" has no downstream implementation in namespaces: [${checks.traceability.mustHaveDownlink.join(', ')}].`);
+                         }
+                    }
                 }
             }
         }
@@ -196,7 +252,7 @@ export class RuleEngine {
                 });
             }
         }
-        console.log(chalk.gray(`Derived ${computedCategories.length} Hub Categories from rules: ${computedCategories.map(c => c.id).join(', ')}`));
+        // console.log(chalk.gray(`Derived ${computedCategories.length} Hub Categories from rules: ${computedCategories.map(c => c.id).join(', ')}`));
         return computedCategories;
     }
 

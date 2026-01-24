@@ -86,9 +86,10 @@ export class BuildManager {
         // --- 0. Load Build Rules ---
         const systemRulesPath = path.resolve(__dirname, '../templates/rules/default-rules.yaml');
         await this.ruleEngine.loadRules(systemRulesPath);
-        // Also look for local rules in .foundryspec/rules.yaml if exists
-        const localRulesPath = path.join(this.projectRoot, '.foundryspec', 'rules.yaml');
-        await this.ruleEngine.loadRules(localRulesPath);
+        
+        // Load Global Project Rules (Centralized Storage)
+        const globalRulesPath = this.configStore.getRulesPath(this.projectId);
+        await this.ruleEngine.loadRules(globalRulesPath);
 
         // --- 1. Load All Assets & Enforce Strict Structure ---
         const assets = await this.loadAssets(this.docsDir);
@@ -97,11 +98,6 @@ export class BuildManager {
         const syntheticAssets = await this.generateSyntheticAssets(assets);
         assets.push(...syntheticAssets);
 
-        // --- 1.5. Strict Persona Gate (Mindmap Rules) ---
-        // This is now partially handled by RuleEngine during loadAssets, 
-        // but we keep the method for complex inter-file consistency checks if needed.
-        await this.validatePersonas(assets);
-        
         // --- 1.6. Strict Folder Registry Check ---
         await this.validateFolderRegistry();
 
@@ -167,6 +163,31 @@ export class BuildManager {
 
         // --- 4. Centralized Validation ---
         const referencedIds: Set<string> = new Set();
+        // Construct Node Map for Graph Traversal (Rule Engine)
+        const nodeMap: Map<string, { uplinks: string[], downlinks: string[] }> = new Map();
+
+        // Helper to populate nodeMap
+        const addGraphNode = (id: string, uplinks: string | string[] | undefined, downlinks: string | string[] | undefined, requirements?: string | string[] | undefined) => {
+            if (!id) return;
+            const ups = Array.isArray(uplinks) ? uplinks : (uplinks ? [uplinks] : []);
+            const downs = Array.isArray(downlinks) ? downlinks : (downlinks ? [downlinks] : []);
+            const reqs = Array.isArray(requirements) ? requirements : (requirements ? [requirements] : []); // Treat requirements as uplinks for traceability purposes? Or separate? 
+            // In the deprecated logic, reqs were distinct. But for Rule Engine 'mustTraceTo', we usually trace uplinks.
+            // Let's add requirements to nodes, but standard rules might only check uplinks.
+            // Actually, for COMP -> REQ, 'requirements' field acts as an uplink.
+            // We should merge them into 'uplinks' for the generic 'recursive trace' to work naturally, 
+            // OR the rule engine needs to know about 'requirements'. 
+            // For now, let's merge 'requirements' into 'uplinks' in the graph view, 
+            // because logically a Component "depends on" / "traces up to" a Requirement.
+            
+            const effectiveUplinks = [...ups, ...reqs];
+
+            if (!nodeMap.has(id)) nodeMap.set(id, { uplinks: [], downlinks: [] });
+            const node = nodeMap.get(id)!;
+            effectiveUplinks.forEach(u => { if (typeof u === 'string' && !node.uplinks.includes(u)) node.uplinks.push(u); });
+            downs.forEach(d => { if (typeof d === 'string' && !node.downlinks.includes(d)) node.downlinks.push(d); });
+        };
+
         for (const asset of assets) {
             const { data } = asset;
             const collect = (val: string | string[] | undefined) => {
@@ -175,22 +196,49 @@ export class BuildManager {
                 else if (typeof val === 'string') referencedIds.add(val);
             };
             
+            // Collect Referenced IDs (for Orphan checks)
+            collect(data.uplink || data.traceability?.uplink);
+            collect(data.downlinks || data.traceability?.downlinks);
+            collect(data.requirements);
+
             const entities = Array.isArray(data.entities) ? data.entities : [];
             for (const ent of entities) {
                 collect(ent.uplink);
                 collect(ent.downlinks);
                 collect(ent.requirements);
             }
+
+            // Build Graph
+            addGraphNode(
+                data.id || data.traceability?.id, 
+                data.uplink || data.traceability?.uplink, 
+                data.downlinks || data.traceability?.downlinks, 
+                data.requirements
+            );
+            
+            for (const ent of entities) {
+                addGraphNode(ent.id, ent.uplink, ent.downlinks, ent.requirements);
+            }
         }
 
         // Perform Rule-Based Validation with project context
         for (const asset of assets) {
-            this.ruleEngine.validateAsset(asset, { referencedIds });
+            this.ruleEngine.validateAsset(asset, { referencedIds, nodeMap });
         }
 
-        await this.validateFrontmatter(assets, directoryBlueprints);
-        await this.validateProjectGraph(assets);
-        await this.validateTraceability(assets, idToFileMap, codeMap);
+        // Semantic Code Check (kept here until migrated to a rule for code parsing)
+        for (const [id, files] of codeMap.entries()) {
+            if (!idToFileMap.has(id)) {
+                // Warning only for now, or error? User said "leave codebase check for now".
+                // But previously it was in validateTraceability. 
+                // Let's keep it here as a standalone check.
+                console.error(chalk.red(`\n❌ Semantic Error: Code references non-existent FoundrySpec ID "${id}" in:\n${files.map(f => `   - ${f}`).join('\n')}`));
+                // We throw to fail build if strict
+                throw new Error(`Build failed due to broken code references.`);
+            }
+        }
+
+
         await this.validateMindmapLabels(assets, idToFileMap);
 
         // --- 5. Puppeteer Syntax Check ---
@@ -258,8 +306,9 @@ export class BuildManager {
              
              // Collect assets in this folder OR matching the idPrefix
              const dirAssets = assets.filter(a => 
-                a.relPath.startsWith(`${dir}/`) || 
-                (catConfig.idPrefix && (a.data.id || '').startsWith(catConfig.idPrefix))
+                (a.relPath.startsWith(`${dir}/`) || 
+                (catConfig.idPrefix && (a.data.id || '').startsWith(catConfig.idPrefix))) &&
+                !a.relPath.includes('/footnotes/')
              );
 
              const items = dirAssets.map(a => {
@@ -548,159 +597,11 @@ ${standaloneAssets.map(asset => {
     }
 
     // --- Validation Logic (Semantic) ---
-    private async validatePersonas(assets: ProjectAsset[]): Promise<void> {
-        console.log(chalk.blue('🔍 Validating Persona definitions (Mindmap Rules)...'));
-        
-        const foundPersonas: { id: string, data: Record<string, unknown>, relPath: string, content: string }[] = [];
 
-        // Scan ALL assets for PER_ IDs (Top level OR Entity level)
-        for (const asset of assets) {
-            const { data, relPath, content } = asset;
-            const topId = data.id || data.traceability?.id;
-            
-            if (topId && typeof topId === 'string' && topId.startsWith('PER_')) {
-                foundPersonas.push({ id: topId, data, relPath, content });
-            }
 
-            const entities = [
-                ...(Array.isArray(data.entities) ? data.entities : []),
-                ...(Array.isArray(data.traceability?.entities) ? data.traceability.entities : [])
-            ];
 
-            for (const ent of entities) {
-                if (ent.id && typeof ent.id === 'string' && ent.id.startsWith('PER_')) {
-                    // For entities, we use the main asset content for visual validation
-                    foundPersonas.push({ id: ent.id, data: ent, relPath, content });
-                }
-            }
-        }
 
-        if (foundPersonas.length === 0) {
-            throw new Error(chalk.red(`\n❌ strict Persona Gate Failed: No Personas found.
-   FoundrySpec requires at least one defined Actor (ID starting with "PER_") to anchor the documentation.
-   
-   Please create an atomic persona mindmap in: docs/discovery/personas/PER_User.mermaid`));
-        }
 
-        for (const { id, content, relPath } of foundPersonas) {
-            // Must be a mindmap
-            if (!content.trim().startsWith('mindmap')) {
-                 throw new Error(chalk.red(`\n❌ Persona Architecture Error: Persona "${id}" in ${relPath} must be a Mermaid mindmap.`));
-            }
-
-            // Visual Node Validation: Check for required branches
-            const lines = content.split('\n').map(l => l.trim().toLowerCase());
-            const hasBranch = (name: string) => lines.some(l => l === name.toLowerCase());
-
-            const missing = [];
-            if (!hasBranch('Role')) missing.push('Role');
-            if (!hasBranch('Description')) missing.push('Description');
-            if (!hasBranch('Goals')) missing.push('Goals');
-
-            if (missing.length > 0) {
-                 throw new Error(chalk.red(`\n❌ Persona Validation Error in ${relPath} ("${id}"):
-   Mindmap is missing required structural branches: ${missing.join(', ')}.
-   
-   Ensure your mindmap has nodes labeled exactly "Role", "Description", and "Goals".`));
-            }
-        }
-        console.log(chalk.green('✅ Persona Gate passed. Visual definitions are strictly structured.'));
-    }
-
-    private async validateTraceability(assets: ProjectAsset[], idToFileMap: Map<string, string>, codeMap: Map<string, string[]>): Promise<void> {
-        console.log(chalk.blue('🔍 Validating semantic traceability (Spec <-> Code)...'));
-        
-        for (const [id, files] of codeMap.entries()) {
-            if (!idToFileMap.has(id)) {
-                const errorMsg = `\n❌ Semantic Error: Code references non-existent FoundrySpec ID "${id}" in:\n${files.map(f => `   - ${f}`).join('\n')}`;
-                throw new Error(chalk.red(errorMsg));
-            }
-        }
-
-        const nodeMap: Map<string, { uplinks: string[], downlinks: string[], relPath: string, requirements?: string[] }> = new Map();
-        
-        for (const asset of assets) {
-            const { data, relPath } = asset;
-            const addNode = (id: string, uplinks: string | string[] | undefined, downlinks: string | string[] | undefined, requirements?: string | string[] | undefined) => {
-                if (!id) return;
-                const ups = Array.isArray(uplinks) ? uplinks : (uplinks ? [uplinks] : []);
-                const downs = Array.isArray(downlinks) ? downlinks : (downlinks ? [downlinks] : []);
-                const reqs = Array.isArray(requirements) ? requirements : (requirements ? [requirements] : []);
-                
-                if (!nodeMap.has(id)) nodeMap.set(id, { uplinks: [], downlinks: [], relPath, requirements: [] });
-                const node = nodeMap.get(id)!;
-                ups.forEach(u => { if (!node.uplinks.includes(u)) node.uplinks.push(u); });
-                downs.forEach(d => { if (!node.downlinks.includes(d)) node.downlinks.push(d); });
-                reqs.forEach(r => { if (!node.requirements!.includes(r)) node.requirements!.push(r); });
-            };
-
-            addNode(data.id || data.traceability?.id, data.uplink || data.traceability?.uplink, data.downlinks || data.traceability?.downlinks, data.requirements);
-            const entities = [
-                ...(Array.isArray(data.entities) ? data.entities : []),
-                ...(Array.isArray(data.traceability?.relationships) ? data.traceability.relationships : []),
-                ...(Array.isArray(data.traceability?.entities) ? data.traceability.entities : [])
-            ];
-            for (const ent of entities) addNode(ent.id, ent.uplink, ent.downlinks, ent.requirements);
-        }
-
-        // Traceability Enforcement
-        const traceToPersona = (id: string, visited: Set<string> = new Set()): boolean => {
-            if (id.startsWith('PER_')) return true;
-            if (visited.has(id)) return false;
-            visited.add(id);
-            const node = nodeMap.get(id);
-            if (!node) return false;
-            for (const up of node.uplinks) if (traceToPersona(up, visited)) return true;
-            return false;
-        };
-
-        for (const [id, node] of nodeMap.entries()) {
-            if (id.startsWith('REQ_')) {
-                if (!traceToPersona(id)) throw new Error(chalk.red(`\n❌ Traceability Error in ${node.relPath}: Requirement "${id}" orphaned (no link to PER_).`));
-                // Enforcement B: Every Requirement MUST have at least one implementation downlink (or be linked TO by one)
-                const validimplPrefixes = ['FEAT_', 'COMP_', 'CTX_', 'BND_', 'REQ_'];
-                
-                const hasDownlink = node.downlinks.some(d => validimplPrefixes.some(p => d.startsWith(p)));
-                
-                // Also check if any implementation links TO this requirement via data.requirements or data.uplink
-                const isImplemented = Array.from(nodeMap.entries()).some(([nid, n]) => 
-                    (n.uplinks.includes(id) || n.requirements?.includes(id)) &&
-                    validimplPrefixes.some(p => nid.startsWith(p))
-                );
-                
-                if (!hasDownlink && !isImplemented) {
-                    throw new Error(chalk.red(`\n❌ Traceability Error in ${node.relPath}: Requirement "${id}" not implemented. It must be linked to a FEAT, COMP, CTX, or BND.`));
-                }
-            }
-            if (id.startsWith('FEAT_') || id.startsWith('COMP_')) {
-                const reqs = node.requirements || [];
-                const uplinks = node.uplinks || [];
-                
-                if (reqs.length === 0 && uplinks.length === 0) {
-                    throw new Error(chalk.red(`\n❌ Traceability Error in ${node.relPath}: Implementation "${id}" is orphaned. It must have either 'uplink' (to Architecture) or 'requirements' (to Functionality).`));
-                }
-                
-                for (const reqId of reqs) if (!idToFileMap.has(reqId)) throw new Error(chalk.red(`\n❌ Traceability Error: "${id}" links to missing requirement "${reqId}".`));
-                for (const upId of uplinks) if (!idToFileMap.has(upId)) throw new Error(chalk.red(`\n❌ Traceability Error: "${id}" links to missing uplink "${upId}".`));
-            }
-        }
-        console.log(chalk.green('✅ Absolute semantic traceability is valid.'));
-    }
-
-    private async validateFrontmatter(assets: ProjectAsset[], _directoryBlueprints: Map<string, Set<string>>): Promise<void> {
-        console.log(chalk.blue('🔍 Validating frontmatter...'));
-        for (const { relPath, data } of assets) {
-            const id = data.id || data.traceability?.id;
-            if (!data || !data.title || !data.description || !id) {
-                throw new Error(chalk.red(`\n❌ Metadata error in ${relPath}: Missing title, description, or id (check traceability.id).`));
-            }
-            if (relPath.endsWith('.md') && !relPath.startsWith('others/')) {
-                 // Markdown files are now treated as footnotes (leaf annotations).
-                 // They are exempt from strict graph connectivity validation because
-                 // they are linked via filename convention, not explicit ID graph edges.
-            }
-        }
-    }
 
     // This is also key as well as other custom validators based on project roles
     private async validateMindmapLabels(_assets: ProjectAsset[], _idToFileMap: Map<string, string>): Promise<void> {
@@ -708,13 +609,7 @@ ${standaloneAssets.map(asset => {
          // (Implementation omitted for brevity but assumed similar to previous)
     }
 
-    // TODO: This ought to be worked on as it is very key
-    private async validateProjectGraph(_assets: ProjectAsset[]): Promise<void> {
-        console.log(chalk.blue('🔍 Validating project graph connectivity...'));
-        // (Graph traversal logic to ensure no orphans from ROOT)
-        // ...
-        console.log(chalk.green('✅ Project graph is valid.'));
-    }
+
 
     private async validateFolderRegistry(): Promise<void> {
         console.log(chalk.blue('🔍 Validating folder registry (Strict Policy)...'));

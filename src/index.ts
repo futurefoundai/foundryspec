@@ -16,6 +16,8 @@ import chalk from 'chalk';
 import path from 'path';
 import fs from 'fs-extra';
 import { fileURLToPath } from 'url';
+import inquirer from 'inquirer';
+import yaml from 'js-yaml';
 
 // Import managers using .js extension for ESM compatibility
 import { ScaffoldManager } from './ScaffoldManager.js';
@@ -24,6 +26,7 @@ import { GitManager } from './GitManager.js';
 import { FileChange } from './types/git.js';
 import { ProbeManager } from './ProbeManager.js';
 import { ConfigStore } from './ConfigStore.js';
+import { Rule, RuleSet } from './types/rules.js';
 
 /**
  * @foundryspec COMP_CLI
@@ -178,8 +181,31 @@ program
                 await fs.ensureDir(path.dirname(commentsPath));
                 await fs.copy(source, commentsPath);
                 console.log(chalk.green(`✅ Comments imported from ${file}`));
+            } else if (action === 'resolve') {
+                if (!file) throw new Error('Usage: comments resolve <comment-id>');
+                if (!await fs.pathExists(commentsPath)) throw new Error('No comments found.');
+                
+                const registry = await fs.readJson(commentsPath);
+                let found = false;
+                
+                for (const key in registry) {
+                    const comments = registry[key];
+                    const comment = comments.find((c: { id: string }) => c.id === file);
+                    if (comment) {
+                        comment.status = 'resolved';
+                        found = true;
+                        break;
+                    }
+                }
+                
+                if (found) {
+                    await fs.writeJson(commentsPath, registry, { spaces: 2 });
+                    console.log(chalk.green(`✅ Comment ${file} marked as resolved.`));
+                } else {
+                    console.log(chalk.red(`❌ Comment ID "${file}" not found.`));
+                }
             } else {
-                console.log(chalk.yellow('Unknown action. Use "dump" or "import".'));
+                console.log(chalk.yellow('Unknown action. Use "dump", "import", or "resolve".'));
             }
         } catch (err: unknown) {
             const msg = err instanceof Error ? err.message : String(err);
@@ -206,35 +232,142 @@ program
 
 program
     .command('add')
-    .description('Add a new documentation category')
-    .argument('<category>', 'Name of the category (e.g., architecture, boundaries)')
+    .description('Interactive wizard to add a new governed component folder')
+    .argument('<category>', 'Name of the category (e.g., "Payments", "Audit Logs")')
     .action(async (category: string) => {
-        console.log(chalk.blue(`\n📂 Adding category: ${category}...`));
         try {
             const root = process.cwd();
             const idPath = path.join(root, '.foundryid');
             if (!await fs.pathExists(idPath)) throw new Error('No .foundryid found. Run in project root.');
             const id = (await fs.readFile(idPath, 'utf8')).trim();
-            
-            const config = await store.getProject(id);
-            if (!config) throw new Error('Project not found in store.');
 
-            const catSlug = category.toLowerCase().replace(/\s+/g, '-');
+            console.log(chalk.blue(`\n🧙 FoundrySpec Governance Wizard`));
+            console.log(chalk.gray(`Configuring new category: "${category}"`));
+
+            // 1. Generate Proposal
+            const slug = category.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+            const title = category.charAt(0).toUpperCase() + category.slice(1);
+            const prefixCandidate = slug.slice(0, 3).toUpperCase() + '_';
             
-            // Update Store
-            const categories = config.categories || [];
-            if (!categories.find(c => c.path === catSlug)) {
-                categories.push({
-                    name: category,
-                    path: catSlug,
-                    description: `Documentation for ${category}`
-                });
-                await store.updateProject(id, { categories });
+            // 2. Interactive Selection
+            const answers = await inquirer.prompt([
+                {
+                    type: 'list',
+                    name: 'diagramType',
+                    message: `What type of diagrams will "${title}" primarily contain?`,
+                    choices: [
+                        { name: 'Strict: Sequence Diagram (Interaction)', value: 'sequenceDiagram' },
+                        { name: 'Strict: Mindmap (Taxonomy/Brainstorming)', value: 'mindmap' },
+                        { name: 'Strict: Flowchart (Process/Logic)', value: 'flowchart' },
+                        { name: 'Strict: Requirement Diagram (Traceability)', value: 'requirementDiagram' },
+                        new inquirer.Separator(),
+                        { name: 'Flexible: Any Mermaid Diagram (Metadata Only)', value: 'any' }
+                    ]
+                }
+            ]);
+
+            const selectedType = answers.diagramType;
+            const isStrict = selectedType !== 'any';
+
+            // 3. Construct Rule
+            const ruleId = `${slug}-registration`;
+            const groupId = `GRP_${title.replace(/\s+/g, '')}`;
+            
+            const newRule: Rule = {
+                id: ruleId,
+                name: `${title} Registration`,
+                level: 'folder',
+                description: `Governance for ${title} domain.`,
+                target: {
+                    idPrefix: prefixCandidate,
+                    pathPattern: `${slug}/*`
+                },
+                type: isStrict ? 'syntax' : 'metadata',
+                enforcement: 'error',
+                // Explicitly empty checks/checks with type based on selection
+                checks: isStrict ? { 
+                    mermaidType: selectedType,
+                    requiredExtension: 'mermaid'
+                } : {},
+                hub: {
+                    id: groupId,
+                    title: title
+                }
+            };
+
+            // 4. Inject into Global Store Rules
+            // We use the ID to find the correct storage path
+            const customRulesPath = store.getRulesPath(id);
+            let customRules: RuleSet = { rules: [] };
+            
+            // Ensure parent dir exists
+            await fs.ensureDir(path.dirname(customRulesPath));
+
+            if (await fs.pathExists(customRulesPath)) {
+                try {
+                    const content = await fs.readFile(customRulesPath, 'utf8');
+                    customRules = yaml.load(content) as RuleSet || { rules: [] };
+                    if (!customRules.rules) customRules.rules = [];
+                } catch (_) { // eslint-disable-line @typescript-eslint/no-unused-vars
+                    console.warn(chalk.yellow(`Warning: Could not parse existing custom rules. Overwriting.`));
+                }
             }
 
-            // Create Directory
-            await fs.ensureDir(path.join(root, 'docs', catSlug));
-            console.log(chalk.green(`✅ Category "${category}" added and registered.`));
+            // Check for duplicates
+            if (customRules.rules.some(r => r.id === ruleId)) {
+                throw new Error(`Rule "${ruleId}" already exists in custom rules.`);
+            }
+
+            customRules.rules.push(newRule);
+            await fs.writeFile(customRulesPath, yaml.dump(customRules));
+            console.log(chalk.green(`\n✅ Governance Rule injected into Global Project Storage.`));
+
+            // 5. Scaffold Directory & File
+            const dirPath = path.join(root, 'docs', slug);
+            await fs.ensureDir(dirPath);
+
+            const starterId = `${prefixCandidate}Overview`;
+            const starterFile = `${starterId}.mermaid`;
+            
+            let starterContent = `---
+title: ${title} Overview
+description: High-level overview of the ${title} domain.
+id: "${starterId}"
+uplink: "${groupId}"
+---
+`;
+            
+            if (selectedType === 'sequenceDiagram') {
+                starterContent += `sequenceDiagram
+    participant User
+    participant ${title}
+    User->>${title}: Interact
+`;
+            } else if (selectedType === 'mindmap') {
+                starterContent += `mindmap
+  root((${title}))
+    Feature 1
+    Feature 2
+`;
+            } else if (selectedType === 'requirementDiagram') {
+                starterContent += `requirementDiagram
+    requirement Init {
+        id: "${prefixCandidate}Init"
+        text: "Initial requirement"
+        risk: Low
+        verifymethod: Test
+    }
+`;
+            } else {
+                // Flowchart / Flexible default
+                starterContent += `graph TD
+    A[Start] --> B[${title}]
+`;
+            }
+
+            await fs.writeFile(path.join(dirPath, starterFile), starterContent);
+            console.log(chalk.green(`✅ Scaffolding complete: docs/${slug}/${starterFile}`));
+            console.log(chalk.gray(`\nRun 'foundryspec build' to update the hub.`));
 
         } catch (err: unknown) {
             const msg = err instanceof Error ? err.message : String(err);

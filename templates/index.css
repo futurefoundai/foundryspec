@@ -249,6 +249,11 @@ g[class*="mindmap-node-l3"] > text,
   stroke-width: 1px !important;
 }
 
+/* Interactive Nodes */
+.clickable-node, .node {
+  cursor: pointer !important;
+}
+
 /* --- Modal --- */
 
 #modal-backdrop {

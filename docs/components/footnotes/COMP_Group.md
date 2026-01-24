@@ -2,14 +2,6 @@
 id: 'COMP_Group'
 title: Scaffold Manager
 description: Core component for project initialization and template management.
-entities:
-  - id: 'COMP_Group'
-    uplink:
-      - 'COMP_Overview'
-      - 'ROOT'
-      - 'GRP_Requirements'
-    requirements:
-      - 'REQ_NonFunctional'
 ---
 
 ## Overview
@@ -20,9 +12,9 @@ The `ScaffoldManager` is the core component responsible for initializing new Fou
 
 - **Initialization**: Generates the standard `docs/` folder structure (Discovery, Context, Boundaries, Components) and the `docs/others/` directory for foreign assets.
 - **Atomic Architecture**: Scaffolds individual, self-contained assets in strict subdirectories:
-  - `docs/discovery/personas/` (Mindmaps)
-  - `docs/discovery/requirements/` (Requirement Diagrams)
-  - `docs/discovery/journeys/` (Sequence Diagrams)
+  - `docs/personas/` (Mindmaps)
+  - `docs/requirements/` (Requirement Diagrams)
+  - `docs/journeys/` (Sequence Diagrams)
 - **Traceability Injection**: Automatically adds base frontmatter to new assets to ensure "Zero-Question" connectivity from the start.
 
 ## Implementation Details

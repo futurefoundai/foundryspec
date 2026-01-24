@@ -1,0 +1,28 @@
+---
+id: "COMP_RuleEngine"
+title: Rule Engine
+description: Core validation engine that enforces structural and semantic integrity.
+uplink: "COMP_BuildManager"
+requirements:
+  - "REQ_PathIntegrity"
+  - "REQ_Core"
+---
+
+classDiagram
+    class COMP_RuleEngine {
+        <<Component>>
+        +loadRules(path)
+        +validateAsset(asset)
+        +getHubCategories()
+    }
+    
+    class Analyzers {
+        <<Module>>
+        +MindmapAnalyzer
+        +SequenceAnalyzer
+        +RequirementAnalyzer
+        +FlowchartAnalyzer
+        +ClassAnalyzer
+    }
+    
+    COMP_RuleEngine --> Analyzers : uses
