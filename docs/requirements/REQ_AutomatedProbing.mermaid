@@ -10,6 +10,12 @@ entities:
       - "PER_SystemAnalyst"
     downlinks:
       - "COMP_ProbeManager"
+      - "REQ_GranularTraceability"
+  - id: "REQ_GranularTraceability"
+    classification: Functional
+    uplink: "REQ_AutomatedProbing"
+    downlinks:
+      - "COMP_ProbeManager"
 ---
 
 requirementDiagram
@@ -19,3 +25,12 @@ requirementDiagram
         risk: Low
         verifymethod: Demonstration
     }
+
+    requirement GranularTraceability {
+        id: "REQ_GranularTraceability"
+        text: "The probe shall verify implementation existence for individual architectural nodes (sub-entities) defined within diagrams, not just top-level spec files."
+        risk: Medium
+        verifymethod: Test
+    }
+
+    AutomatedProbing -contains-> GranularTraceability
