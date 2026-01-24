@@ -1,0 +1,17 @@
+---
+id: "JRN_AutomatedEvolution"
+title: Automated Specification Evolution
+description: How the coding agent interacts with the Rule Engine and CLI to evolve documentation.
+uplink: "PER_CodingAgent"
+---
+
+sequenceDiagram
+    participant User as Coding Agent
+    participant System as FoundrySpec Engine
+    
+    User->>System: foundryspec build
+    System->>System: validateAsset(new_node)
+    System-->>User: Error: Linkage violation
+    User->>User: self-correct(missing_links)
+    User->>System: foundryspec build
+    System-->>User: Success: 100% Integrity

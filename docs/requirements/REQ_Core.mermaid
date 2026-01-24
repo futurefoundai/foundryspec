@@ -4,13 +4,14 @@ title: Core Requirements
 description: General functional and non-functional requirements.
 classification: Functional
 entities:
-  - id: "REQ_Core"
+  - id: REQ_Core
     uplink: 
-      - "GRP_Requirements"
-      - "PER_SystemAnalyst"
+      - GRP_Requirements
+      - PER_SystemAnalyst
     downlinks:
-      - "REQ_Functional"
-      - "REQ_NonFunctional"
+      - REQ_SafeRemoval
+      - REQ_Functional
+      - REQ_NonFunctional
   - id: "REQ_Functional"
     classification: Functional
     uplink: 
@@ -40,11 +41,16 @@ entities:
     uplink: "REQ_DynamicRoot"
     downlinks:
       - "COMP_BuildManager"
-  - id: "REQ_ZeroConfig"
+  - id: REQ_ZeroConfig
     classification: Functional
-    uplink: "REQ_Functional"
+    uplink: REQ_Functional
     downlinks:
-      - "COMP_ConfigStore"
+      - COMP_ConfigStore
+  - id: REQ_SafeRemoval
+    classification: Functional
+    uplink: REQ_Core
+    downlinks:
+      - COMP_CLI
 ---
 
 requirementDiagram
@@ -54,6 +60,16 @@ requirementDiagram
         risk: Low
         verifymethod: Test
     }
+
+    requirement Safe_Removal {
+        id: "REQ_SafeRemoval"
+        text: "The system shall prevent removing categories referenced by other documents."
+        risk: Medium
+        verifymethod: Test
+    }
+
+    Functional -contains-> Safe_Removal
+
 
     requirement Dynamic_Root {
         id: "REQ_DynamicRoot"

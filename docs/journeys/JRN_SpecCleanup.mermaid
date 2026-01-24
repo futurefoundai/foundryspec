@@ -1,0 +1,20 @@
+---
+id: "JRN_SpecCleanup"
+title: Documentation Integrity Maintenance
+description: Manual or automated cleanup of documentation categories.
+uplink: "PER_SystemAnalyst"
+---
+
+sequenceDiagram
+    participant User as System Analyst
+    participant System as FoundrySpec CLI
+    
+    User->>System: foundryspec remove <category>
+    System->>System: Scan for dependencies
+    alt Has Dependencies
+        System-->>User: Error: blocked
+    else Safe
+        System->>System: Delete directory
+        System->>System: Remove rule
+        System-->>User: Success
+    end

@@ -12,6 +12,8 @@ rules:
       mermaidType: mindmap
       requiredExtension: mermaid
       requiredNodes: [Role, Description, Goals]
+      traceability:
+        mustHaveDownlink: [JRN_]
     hub:
       id: GRP_Personas
       title: Personas
@@ -19,7 +21,7 @@ rules:
   - id: journey-syntax
     name: Journey Strict Syntax
     level: folder
-    description: "Journeys must be sequence diagrams to accurately capture interaction flows."
+    description: "Journeys must be sequence diagrams and must trace to a Persona (User)."
     target:
       idPrefix: JRN_
       pathPattern: "journeys/*"
@@ -29,6 +31,8 @@ rules:
       mermaidType: sequenceDiagram
       requiredExtension: mermaid
       requiredNodes: [User, System]
+      traceability:
+        mustTraceTo: [PER_]
     hub:
       id: GRP_Journeys
       title: Journeys

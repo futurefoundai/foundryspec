@@ -163,6 +163,12 @@ export class BuildManager {
 
         // --- 4. Centralized Validation ---
         const referencedIds: Set<string> = new Set();
+        
+        // Register Hub Categories as valid reference points to avoid Orphan errors for root links
+        const categoriesFromRules = this.ruleEngine.getHubCategories();
+        categoriesFromRules.forEach(cat => referencedIds.add(cat.id));
+        referencedIds.add('ROOT');
+
         // Construct Node Map for Graph Traversal (Rule Engine)
         const nodeMap: Map<string, { uplinks: string[], downlinks: string[] }> = new Map();
 
