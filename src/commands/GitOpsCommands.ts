@@ -9,7 +9,7 @@ export function registerGitOpsCommands(program: Command, findProjectRoot: (dir: 
     program
         .command('gitops')
         .description('Manage GitOps integration and enforcement policies')
-        .argument('<action>', 'Action to perform (install, check)')
+        .argument('<action>', 'Action to perform (install, ci)')
         .action(async (action: string) => {
             try {
                 const root = await findProjectRoot(process.cwd());
