@@ -141,3 +141,66 @@ rules:
     checks:
       traceability:
         mustBeLinked: true
+
+  - id: data-registration
+    name: Data Model Registration
+    level: folder
+    description: "ER diagrams accessible via 'Add Data' context menu for AI collaboration."
+    target:
+      idPrefix: DATA_
+      pathPattern: "data/*"
+    type: structural
+    enforcement: error
+    checks:
+      mermaidType: erDiagram
+      requiredExtension: mermaid
+      onePerFile: true
+      accessControl:
+        allowedReferencers: [COMP_, BND_, CTX_, SEQ_, FLOW_]
+      traceability:
+        mustBeLinked: true
+    hub:
+      id: GRP_Data
+      title: Data Models
+
+  - id: sequence-registration
+    name: Sequence Registration
+    level: folder
+    description: "Process sequences accessible via 'Add Sequence' context menu. Participants must be valid ecosystem nodes."
+    target:
+      idPrefix: SEQ_
+      pathPattern: "sequences/*"
+    type: structural
+    enforcement: error
+    checks:
+      mermaidType: sequenceDiagram
+      requiredExtension: mermaid
+      onePerFile: true
+      allowedNodePrefixes: [COMP_, BND_, CTX_, DATA_, FLOW_]
+      traceability:
+        mustTraceTo: [COMP_, BND_, CTX_]
+        mustBeLinked: true
+    hub:
+      id: GRP_Sequences
+      title: Sequences
+
+  - id: flow-registration
+    name: Flow Registration
+    level: folder
+    description: "Logical flows accessible via 'Add Flow' context menu for AI collaboration."
+    target:
+      idPrefix: FLOW_
+      pathPattern: "flows/*"
+    type: structural
+    enforcement: error
+    checks:
+      mermaidType: flowchart
+      requiredExtension: mermaid
+      onePerFile: true
+      allowedNodePrefixes: [COMP_, BND_, DATA_, SEQ_]
+      traceability:
+        mustBeLinked: true
+    hub:
+      id: GRP_Flows
+      title: Flows
+

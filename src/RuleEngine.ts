@@ -182,7 +182,45 @@ export class RuleEngine {
             }
         }
         
-        // 6. Traceability Check (Advanced)
+        // 6. One-Per-File Check
+        if (checks.onePerFile && rule.target.idPrefix) {
+            const entities = Array.isArray(asset.data.entities) ? asset.data.entities : [];
+            const matchingNodes = entities.filter((ent: any) => 
+                ent.id && ent.id.startsWith(rule.target.idPrefix!)
+            );
+            if (matchingNodes.length !== 1) {
+                errors.push(
+                    `Expected exactly 1 node with prefix "${rule.target.idPrefix}", found ${matchingNodes.length}. ` +
+                    `Each file must contain exactly one entity of this type.`
+                );
+            }
+        }
+        
+        // 7. Access Control Check
+        if (checks.accessControl?.allowedReferencers && context) {
+            const entities = Array.isArray(asset.data.entities) ? asset.data.entities : [];
+            const nodeId = entities.find((ent: any) => 
+                ent.id && ent.id.startsWith(rule.target.idPrefix || '')
+            )?.id;
+            
+            if (nodeId && context.nodeMap.has(nodeId)) {
+                const node = context.nodeMap.get(nodeId)!;
+                const invalidReferencers = node.uplinks.filter((uplink: string) => {
+                    const allowed = checks.accessControl!.allowedReferencers!;
+                    return !allowed.some(prefix => uplink.startsWith(prefix));
+                });
+                
+                if (invalidReferencers.length > 0) {
+                    errors.push(
+                        `Access control violation for "${nodeId}":\n` +
+                        `  Invalid referencers: ${invalidReferencers.join(', ')}\n` +
+                        `  Allowed prefixes: ${checks.accessControl!.allowedReferencers!.join(', ')}`
+                    );
+                }
+            }
+        }
+        
+        // 8. Traceability Check (Advanced)
         if (checks.traceability && context) {
             const { nodeMap, referencedIds } = context;
             const entities = [

@@ -14,6 +14,7 @@ export interface RuleChecks {
     requiredNodes?: string[];
     requiredFrontmatter?: string[];
     requiredExtension?: string;
+    onePerFile?: boolean; // Enforce exactly one entity per file
     traceability?: {
         linksToPersona?: boolean;
         requiresImplementation?: boolean;
@@ -21,6 +22,9 @@ export interface RuleChecks {
         mustTraceTo?: string[];
         mustHaveDownlink?: string[];
         allowedDownlinkPrefixes?: string[];
+    };
+    accessControl?: {
+        allowedReferencers?: string[]; // ID prefixes allowed to link to this category
     };
     allowedNodePrefixes?: string[];
 }

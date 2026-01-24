@@ -37,7 +37,10 @@ export class ScaffoldManager {
         { name: "Journeys", path: "journeys", description: "L0: User journey maps", enabled: true },
         { name: "Context", path: "context", description: "L1: System context and high-level strategy", enabled: true },
         { name: "Boundaries", path: "boundaries", description: "L2: Technical boundaries and communication", enabled: true },
-        { name: "Components", path: "components", description: "L3: Internal module structure", enabled: true }
+        { name: "Components", path: "components", description: "L3: Internal module structure", enabled: true },
+        { name: "Data Models", path: "data", description: "ER diagrams for AI collaboration", enabled: true },
+        { name: "Sequences", path: "sequences", description: "Process flows for AI collaboration", enabled: true },
+        { name: "Flows", path: "flows", description: "Logical workflows for AI collaboration", enabled: true }
     ];
 
     constructor(projectName?: string) {
@@ -175,6 +178,66 @@ graph TD
     end
 `;
         await fs.writeFile(path.join(boundariesPath, 'boundaries.mermaid'), boundariesContent);
+
+        // --- 7. Data Models ---
+        const dataPath = path.join(this.targetDir, 'data');
+        const dataContent = `---
+title: User Data Model
+description: Entity-relationship diagram for user data.
+id: "DATA_UserModel"
+---
+erDiagram
+    USER ||--o{ ORDER : places
+    USER {
+        string id PK
+        string name
+        string email
+    }
+    ORDER {
+        string id PK
+        string userId FK
+        date orderDate
+    }
+`;
+        await fs.writeFile(path.join(dataPath, 'DATA_UserModel.mermaid'), dataContent);
+
+        // --- 8. Sequences ---
+        const sequencesPath = path.join(this.targetDir, 'sequences');
+        const sequenceContent = `---
+title: Authentication Flow
+description: Sequence diagram showing authentication process.
+id: "SEQ_AuthFlow"
+uplinks: ["COMP_Auth"]
+---
+sequenceDiagram
+    participant User as PER_User
+    participant App as COMP_Auth
+    participant DB as DATA_UserModel
+    
+    User->>App: Login Request
+    App->>DB: Validate Credentials
+    DB-->>App: User Data
+    App-->>User: Auth Token
+`;
+        await fs.writeFile(path.join(sequencesPath, 'SEQ_AuthFlow.mermaid'), sequenceContent);
+
+        // --- 9. Flows ---
+        const flowsPath = path.join(this.targetDir, 'flows');
+        const flowContent = `---
+title: Data Processing Pipeline
+description: Logical flow for data processing.
+id: "FLOW_DataPipeline"
+---
+flowchart TD
+    Start([Start]) --> Input[Receive Input]
+    Input --> Validate{Valid?}
+    Validate -->|Yes| Process[Process Data]
+    Validate -->|No| Error[Return Error]
+    Process --> Save[Save to DATA_UserModel]
+    Save --> End([End])
+    Error --> End
+`;
+        await fs.writeFile(path.join(flowsPath, 'FLOW_DataPipeline.mermaid'), flowContent);
 
         // --- REGISTER PROJECT GLOBALLY ---
         const projectId = crypto.randomUUID();
