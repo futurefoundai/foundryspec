@@ -180,12 +180,12 @@ async function initApp() {
         if (contextMenu && !contextMenu.contains(e.target)) contextMenu.style.display = 'none'; 
     });
 
-    document.getElementById('menu-comments').addEventListener('click', (e) => openSidebar(activeNodeId, 'comments'));
+    document.getElementById('menu-comments').addEventListener('click', (e) => openSidebar(activeNodeId));
     document.getElementById('menu-footnotes').addEventListener('click', (e) => handleFootnoteSelection(activeNodeId, e.clientX, e.clientY));
-    document.getElementById('menu-data').addEventListener('click', (e) => openSidebar(activeNodeId, 'design', 'DATA'));
-    document.getElementById('menu-sequence').addEventListener('click', (e) => openSidebar(activeNodeId, 'design', 'SEQ'));
-    document.getElementById('menu-flow').addEventListener('click', (e) => openSidebar(activeNodeId, 'design', 'FLOW'));
-    document.getElementById('menu-state').addEventListener('click', (e) => openSidebar(activeNodeId, 'design', 'STATE'));
+    document.getElementById('menu-data').addEventListener('click', (e) => openSidebar(activeNodeId));
+    document.getElementById('menu-sequence').addEventListener('click', (e) => openSidebar(activeNodeId));
+    document.getElementById('menu-flow').addEventListener('click', (e) => openSidebar(activeNodeId));
+    document.getElementById('menu-state').addEventListener('click', (e) => openSidebar(activeNodeId));
     
     if (saveCommentBtn) saveCommentBtn.addEventListener('click', saveComment);
 
@@ -427,10 +427,9 @@ function openNavigationModal(title, targets) {
 }
 
 // @foundryspec/start COMP_SidebarControllers
-function openSidebar(nodeId, tab = 'comments', filter = null) {
+function openSidebar(nodeId) {
     if (contextMenu) contextMenu.style.display = 'none';
     activeNodeId = nodeId;
-    sidebarCurrentTab = tab;
     
     // UI Update
     const sidebar = document.getElementById('context-sidebar');
@@ -438,22 +437,13 @@ function openSidebar(nodeId, tab = 'comments', filter = null) {
     sidebar.classList.add('open');
     title.innerText = nodeId;
 
-    switchSidebarTab(tab, filter);
+    renderSidebarContent();
 }
 
 function closeSidebar() {
     document.getElementById('context-sidebar').classList.remove('open');
 }
 
-function switchSidebarTab(tab, filter = null) {
-    sidebarCurrentTab = tab;
-    document.querySelectorAll('.tab-btn').forEach(b => {
-        b.classList.toggle('active', b.innerText.toLowerCase().includes(tab));
-    });
-    renderSidebarContent(filter);
-    const footer = document.getElementById('sidebar-footer');
-    if (footer) footer.style.display = tab === 'comments' ? 'block' : 'none';
-}
 
 function handleFootnoteSelection(nodeId, x, y) {
     if (contextMenu) contextMenu.style.display = 'none';
@@ -468,7 +458,7 @@ function handleFootnoteSelection(nodeId, x, y) {
         }
     } else {
         // No footnote detected -> Sidebar prompt
-        openSidebar(nodeId, 'comments');
+        openSidebar(nodeId);
         if (newCommentInput) {
             newCommentInput.value = `[AI PROMPT] This node "${nodeId}" lacks technical documentation. Please generate informative footnotes summarizing its role and implementation details.`;
             newCommentInput.focus();
@@ -476,93 +466,105 @@ function handleFootnoteSelection(nodeId, x, y) {
     }
 }
 
-async function renderSidebarContent(filter = null) {
+async function renderSidebarContent() {
     const content = document.getElementById('sidebar-content');
     content.innerHTML = '';
 
-    if (sidebarCurrentTab === 'comments') {
-        const usi = getUSI(activeNodeId, currentViewPath);
-        const localComments = commentsRegistry[usi] || [];
-        const otherComments = Object.keys(commentsRegistry)
-            .filter(key => key.includes(`#${activeNodeId}@`) && key !== usi)
-            .reduce((arr, key) => arr.concat(commentsRegistry[key]), []);
+    // 1. Related Diagrams (Data, Seq, Flow, State)
+    const allTargets = idMap[activeNodeId] || [];
+    const related = allTargets.filter(t => ['DATA', 'SEQ', 'FLOW', 'STATE'].some(p => t.type.toUpperCase().startsWith(p)));
+    
+    if (related.length > 0) {
+        const h4 = document.createElement('h4');
+        h4.style.fontSize = '0.7rem'; h4.style.textTransform = 'uppercase';
+        h4.style.color = 'var(--text-secondary)'; h4.style.margin = '1rem 0 0.5rem 0';
+        h4.innerText = 'Related Diagrams';
+        content.appendChild(h4);
 
-        const listDiv = document.createElement('div');
-        listDiv.className = 'sidebar-comment-list';
-
-        const renderBatch = (title, items, isLocal, u) => {
-            if (items.length === 0) return;
-            const h4 = document.createElement('h4');
-            h4.style.fontSize = '0.7rem'; h4.style.textTransform = 'uppercase';
-            h4.style.color = isLocal ? 'var(--accent)' : 'var(--text-secondary)';
-            h4.style.margin = '1rem 0 0.5rem 0'; h4.innerText = title;
-            listDiv.appendChild(h4);
-
-            items.forEach(c => {
-                const card = document.createElement('div');
-                card.className = 'comment-text';
-                card.innerHTML = `
-                    <div class="comment-header">
-                        <span class="comment-author">${c.author}</span>
-                        <div style="display:flex; align-items:center; gap:0.5rem;">
-                            <span style="font-size:0.65rem; color:var(--text-secondary)">${new Date(c.timestamp).toLocaleDateString()}</span>
-                            ${isLocal ? `<button onclick="resolveComment('${u}', '${c.id}')" style="background:none; border:none; color:#10b981; cursor:pointer; font-size:1rem; padding:0; display:flex;">✓</button>` : ''}
-                        </div>
-                    </div>
-                    <div>${c.content}</div>
-                `;
-                listDiv.appendChild(card);
-            });
-        };
-
-        renderBatch('This View', localComments, true, usi);
-        renderBatch('Other Views', otherComments, false);
-
-        if (localComments.length === 0 && otherComments.length === 0) {
-            listDiv.innerHTML = '<div style="color:var(--text-secondary); margin-bottom:1rem; opacity:0.6;">No feedback yet. Enter a prompt to collaborate with AI.</div>';
-        }
-        content.appendChild(listDiv);
-
-    } else if (sidebarCurrentTab === 'design') {
-        // Technical Design (Data, Seq, Flow)
-        const allTargets = idMap[activeNodeId] || [];
-        const filtered = filter ? allTargets.filter(t => t.type.toUpperCase().startsWith(filter)) : allTargets.filter(t => ['DATA', 'SEQ', 'FLOW', 'STATE'].some(p => t.type.toUpperCase().startsWith(p)));
-
-        if (filtered.length > 0) {
-            filtered.forEach(t => {
-                const item = document.createElement('div');
-                item.className = 'design-item';
-                item.onclick = () => { closeSidebar(); loadDiagram(t.path); };
-                item.innerHTML = `
-                    <div style="font-size:1.2rem; color:var(--accent)">${t.type.startsWith('DATA') ? '📊' : t.type.startsWith('SEQ') ? '↔️' : t.type.startsWith('STATE') ? '🚦' : '🌲'}</div>
-                    <div>
-                        <div style="font-weight:600; font-size:0.85rem;">${t.title}</div>
-                        <div style="font-size:0.7rem; color:var(--text-secondary)">${t.type}</div>
-                    </div>
-                `;
-                content.appendChild(item);
-            });
-        }
-        
-        // Always show AI prompt if something specific was requested or as a general option
-        const prompts = {
-            DATA: `[AI PROMPT] Generate a DATA_ model for node ${activeNodeId}. Use erDiagram syntax.`,
-            SEQ: `[AI PROMPT] Generate a SEQ_ diagram for node ${activeNodeId}. Use sequenceDiagram syntax.`,
-            FLOW: `[AI PROMPT] Generate a FLOW_ flowchart for node ${activeNodeId}.`,
-            STATE: `[AI PROMPT] Generate a STATE_ state diagram for node ${activeNodeId}.`
-        };
-
-        Object.keys(prompts).forEach(key => {
-            if (filter && filter !== key) return;
-            const promptBox = document.createElement('div');
-            promptBox.className = 'ai-prompt-box';
-            promptBox.innerHTML = `
-                <div class="ai-prompt-text">${prompts[key]}</div>
-                <button onclick="copyPrompt('${prompts[key]}')" style="background:var(--accent); color:#fff; border:none; padding:4px 8px; border-radius:4px; font-size:0.7rem; cursor:pointer;">Copy Prompt</button>
+        related.forEach(t => {
+            const item = document.createElement('div');
+            item.className = 'design-item';
+            item.onclick = () => { closeSidebar(); loadDiagram(t.path); };
+            item.innerHTML = `
+                <div style="font-size:1.2rem; color:var(--accent)">${t.type.startsWith('DATA') ? '📊' : t.type.startsWith('SEQ') ? '↔️' : t.type.startsWith('STATE') ? '🚦' : '🌲'}</div>
+                <div>
+                    <div style="font-weight:600; font-size:0.85rem;">${t.title}</div>
+                    <div style="font-size:0.7rem; color:var(--text-secondary)">${t.type}</div>
+                </div>
             `;
-            content.appendChild(promptBox);
+            content.appendChild(item);
         });
+        const sep = document.createElement('hr'); sep.style.border = '0'; sep.style.borderTop = '1px solid var(--border)'; sep.style.margin = '1rem 0';
+        content.appendChild(sep);
     }
+
+    // 2. Comments
+    const usi = getUSI(activeNodeId, currentViewPath);
+    const localComments = commentsRegistry[usi] || [];
+    const otherComments = Object.keys(commentsRegistry)
+        .filter(key => key.includes(`#${activeNodeId}@`) && key !== usi)
+        .reduce((arr, key) => arr.concat(commentsRegistry[key]), []);
+
+    const renderBatch = (title, items, isLocal, u) => {
+        if (items.length === 0) return;
+        const h4 = document.createElement('h4');
+        h4.style.fontSize = '0.7rem'; h4.style.textTransform = 'uppercase';
+        h4.style.color = isLocal ? 'var(--accent)' : 'var(--text-secondary)';
+        h4.style.margin = '1rem 0 0.5rem 0'; h4.innerText = title;
+        content.appendChild(h4);
+
+        items.forEach(c => {
+            const card = document.createElement('div');
+            card.className = 'comment-text';
+            card.innerHTML = `
+                <div class="comment-header">
+                    <span class="comment-author">${c.author}</span>
+                    <div style="display:flex; align-items:center; gap:0.5rem;">
+                        <span style="font-size:0.65rem; color:var(--text-secondary)">${new Date(c.timestamp).toLocaleDateString()}</span>
+                        ${isLocal ? `<button onclick="resolveComment('${u}', '${c.id}')" style="background:none; border:none; color:#10b981; cursor:pointer; font-size:1rem; padding:0; display:flex;">✓</button>` : ''}
+                    </div>
+                </div>
+                <div>${c.content}</div>
+            `;
+            content.appendChild(card);
+        });
+    };
+
+    renderBatch('Comments', localComments, true, usi);
+    renderBatch('Other Contexts', otherComments, false);
+
+    // 3. AI Prompts (Collapsed by default or just listed?)
+    // Let's list them cleanly at bottom
+    const aiContainer = document.createElement('div');
+    aiContainer.style.marginTop = '1rem';
+    
+    const aiTitle = document.createElement('h4');
+    aiTitle.style.fontSize = '0.7rem'; aiTitle.style.textTransform = 'uppercase';
+    aiTitle.style.color = 'var(--text-secondary)'; aiTitle.style.marginBottom = '0.5rem';
+    aiTitle.innerText = 'AI Generation';
+    aiContainer.appendChild(aiTitle);
+
+    const prompts = {
+        DATA: `[AI PROMPT] Generate a DATA_ model for node ${activeNodeId}. Use erDiagram syntax.`,
+        SEQ: `[AI PROMPT] Generate a SEQ_ diagram for node ${activeNodeId}. Use sequenceDiagram syntax.`,
+        FLOW: `[AI PROMPT] Generate a FLOW_ flowchart for node ${activeNodeId}.`,
+        STATE: `[AI PROMPT] Generate a STATE_ state diagram for node ${activeNodeId}.`
+    };
+
+    Object.keys(prompts).forEach(key => {
+        const promptBox = document.createElement('div');
+        promptBox.className = 'ai-prompt-box';
+        promptBox.innerHTML = `
+            <div class="ai-prompt-text">${prompts[key]}</div>
+            <button onclick="copyPrompt('${prompts[key]}')" style="background:var(--accent); color:#fff; border:none; padding:4px 8px; border-radius:4px; font-size:0.7rem; cursor:pointer;">Copy</button>
+        `;
+        aiContainer.appendChild(promptBox);
+    });
+    content.appendChild(aiContainer);
+    
+    // Ensure footer is visible
+    const footer = document.getElementById('sidebar-footer');
+    if (footer) footer.style.display = 'block';
 }
 
 function copyPrompt(text) {
