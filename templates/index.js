@@ -144,6 +144,9 @@ async function initApp() {
     commentList = document.getElementById('comment-list');
     newCommentInput = document.getElementById('new-comment-input');
     saveCommentBtn = document.getElementById('save-comment-btn');
+    const sidebarInput = document.getElementById('sidebar-comment-input');
+    const sidebarSaveBtn = document.getElementById('sidebar-save-btn');
+    if (sidebarSaveBtn) sidebarSaveBtn.addEventListener('click', () => saveComment(true));
     
     // Navigation Modal
     navModalBackdrop = document.getElementById('nav-modal-backdrop');
@@ -364,8 +367,9 @@ if (searchInput) {
 // Initialize
 initTheme();
 
-async function saveComment() {
-    const content = newCommentInput.value.trim();
+async function saveComment(fromSidebar = false) {
+    const inputEl = fromSidebar ? document.getElementById('sidebar-comment-input') : newCommentInput;
+    const content = inputEl.value.trim();
     if (!content || !activeNodeId || activeNodeId === 'undefined') return;
     const usi = getUSI(activeNodeId, currentViewPath);
     if (!usi) return;
@@ -375,7 +379,7 @@ async function saveComment() {
     try {
         const response = await fetch('/api/comments', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...newComment, compositeKey: usi }) });
         if (!response.ok) throw new Error('Failed to save');
-        newCommentInput.value = ''; 
+        inputEl.value = ''; 
         
         // Refresh UI
         const sidebar = document.getElementById('context-sidebar');
@@ -447,6 +451,8 @@ function switchSidebarTab(tab, filter = null) {
         b.classList.toggle('active', b.innerText.toLowerCase().includes(tab));
     });
     renderSidebarContent(filter);
+    const footer = document.getElementById('sidebar-footer');
+    if (footer) footer.style.display = tab === 'comments' ? 'block' : 'none';
 }
 
 function handleFootnoteSelection(nodeId, x, y) {
