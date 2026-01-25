@@ -4,6 +4,15 @@ export function toggleTheme() {
     localStorage.setItem('theme', isDark ? 'dark' : 'light');
     const btn = document.getElementById('theme-toggle');
     if (btn) btn.innerHTML = isDark ? '&#9790;' : '&#9728;';
+    
+    // Update Mermaid theme and trigger re-render
+    if (window.updateMermaidTheme) {
+        window.updateMermaidTheme();
+        // Trigger a re-render of the current diagram
+        if (window.reloadCurrentDiagram) {
+            window.reloadCurrentDiagram();
+        }
+    }
 }
 
 export function initTheme() {

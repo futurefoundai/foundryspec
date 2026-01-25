@@ -19,6 +19,82 @@ export async function ioInitCustomCSS() {
     }
 }
 
+/**
+ * Updates Mermaid theme based on current dark/light mode
+ */
+export function updateMermaidTheme() {
+    const isDark = document.body.classList.contains('dark-mode');
+    
+    const themeVariables = isDark ? {
+        // Dark mode theme
+        primaryColor: '#1e293b',
+        primaryTextColor: '#f1f5f9',
+        primaryBorderColor: '#94a3b8',
+        lineColor: '#38bdf8',
+        secondaryColor: '#0f172a',
+        tertiaryColor: '#334155',
+        
+        // Sequence diagram specific
+        actorBkg: '#1e293b',
+        actorBorder: '#94a3b8',
+        actorTextColor: '#f1f5f9',
+        actorLineColor: '#475569',
+        signalColor: '#f1f5f9',
+        signalTextColor: '#f1f5f9',
+        labelBoxBkgColor: '#0f172a',
+        labelBoxBorderColor: '#475569',
+        labelTextColor: '#f1f5f9',
+        loopTextColor: '#f1f5f9',
+        noteBorderColor: '#38bdf8',
+        noteBkgColor: '#1e293b',
+        noteTextColor: '#f1f5f9',
+        activationBorderColor: '#38bdf8',
+        activationBkgColor: '#334155',
+        sequenceNumberColor: '#ffffff',
+        
+        // Alt/Loop/Opt boxes
+        altSectionBkgColor: 'rgba(15, 23, 42, 0.3)',
+        altSectionBorderColor: '#475569'
+    } : {
+        // Light mode theme
+        primaryColor: '#2563eb',
+        primaryTextColor: '#1e293b',
+        primaryBorderColor: '#334155',
+        lineColor: '#2563eb',
+        secondaryColor: '#f1f5f9',
+        tertiaryColor: '#e2e8f0',
+        
+        // Sequence diagram specific
+        actorBkg: '#ffffff',
+        actorBorder: '#334155',
+        actorTextColor: '#1e293b',
+        actorLineColor: '#64748b',
+        signalColor: '#1e293b',
+        signalTextColor: '#1e293b',
+        labelBoxBkgColor: '#f8f9fa',
+        labelBoxBorderColor: '#64748b',
+        labelTextColor: '#1e293b',
+        loopTextColor: '#1e293b',
+        noteBorderColor: '#2563eb',
+        noteBkgColor: '#f1f5f9',
+        noteTextColor: '#1e293b',
+        activationBorderColor: '#2563eb',
+        activationBkgColor: '#e0e7ff',
+        sequenceNumberColor: '#1e293b',
+        
+        // Alt/Loop/Opt boxes
+        altSectionBkgColor: 'rgba(241, 245, 249, 0.5)',
+        altSectionBorderColor: '#64748b'
+    };
+    
+    globals.mermaid.initialize({
+        startOnLoad: false,
+        securityLevel: 'loose',
+        theme: 'base',
+        themeVariables
+    });
+}
+
 export async function initApp() {
     // Inject dependency
     setLoadDiagramFn(loadDiagram);
@@ -34,10 +110,8 @@ export async function initApp() {
     const domReady = !!(backButton && viewer);
     if (!mermaidReady || !domReady) { setTimeout(initApp, 200); return; }
 
-    globals.mermaid.initialize({
-        startOnLoad: false, securityLevel: 'loose', theme: 'base',
-        themeVariables: { primaryColor: '#1e293b', primaryTextColor: '#f8fafc', primaryBorderColor: '#334155', lineColor: '#38bdf8' }
-    });
+    // Initialize Mermaid with theme based on current mode
+    updateMermaidTheme();
 
     // Event Listeners
     viewer.addEventListener('contextmenu', (e) => {
@@ -179,5 +253,5 @@ export async function initApp() {
     initTheme();
 }
 
-// Attach init to window? No, purely internal to modules?
-// We need to call it.
+// Expose updateMermaidTheme to window for theme toggle
+window.updateMermaidTheme = updateMermaidTheme;

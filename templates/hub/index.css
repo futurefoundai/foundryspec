@@ -711,3 +711,174 @@ g[class*="mindmap-node-l3"] > text,
     stroke: var(--accent) !important;
     stroke-width: 3.5px !important;
 }
+
+/* --- Sequence Diagram Styling --- */
+
+/* Sequence Diagram Actors */
+.actor {
+    fill: var(--bg-secondary) !important;
+    stroke: var(--text-primary) !important;
+    stroke-width: 2px !important;
+}
+
+.actor text,
+.actor-label,
+.actor .label {
+    fill: var(--text-primary) !important;
+    font-family: "Inter", sans-serif !important;
+    font-weight: 600 !important;
+}
+
+/* Sequence Diagram Actor Lines */
+.actor-line {
+    stroke: var(--border) !important;
+    stroke-width: 1px !important;
+    stroke-dasharray: 5, 5 !important;
+}
+
+/* Sequence Diagram Messages/Arrows */
+.messageLine0,
+.messageLine1,
+line.actor-line,
+path.messageLine0,
+path.messageLine1 {
+    stroke: var(--text-primary) !important;
+    stroke-width: 1.5px !important;
+}
+
+/* Message Labels */
+.messageText,
+.labelText,
+text.messageText {
+    fill: var(--text-primary) !important;
+    font-family: "Inter", sans-serif !important;
+    font-size: 0.9rem !important;
+}
+
+/* Sequence Diagram Notes */
+.note,
+.noteText {
+    fill: var(--bg-secondary) !important;
+    stroke: var(--accent) !important;
+    stroke-width: 2px !important;
+}
+
+.note text,
+.noteText text,
+text.noteText {
+    fill: var(--text-primary) !important;
+    font-family: "Inter", sans-serif !important;
+    font-size: 0.85rem !important;
+    line-height: 1.4 !important;
+}
+
+/* Activation Boxes (vertical bars showing activity) */
+.activation0,
+.activation1,
+.activation2,
+rect.activation0,
+rect.activation1,
+rect.activation2 {
+    fill: var(--accent) !important;
+    stroke: var(--accent) !important;
+    stroke-width: 2px !important;
+    opacity: 0.3 !important;
+}
+
+/* Alt/Loop/Opt/Par Boxes (Grouping) */
+.labelBox,
+rect.labelBox {
+    fill: var(--bg-primary) !important;
+    stroke: var(--border) !important;
+    stroke-width: 1.5px !important;
+    opacity: 0.9 !important;
+}
+
+/* Alt/Loop/Opt Labels */
+.labelText,
+.loopText,
+text.labelText,
+text.loopText {
+    fill: var(--text-primary) !important;
+    font-family: "Inter", sans-serif !important;
+    font-weight: 700 !important;
+    font-size: 0.85rem !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.05em !important;
+}
+
+/* Sequence Number Circles */
+.sequenceNumber {
+    fill: var(--accent) !important;
+}
+
+.sequenceNumber text {
+    fill: #ffffff !important;
+    font-weight: 700 !important;
+}
+
+/* Loop Line (the line that separates loop label from content) */
+.loopLine {
+    stroke: var(--border) !important;
+    stroke-width: 1px !important;
+}
+
+/* Dark mode specific adjustments for better contrast */
+body.dark-mode .actor {
+    fill: #1e293b !important;
+    stroke: #94a3b8 !important;
+}
+
+body.dark-mode .note {
+    fill: #1e293b !important;
+    stroke: #38bdf8 !important;
+}
+
+body.dark-mode .activation0,
+body.dark-mode .activation1,
+body.dark-mode .activation2 {
+    fill: #38bdf8 !important;
+    stroke: #38bdf8 !important;
+}
+
+body.dark-mode .labelBox,
+body.dark-mode g[class*="alt"] rect,
+body.dark-mode g[class*="loop"] rect,
+body.dark-mode g[class*="opt"] rect,
+body.dark-mode g[class*="par"] rect,
+body.dark-mode g[class*="critical"] rect {
+    fill: rgba(15, 23, 42, 0.7) !important;
+    stroke: #475569 !important;
+    stroke-width: 1.5px !important;
+    opacity: 0.6 !important;
+}
+
+/* Light mode specific adjustments */
+body:not(.dark-mode) .actor {
+    fill: #ffffff !important;
+    stroke: #334155 !important;
+}
+
+body:not(.dark-mode) .note {
+    fill: #f1f5f9 !important;
+    stroke: #2563eb !important;
+}
+
+body:not(.dark-mode) .activation0,
+body:not(.dark-mode) .activation1,
+body:not(.dark-mode) .activation2 {
+    fill: #2563eb !important;
+    stroke: #2563eb !important;
+}
+
+body:not(.dark-mode) .labelBox,
+body:not(.dark-mode) g[class*="alt"] rect,
+body:not(.dark-mode) g[class*="loop"] rect,
+body:not(.dark-mode) g[class*="opt"] rect,
+body:not(.dark-mode) g[class*="par"] rect,
+body:not(.dark-mode) g[class*="critical"] rect {
+    fill: rgba(241, 245, 249, 0.8) !important;
+    stroke: #64748b !important;
+    stroke-width: 1.5px !important;
+    opacity: 0.6 !important;
+}

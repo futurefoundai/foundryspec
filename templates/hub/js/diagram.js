@@ -96,3 +96,64 @@ export async function loadDiagram(filePath, isBack = false) {
 
 // Expose to window for UI onclicks
 window.loadDiagram = loadDiagram;
+
+/**
+ * Reloads the current diagram (used when theme changes)
+ */
+export async function reloadCurrentDiagram() {
+    const currentPath = (await import('./state.js')).currentViewPath;
+    if (currentPath && currentPath !== 'root.mermaid') {
+        // Reload without adding to history
+        const viewer = document.getElementById('viewer');
+        const stateContainer = (await import('./state.js')).currentContainer;
+        
+        try {
+            const response = await fetch(currentPath);
+            if (!response.ok) return;
+            
+            let content = await response.text();
+            content = content.replace(/^---[\s\S]*?---\s*/, '');
+            
+            if (currentPath.endsWith('.md')) return; // Don't reload markdown
+            
+            const { svg } = await globals.mermaid.render('mermaid-svg-' + Date.now(), content);
+            const newContainer = document.createElement('div');
+            newContainer.className = 'diagram-container fade-in';
+            newContainer.innerHTML = svg;
+            
+            const svgEl = newContainer.querySelector('svg');
+            if (svgEl) {
+                svgEl.style.width = '100%';
+                svgEl.style.height = '100%';
+                svgEl.style.maxWidth = 'none';
+            }
+            
+            // Remove old container
+            if (stateContainer && stateContainer.parentNode) {
+                stateContainer.parentNode.removeChild(stateContainer);
+            }
+            
+            // Add new container
+            viewer.appendChild(newContainer);
+            applyCursors(newContainer);
+            
+            if (svgEl) {
+                try {
+                    window.panZoomInstance = globals.svgPanZoom(svgEl, {
+                        zoomEnabled: true,
+                        controlIconsEnabled: true,
+                        fit: true,
+                        center: true,
+                        minZoom: 0.1
+                    });
+                } catch (_e) { /* empty */ }
+            }
+            
+            setCurrentContainer(newContainer);
+        } catch (error) {
+            console.error('[FoundrySpec] Error reloading diagram:', error);
+        }
+    }
+}
+
+window.reloadCurrentDiagram = reloadCurrentDiagram;
