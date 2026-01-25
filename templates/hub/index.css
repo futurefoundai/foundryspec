@@ -787,7 +787,7 @@ rect.activation2 {
 
 /* Alt/Loop/Opt/Par Boxes (Grouping) */
 .labelBox,
-rect.labelBox {
+rect.labelBox, rect {
     fill: var(--bg-primary) !important;
     stroke: var(--border) !important;
     stroke-width: 1.5px !important;
