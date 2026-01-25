@@ -35,6 +35,8 @@ entities:
       - "REQ_LocalFirst"
       - "REQ_ZeroMaintenance"
       - "REQ_Performance"
+      - "REQ_SmartCaching"
+      - "REQ_HumanReadable"
   - id: "REQ_Integrity"
     classification: Non-Functional
     uplink: "REQ_NonFunctional"
@@ -56,6 +58,16 @@ entities:
     uplink: "REQ_NonFunctional"
     downlinks:
       - "COMP_BuildManager"
+  - id: "REQ_SmartCaching"
+    classification: Non-Functional
+    uplink: "REQ_NonFunctional"
+    downlinks:
+      - "COMP_BuildManager"
+  - id: "REQ_HumanReadable"
+    classification: Non-Functional
+    uplink: "REQ_NonFunctional"
+    downlinks:
+      - "COMP_RuleEngine"
   - id: "REQ_DynamicRoot"
     classification: Functional
     uplink: "REQ_Functional"
@@ -100,7 +112,7 @@ entities:
 requirementDiagram
     requirement Functional {
         id: "REQ_Functional"
-        text: "The system shall provide extensible documentation capabilities."
+        text: "The system shall provide extensile documentation capabilities."
         risk: Low
         verifymethod: Test
     }
@@ -184,8 +196,22 @@ requirementDiagram
 
     requirement Build_Performance {
         id: "REQ_Performance"
-        text: "The system shall build a documentation hub with 50+ diagrams in under 30 seconds."
+        text: "The system shall update incremental documentation builds in under 1 second for unchanged files."
         risk: Medium
+        verifymethod: Test
+    }
+    
+    requirement Smart_Caching {
+        id: "REQ_SmartCaching"
+        text: "The system shall implement content-addressable caching to avoid redundant parsing while maintaining validation integrity."
+        risk: Medium
+        verifymethod: Test
+    }
+    
+    requirement Human_Readable {
+        id: "REQ_HumanReadable"
+        text: "The system shall support human-readable labels in diagrams while strictly enforcing architectural IDs for validation."
+        risk: Low
         verifymethod: Test
     }
 
@@ -200,6 +226,8 @@ requirementDiagram
     Non_Functional -contains-> Local_First
     Non_Functional -contains-> Zero_Maintenance
     Non_Functional -contains-> Build_Performance
+    Non_Functional -contains-> Smart_Caching
+    Non_Functional -contains-> Human_Readable
 
     Functional -contains-> Dynamic_Root
     Functional -contains-> Zero_Config

@@ -10,13 +10,10 @@ entities:
   - id: "BND_App"
     uplink: "CTX_System"
 ---
-
-C4Container
-    title Technical Boundaries
-
-    System_Boundary(system, "FoundrySpec Engine") {
-        Container(BND_App, "Main Application", "Technology Stack", "Core business logic")
-        ContainerDb(db, "Data Store", "Persistence Technology", "Storage")
-    }
-
-    Rel(BND_App, db, "Reads/Writes", "Protocol")
+graph TD
+    subgraph System[FoundrySpec Engine]
+        BND_App[Main Application]
+        DB[(Data Store)]
+    end
+    
+    BND_App --> DB

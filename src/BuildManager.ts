@@ -24,6 +24,8 @@ import { FoundryConfig } from './types/config.js';
 import { ConfigStore } from './ConfigStore.js';
 import { RuleEngine } from './RuleEngine.js';
 import { ProbeManager } from './ProbeManager.js';
+import { MermaidParser } from './MermaidParser.js';
+import { BrowserPool } from './BrowserPool.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -35,6 +37,7 @@ export class BuildManager {
   private docsDir: string;
   private configStore: ConfigStore;
   private ruleEngine: RuleEngine;
+  private mermaidParser: MermaidParser;
   private projectId: string | null = null;
   private projectName: string = "FoundrySpec Project";
 
@@ -44,6 +47,7 @@ export class BuildManager {
     this.docsDir = path.join(this.projectRoot, 'docs');
     this.configStore = new ConfigStore();
     this.ruleEngine = new RuleEngine();
+    this.mermaidParser = new MermaidParser(this.ruleEngine);
   }
 
   private async resolveProject(): Promise<void> {
@@ -438,70 +442,42 @@ ${standaloneAssets
     return synthetic;
   }
 
+  /**
+   * Validate Mermaid syntax using cached parsing
+   */
   private async checkMermaidSyntax(assets: ProjectAsset[]) {
-    const mermaidContents: Map<string, string> = new Map();
-    for (const asset of assets) {
-      if (asset.relPath.endsWith('.mermaid')) {
-        mermaidContents.set(asset.relPath, asset.content);
+    const mermaidAssets = assets.filter(a => a.relPath.endsWith('.mermaid'));
+    
+    console.log(chalk.gray(`Validating ${mermaidAssets.length} Mermaid diagrams...`));
+    
+    let cacheHits = 0;
+    let cacheMisses = 0;
+
+    // Parse all diagrams (with caching)
+    for (const asset of mermaidAssets) {
+      try {
+        const result = await this.mermaidParser.parseWithCache(asset.relPath, asset.content);
+        if (result.fromCache) {
+          cacheHits++;
+        } else {
+          cacheMisses++;
+        }
+      } catch (err: unknown) {
+        console.error(chalk.red(`\n❌ Syntax error in ${asset.relPath}:`));
+        const message = err instanceof Error ? err.message : String(err);
+        console.error(chalk.yellow(message));
+        throw new Error(`Build failed due to Mermaid syntax errors.`);
       }
     }
 
-    const CONCURRENCY = 4;
-    const browser = await puppeteer.launch({
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-accel',
-        '--disable-gpu',
-      ],
-      headless: true,
-    });
-
-    try {
-      const filesArray = Array.from(mermaidContents.entries());
-      const chunkSize = Math.ceil(filesArray.length / CONCURRENCY);
-      const workChunks = [];
-      for (let i = 0; i < filesArray.length; i += chunkSize) {
-        workChunks.push(filesArray.slice(i, i + chunkSize));
-      }
-
-      await Promise.all(
-        workChunks.map(async (chunk) => {
-          const page = await browser.newPage();
-          try {
-            await page.setContent(
-              '<!DOCTYPE html><html><body><div id="container"></div></body></html>',
-            );
-            const require = createRequire(import.meta.url);
-            const mermaidPath = require.resolve('mermaid/dist/mermaid.min.js');
-            await page.addScriptTag({ path: mermaidPath });
-            await page.evaluate(() => {
-              // @ts-expect-error Mermaid types are not fully covered
-              mermaid.initialize({ startOnLoad: false });
-            });
-
-            for (const [file, content] of chunk) {
-              try {
-                await page.evaluate((diagram) => {
-                  // @ts-expect-error Mermaid types are not fully covered
-                  return mermaid.parse(diagram);
-                }, content);
-              } catch (err: unknown) {
-                console.error(chalk.red(`\n❌ Syntax error in ${file}:`));
-                const message = err instanceof Error ? err.message : String(err);
-                console.error(chalk.yellow(message));
-                throw new Error(`Build failed due to Mermaid syntax errors.`);
-              }
-            }
-          } finally {
-            await page.close();
-          }
-        }),
-      );
-    } finally {
-      await browser.close();
+    // Show cache statistics
+    if (mermaidAssets.length > 0) {
+      const hitRate = ((cacheHits / mermaidAssets.length) * 100).toFixed(1);
+      console.log(chalk.gray(`  Cache: ${cacheHits} hits, ${cacheMisses} misses (${hitRate}% hit rate)`));
     }
+
+    // Save cache to disk
+    await this.mermaidParser.flush();
   }
 
   async generateHub(

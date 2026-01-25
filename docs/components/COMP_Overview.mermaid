@@ -19,6 +19,8 @@ entities:
     requirements:
       - "REQ_PathIntegrity"
       - "REQ_DynamicRoot"
+      - "REQ_Performance"
+      - "REQ_SmartCaching"
   - id: "COMP_ProbeManager"
     uplink: "REQ_AutomatedProbing"
     requirements:
@@ -45,6 +47,7 @@ entities:
     uplink: "COMP_BuildManager"
     requirements:
       - "REQ_Core"
+      - "REQ_HumanReadable"
   - id: "COMP_SidebarControllers"
     uplink: "COMP_InteractiveComments"
     description: "Handles the logic for the context sidebar and unified ID resolution."
@@ -62,6 +65,18 @@ classDiagram
         +ValidationEngine
         +AssetLoader
         +SyntheticGenerator
+    }
+
+    class MermaidParser {
+        <<Service>>
+        +parseWithCache(file, content)
+        +flush()
+    }
+
+    class BrowserPool {
+        <<Singleton>>
+        +getBrowser()
+        +close()
     }
 
     class COMP_ProbeManager {
@@ -119,6 +134,9 @@ classDiagram
     COMP_CLI --> COMP_GitManager : uses
     COMP_BuildManager --> COMP_ConfigStore : uses
     COMP_BuildManager --> COMP_RuleEngine : orchestrates
+    COMP_BuildManager --> MermaidParser : uses
+    MermaidParser --> BrowserPool : leverages
+    MermaidParser --> COMP_RuleEngine : uses analyzers
     COMP_ProbeManager --> COMP_BuildManager : uses
     COMP_BuildManager --> COMP_Group : uses template
     COMP_DevServer --> COMP_BuildManager : triggers rebuild

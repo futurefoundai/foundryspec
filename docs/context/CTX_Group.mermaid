@@ -8,13 +8,10 @@ entities:
     downlinks:
       - "BND_App"
 ---
+graph TD
+    User((User))
+    CTX_System[FoundrySpec Engine]
+    External[External System]
 
-C4Context
-    title System Context Diagram (L1)
-
-    Person(user, "User", "A user of the system")
-    System(CTX_System, "FoundrySpec Engine", "The software system being built")
-    System_Ext(external, "External System", "An external dependency")
-
-    Rel(user, CTX_System, "Uses")
-    Rel(CTX_System, external, "Connects to")
+    User --> CTX_System
+    CTX_System --> External

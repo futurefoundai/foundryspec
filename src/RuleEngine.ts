@@ -55,6 +55,23 @@ export class RuleEngine {
         return this.analyzers;
     }
 
+    /**
+     * Analyze diagram content and extract nodes/relationships
+     * Used by Mermaid Parser for caching
+     */
+    public analyzeContent(content: string, diagramType: string): { nodes: string[]; relationships: Array<{ from: string; to: string; label?: string }> } {
+        const analyzer = this.analyzers[diagramType];
+        if (analyzer) {
+            const result = analyzer.analyze(content);
+            return {
+                nodes: result.nodes || [],
+                relationships: result.relationships || [],
+            };
+        }
+        // Return empty result if no analyzer for this type
+        return { nodes: [], relationships: [] };
+    }
+
     async loadRules(rulesPath: string): Promise<void> {
         if (!await fs.pathExists(rulesPath)) return;
         
