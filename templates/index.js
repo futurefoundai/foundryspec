@@ -429,6 +429,7 @@ function openNavigationModal(title, targets) {
 // @foundryspec/start COMP_SidebarControllers
 function openSidebar(nodeId) {
     if (contextMenu) contextMenu.style.display = 'none';
+    closeFootnoteSidebar();
     activeNodeId = nodeId;
     
     // UI Update
@@ -576,24 +577,9 @@ async function loadDiagram(filePath, isBack = false) {
         currentViewPath = filePath.replace(/\\/g, '/');
         content = content.replace(/^---[\s\S]*?---\s*/, '');
         if (filePath.endsWith('.md')) {
-            modalTitle.innerText = filePath.split('/').pop().replace(/\.(mermaid|md)$/, "");
-            let html = marked.parse(content);
-            
-            // Find the ID associated with this file path
-            const possibleId = Object.keys(idMap).find(id => 
-                idMap[id].some(target => target.path === filePath)
-            );
-
-            if (possibleId) {
-                const codeFiles = idMap[possibleId]
-                   .filter(t => t.type === 'code')
-                   .map(t => t.path);
-
-                if (codeFiles.length > 0) {
-                   html += `<div class="implementation-box" style="margin-top: 2rem; padding: 1.5rem; background: rgba(56, 189, 248, 0.05); border: 1px solid rgba(56, 189, 248, 0.2); border-radius: 8px;"><h3 style="margin-top: 0; color: #38bdf8; font-family: 'Outfit'; font-size: 1rem;">Implementation Traceability</h3><p style="font-size: 0.9rem; color: #94a3b8; margin-bottom: 1rem;">This requirement is implemented in the following codebase locations:</p><ul style="list-style: none; padding: 0; margin: 0;">${codeFiles.map(f => `<li style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; font-family: monospace; font-size: 0.85rem; color: var(--text-primary);"><span style="color: #38bdf8;">📁</span> ${f}</li>`).join('')}</ul></div>`;
-                }
-            }
-            modalBody.innerHTML = html; modalBackdrop.classList.add('open'); return;
+        if (filePath.endsWith('.md')) {
+            openFootnoteSidebar(filePath, content);
+            return;
         }
         const { svg } = await mermaid.render('mermaid-svg-' + Date.now(), content);
         const newContainer = document.createElement('div'); newContainer.className = 'diagram-container ' + (isBack ? 'initial-reverse' : 'initial'); newContainer.innerHTML = svg;
@@ -631,6 +617,40 @@ async function loadDiagram(filePath, isBack = false) {
         errDiv.style.fontWeight = 'bold'; errDiv.innerText = `Error loading diagram: ${filePath}\n${error.message}`;
         if (viewer) { viewer.innerHTML = ''; viewer.appendChild(errDiv); }
     }
+}
+
+function openFootnoteSidebar(filePath, content) {
+    closeSidebar(); // Close context sidebar
+    const sidebar = document.getElementById('footnote-sidebar');
+    const title = document.getElementById('footnote-sidebar-title');
+    const body = document.getElementById('footnote-sidebar-content');
+    
+    title.innerText = filePath.split('/').pop().replace(/\.(mermaid|md)$/, "");
+    
+    let html = marked.parse(content);
+    
+    // Find the ID associated with this file path to show implementation logic
+    const possibleId = Object.keys(idMap).find(id => 
+        idMap[id].some(target => target.path === filePath)
+    );
+
+    if (possibleId) {
+        const codeFiles = idMap[possibleId]
+           .filter(t => t.type === 'code')
+           .map(t => t.path);
+
+        if (codeFiles.length > 0) {
+           html += `<div class="implementation-box" style="margin-top: 2rem; padding: 1.5rem; background: rgba(56, 189, 248, 0.05); border: 1px solid rgba(56, 189, 248, 0.2); border-radius: 8px;"><h3 style="margin-top: 0; color: #38bdf8; font-family: 'Outfit'; font-size: 1rem;">Implementation Traceability</h3><p style="font-size: 0.9rem; color: #94a3b8; margin-bottom: 1rem;">This requirement is implemented in the following codebase locations:</p><ul style="list-style: none; padding: 0; margin: 0;">${codeFiles.map(f => `<li style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; font-family: monospace; font-size: 0.85rem; color: var(--text-primary);"><span style="color: #38bdf8;">📁</span> ${f}</li>`).join('')}</ul></div>`;
+        }
+    }
+
+    body.innerHTML = html;
+    sidebar.classList.add('open');
+}
+
+function closeFootnoteSidebar() {
+    const sidebar = document.getElementById('footnote-sidebar');
+    if (sidebar) sidebar.classList.remove('open');
 }
 
 function updateUI() { 
