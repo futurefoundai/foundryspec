@@ -22,7 +22,8 @@ import {
     FlowchartAnalyzer, 
     RequirementAnalyzer,
     ClassAnalyzer,
-    C4Analyzer
+    C4Analyzer,
+    StateDiagramAnalyzer
 } from './analyzers/index.js';
 
 export interface ProjectContext {
@@ -44,7 +45,8 @@ export class RuleEngine {
         'classDiagram': new ClassAnalyzer(),
         'C4Context': new C4Analyzer(),
         'C4Container': new C4Analyzer(),
-        'C4Component': new C4Analyzer()
+        'C4Component': new C4Analyzer(),
+        'stateDiagram': new StateDiagramAnalyzer()
     };
 
     constructor() {}

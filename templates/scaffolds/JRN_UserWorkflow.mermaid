@@ -1,0 +1,22 @@
+---
+title: User Workflow
+description: Core user interaction flow.
+id: "JRN_UserWorkflow"
+uplink: "PER_User"
+---
+sequenceDiagram
+    autonumber
+    actor User as Standard User
+    participant System as CDS Platform
+
+    rect rgb(240, 255, 240)
+    Note right of User: Happy Path: Core Workflow
+    
+    User->>System: Login(credentials)
+    System-->>User: 200 OK (Auth Token)
+
+    User->>System: Perform Action(data)
+    System->>System: Validate & Process
+    System-->>User: 200 OK (Success)
+    end
+

@@ -1,0 +1,16 @@
+---
+title: Authentication State Machine
+description: State machine modeling authentication states.
+id: "STATE_AuthStates"
+uplink: "COMP_Auth"
+---
+stateDiagram-v2
+    [*] --> Unauthenticated
+    Unauthenticated --> Authenticating: Login Attempt
+    Authenticating --> Authenticated: Success
+    Authenticating --> Unauthenticated: Failure
+    Authenticated --> Unauthenticated: Logout
+    Authenticated --> Refreshing: Token Expired
+    Refreshing --> Authenticated: Success
+    Refreshing --> Unauthenticated: Failure
+    Authenticated --> [*]

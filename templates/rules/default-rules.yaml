@@ -59,14 +59,15 @@ rules:
   - id: context-registration
     name: Context Model Registration
     level: folder
-    description: "Registers Context models for the Hub. Context models must be C4Context diagrams."
+    description: "Registers Context models for the Hub. Context models use graph syntax."
     target:
       idPrefix: CTX_
       pathPattern: "context/*"
     type: syntax
     enforcement: error
     checks:
-      mermaidType: C4Context
+      mermaidType: graph
+      requiredExtension: mermaid
       traceability:
         mustHaveDownlink: [BND_, COMP_, FEAT_]
     hub:
@@ -76,14 +77,15 @@ rules:
   - id: boundary-registration
     name: Boundary Definition Registration
     level: folder
-    description: "Registers Boundary definitions for the Hub. Boundary models must be C4Container diagrams."
+    description: "Registers Boundary definitions for the Hub. Boundary models use graph syntax."
     target:
       idPrefix: BND_
       pathPattern: "boundaries/*"
     type: syntax
     enforcement: error
     checks:
-      mermaidType: C4Container
+      mermaidType: graph
+      requiredExtension: mermaid
       traceability:
         mustTraceTo: [CTX_]
     hub:
@@ -145,7 +147,7 @@ rules:
   - id: data-registration
     name: Data Model Registration
     level: folder
-    description: "ER diagrams accessible via 'Add Data' context menu for AI collaboration."
+    description: "ER diagrams accessible per-node via context menu for AI collaboration."
     target:
       idPrefix: DATA_
       pathPattern: "data/*"
@@ -155,15 +157,13 @@ rules:
       mermaidType: erDiagram
       requiredExtension: mermaid
       onePerFile: true
-      accessControl:
-        allowedReferencers: [COMP_, BND_, CTX_, SEQ_, FLOW_]
       traceability:
         mustBeLinked: true
 
   - id: sequence-registration
     name: Sequence Registration
     level: folder
-    description: "Process sequences accessible via 'Add Sequence' context menu. Participants must be valid ecosystem nodes."
+    description: "Process sequences accessible per-node via context menu. Participants must be valid ecosystem nodes."
     target:
       idPrefix: SEQ_
       pathPattern: "sequences/*"
@@ -173,7 +173,7 @@ rules:
       mermaidType: sequenceDiagram
       requiredExtension: mermaid
       onePerFile: true
-      allowedNodePrefixes: [COMP_, BND_, CTX_, DATA_, FLOW_]
+      allowedNodePrefixes: [COMP_, BND_, CTX_, DATA_, FLOW_, STATE_]
       traceability:
         mustTraceTo: [COMP_, BND_, CTX_]
         mustBeLinked: true
@@ -181,7 +181,7 @@ rules:
   - id: flow-registration
     name: Flow Registration
     level: folder
-    description: "Logical flows accessible via 'Add Flow' context menu for AI collaboration."
+    description: "Logical flows accessible per-node via context menu for AI collaboration."
     target:
       idPrefix: FLOW_
       pathPattern: "flows/*"
@@ -191,7 +191,22 @@ rules:
       mermaidType: flowchart
       requiredExtension: mermaid
       onePerFile: true
-      allowedNodePrefixes: [COMP_, BND_, DATA_, SEQ_]
+      traceability:
+        mustBeLinked: true
+
+  - id: state-registration
+    name: State Machine Registration
+    level: folder
+    description: "State machines accessible per-node via context menu for modeling behavior."
+    target:
+      idPrefix: STATE_
+      pathPattern: "states/*"
+    type: structural
+    enforcement: error
+    checks:
+      mermaidType: stateDiagram
+      requiredExtension: mermaid
+      onePerFile: true
       traceability:
         mustBeLinked: true
 

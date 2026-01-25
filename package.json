@@ -33,7 +33,7 @@
   "author": "FutureFoundAI",
   "license": "AGPL-3.0-only",
   "dependencies": {
-    "@a24z/mermaid-parser": "^1.0.0",
+    "@mermaid-js/parser": "^0.6.3",
     "@types/inquirer": "^9.0.9",
     "chalk": "^5.3.0",
     "commander": "^11.1.0",

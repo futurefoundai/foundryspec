@@ -1,0 +1,10 @@
+---
+title: System Context Diagram
+description: High-level system landscape.
+id: "CTX_Main"
+downlinks:
+  - "BND_Main"
+---
+graph TD
+    User((User)) --> System[CDS Reporting Platform]
+    System --> DB[(Database)]

@@ -40,7 +40,8 @@ export class ScaffoldManager {
         { name: "Components", path: "components", description: "L3: Internal module structure", enabled: true },
         { name: "Data Models", path: "data", description: "ER diagrams for AI collaboration", enabled: true },
         { name: "Sequences", path: "sequences", description: "Process flows for AI collaboration", enabled: true },
-        { name: "Flows", path: "flows", description: "Logical workflows for AI collaboration", enabled: true }
+        { name: "Flows", path: "flows", description: "Logical workflows for AI collaboration", enabled: true },
+        { name: "States", path: "states", description: "State machines for behavior modeling", enabled: true }
     ];
 
     constructor(projectName?: string) {
@@ -63,181 +64,28 @@ export class ScaffoldManager {
             await fs.ensureDir(path.join(this.targetDir, cat.path));
         }
 
-        // --- 1. Personas (Atomic Mindmaps) ---
-        const personaDir = path.join(this.targetDir, 'personas');
-        await fs.ensureDir(personaDir);
-
-        const userContent = `---
-title: Standard User
-description: A typical end-user of the system.
-id: "PER_User"
----
-mindmap
-  PER_User((Standard User))
-    Role
-      End User
-    Description
-      A typical end-user interacting with the system's core features.
-    Goals
-      Access public features
-      Manage personal data
-      Perform core workflows
-`;
-
-        const adminContent = `---
-title: System Admin
-description: Privileged user responsible for system management.
-id: "PER_Admin"
----
-mindmap
-  PER_Admin((System Admin))
-    Role
-      Administrator
-    Description
-      Privileged user responsible for user management, configuration, and system oversight.
-    Goals
-      Manage user accounts
-      Configure system settings
-      Monitor system health
-`;
-        await fs.writeFile(path.join(personaDir, 'PER_User.mermaid'), userContent);
-        await fs.writeFile(path.join(personaDir, 'PER_Admin.mermaid'), adminContent);
-
-        // --- 2. Requirements ---
-        const reqDir = path.join(this.targetDir, 'requirements');
-        await fs.ensureDir(reqDir);
-
-        const coreReqContent = `---
-title: Core Requirements
-description: Fundamental system requirements.
-id: "REQ_Core"
-uplink: "PER_User"
-downlinks:
-  - "CTX_System"
----
-requirementDiagram
-    requirement Fundamental {
-        id: "REQ_Core"
-        text: "The system shall perform its core functions."
-        risk: Low
-        verifymethod: Test
-    }
-`;
-        await fs.writeFile(path.join(reqDir, 'REQ_Core.mermaid'), coreReqContent);
-
-        // --- 3. Journey ---
-        const journeyDir = path.join(this.targetDir, 'journeys');
-        await fs.ensureDir(journeyDir);
+        // Copy template files from templates/scaffolds to project docs
+        const scaffoldDir = path.join(this.templateDir, 'scaffolds');
         
-        const journeyContent = `---
-title: User Workflow
-description: Core user interaction flow.
-id: "JRN_UserWorkflow"
-uplink: "PER_User"
----
-sequenceDiagram
-    autonumber
-    actor User
-    participant System
-
-    rect rgb(240, 255, 240)
-    Note right of User: Happy Path: Core Workflow
-    
-    User->>System: Login(credentials)
-    System-->>User: 200 OK (Auth Token)
-
-    User->>System: Perform Action(data)
-    System->>System: Validate & Process
-    System-->>User: 200 OK (Success)
-    end
-`;
-        await fs.writeFile(path.join(journeyDir, 'JRN_UserWorkflow.mermaid'), journeyContent);
-
-        // --- 4. Context (L1) ---
-        const contextPath = path.join(this.targetDir, 'context');
-        const systemContextContent = `---
-title: System Context Diagram (L1)
-description: High-level system landscape.
-id: "CTX_Main"
----
-graph TD
-    User((User)) --> CTX_System((${this.projectName}))
-`;
-        await fs.writeFile(path.join(contextPath, 'context.mermaid'), systemContextContent);
-
-        // --- 5. Boundaries (L2) ---
-        const boundariesPath = path.join(this.targetDir, 'boundaries');
-        const boundariesContent = `---
-title: Technical Boundaries Diagram (L2)
-description: Boundary decomposition.
-id: "BND_Main"
----
-graph TD
-    subgraph CTX_System [${this.projectName}]
-        BND_App(Main Application)
-    end
-`;
-        await fs.writeFile(path.join(boundariesPath, 'boundaries.mermaid'), boundariesContent);
-
-        // --- 7. Data Models ---
-        const dataPath = path.join(this.targetDir, 'data');
-        const dataContent = `---
-title: User Data Model
-description: Entity-relationship diagram for user data.
-id: "DATA_UserModel"
----
-erDiagram
-    USER ||--o{ ORDER : places
-    USER {
-        string id PK
-        string name
-        string email
-    }
-    ORDER {
-        string id PK
-        string userId FK
-        date orderDate
-    }
-`;
-        await fs.writeFile(path.join(dataPath, 'DATA_UserModel.mermaid'), dataContent);
-
-        // --- 8. Sequences ---
-        const sequencesPath = path.join(this.targetDir, 'sequences');
-        const sequenceContent = `---
-title: Authentication Flow
-description: Sequence diagram showing authentication process.
-id: "SEQ_AuthFlow"
-uplinks: ["COMP_Auth"]
----
-sequenceDiagram
-    participant User as PER_User
-    participant App as COMP_Auth
-    participant DB as DATA_UserModel
-    
-    User->>App: Login Request
-    App->>DB: Validate Credentials
-    DB-->>App: User Data
-    App-->>User: Auth Token
-`;
-        await fs.writeFile(path.join(sequencesPath, 'SEQ_AuthFlow.mermaid'), sequenceContent);
-
-        // --- 9. Flows ---
-        const flowsPath = path.join(this.targetDir, 'flows');
-        const flowContent = `---
-title: Data Processing Pipeline
-description: Logical flow for data processing.
-id: "FLOW_DataPipeline"
----
-flowchart TD
-    Start([Start]) --> Input[Receive Input]
-    Input --> Validate{Valid?}
-    Validate -->|Yes| Process[Process Data]
-    Validate -->|No| Error[Return Error]
-    Process --> Save[Save to DATA_UserModel]
-    Save --> End([End])
-    Error --> End
-`;
-        await fs.writeFile(path.join(flowsPath, 'FLOW_DataPipeline.mermaid'), flowContent);
+        for (const cat of this.standardCategories) {
+            const sourcePath = path.join(scaffoldDir, cat.path);
+            const targetPath = path.join(this.targetDir, cat.path);
+            
+            if (await fs.pathExists(sourcePath)) {
+                // Copy all files from the scaffold category to the project
+                const files = await fs.readdir(sourcePath);
+                for (const file of files) {
+                    const sourceFile = path.join(sourcePath, file);
+                    const targetFile = path.join(targetPath, file);
+                    
+                    // Skip if it's a directory (we only want files)
+                    const stat = await fs.stat(sourceFile);
+                    if (stat.isFile()) {
+                        await fs.copyFile(sourceFile, targetFile);
+                    }
+                }
+            }
+        }
 
         // --- REGISTER PROJECT GLOBALLY ---
         const projectId = crypto.randomUUID();

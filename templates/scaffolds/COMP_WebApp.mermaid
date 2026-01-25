@@ -1,0 +1,16 @@
+---
+title: Web Application Component
+description: Frontend web application component.
+id: "COMP_WebApp"
+uplink: "BND_Main"
+downlinks:
+  - "COMP_Auth"
+---
+classDiagram
+    class WebApplication {
+        +render()
+        +handleUserInput()
+        +displayData()
+    }
+    
+    WebApplication --> AuthService : uses

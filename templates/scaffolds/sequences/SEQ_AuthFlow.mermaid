@@ -1,0 +1,16 @@
+---
+title: Authentication Flow
+description: Sequence diagram showing authentication process.
+id: "SEQ_AuthFlow"
+uplink: "COMP_WebApp"
+---
+sequenceDiagram
+    participant COMP_WebApp as Web Application
+    participant COMP_Auth as Auth Service
+    participant DATA_UserModel as User Database
+    
+    COMP_WebApp->>COMP_Auth: Login Request
+    COMP_Auth->>DATA_UserModel: Validate Credentials
+    DATA_UserModel-->>COMP_Auth: User Data
+    COMP_Auth-->>COMP_WebApp: Auth Token
+

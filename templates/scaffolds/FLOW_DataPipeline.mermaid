@@ -1,0 +1,13 @@
+---
+title: Data Processing Pipeline
+description: Logical flow for data processing.
+id: "FLOW_DataPipeline"
+---
+flowchart TD
+    Start([Start]) --> Input[Receive Input]
+    Input --> Validate{Valid?}
+    Validate -->|Yes| Process[Process Data]
+    Validate -->|No| Error[Return Error]
+    Process --> Save[Save to DATA_UserModel]
+    Save --> End([End])
+    Error --> End
