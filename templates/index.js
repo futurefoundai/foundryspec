@@ -182,6 +182,7 @@ async function initApp() {
     document.getElementById('menu-data').addEventListener('click', (e) => openSidebar(activeNodeId, 'design', 'DATA'));
     document.getElementById('menu-sequence').addEventListener('click', (e) => openSidebar(activeNodeId, 'design', 'SEQ'));
     document.getElementById('menu-flow').addEventListener('click', (e) => openSidebar(activeNodeId, 'design', 'FLOW'));
+    document.getElementById('menu-state').addEventListener('click', (e) => openSidebar(activeNodeId, 'design', 'STATE'));
     
     if (saveCommentBtn) saveCommentBtn.addEventListener('click', saveComment);
 
@@ -519,7 +520,7 @@ async function renderSidebarContent(filter = null) {
     } else if (sidebarCurrentTab === 'design') {
         // Technical Design (Data, Seq, Flow)
         const allTargets = idMap[activeNodeId] || [];
-        const filtered = filter ? allTargets.filter(t => t.type.toUpperCase().startsWith(filter)) : allTargets.filter(t => ['DATA', 'SEQ', 'FLOW'].some(p => t.type.toUpperCase().startsWith(p)));
+        const filtered = filter ? allTargets.filter(t => t.type.toUpperCase().startsWith(filter)) : allTargets.filter(t => ['DATA', 'SEQ', 'FLOW', 'STATE'].some(p => t.type.toUpperCase().startsWith(p)));
 
         if (filtered.length > 0) {
             filtered.forEach(t => {
@@ -527,7 +528,7 @@ async function renderSidebarContent(filter = null) {
                 item.className = 'design-item';
                 item.onclick = () => { closeSidebar(); loadDiagram(t.path); };
                 item.innerHTML = `
-                    <div style="font-size:1.2rem; color:var(--accent)">${t.type.startsWith('DATA') ? '📊' : t.type.startsWith('SEQ') ? '↔️' : '🌲'}</div>
+                    <div style="font-size:1.2rem; color:var(--accent)">${t.type.startsWith('DATA') ? '📊' : t.type.startsWith('SEQ') ? '↔️' : t.type.startsWith('STATE') ? '🚦' : '🌲'}</div>
                     <div>
                         <div style="font-weight:600; font-size:0.85rem;">${t.title}</div>
                         <div style="font-size:0.7rem; color:var(--text-secondary)">${t.type}</div>
@@ -541,7 +542,8 @@ async function renderSidebarContent(filter = null) {
         const prompts = {
             DATA: `[AI PROMPT] Generate a DATA_ model for node ${activeNodeId}. Use erDiagram syntax.`,
             SEQ: `[AI PROMPT] Generate a SEQ_ diagram for node ${activeNodeId}. Use sequenceDiagram syntax.`,
-            FLOW: `[AI PROMPT] Generate a FLOW_ flowchart for node ${activeNodeId}.`
+            FLOW: `[AI PROMPT] Generate a FLOW_ flowchart for node ${activeNodeId}.`,
+            STATE: `[AI PROMPT] Generate a STATE_ state diagram for node ${activeNodeId}.`
         };
 
         Object.keys(prompts).forEach(key => {
@@ -572,7 +574,7 @@ window.closeNavModal = closeNavModal;
 function getIconForType(type) {
     const icons = {
         COMP: '📦', BND: '🌐', CTX: '📐', REQ: '✅', 
-        DATA: '💾', SEQ: '🔄', FLOW: '📊', CODE: '💻', PER: '👤'
+        DATA: '💾', SEQ: '🔄', FLOW: '📊', CODE: '💻', PER: '👤', STATE: '🚦'
     };
     return icons[type] || '📄';
 }
