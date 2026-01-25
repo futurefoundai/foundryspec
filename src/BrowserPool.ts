@@ -6,6 +6,7 @@ import { Browser } from 'puppeteer';
 import puppeteer from 'puppeteer';
 
 /**
+ * @foundryspec COMP_BrowserPool
  * Singleton class for managing a shared Puppeteer browser instance
  * to avoid repeated browser launches.
  */

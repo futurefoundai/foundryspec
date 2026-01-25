@@ -21,6 +21,15 @@ entities:
       - "REQ_DynamicRoot"
       - "REQ_Performance"
       - "REQ_SmartCaching"
+    downlinks:
+      - "COMP_RuleEngine"
+      - "COMP_MermaidParser"
+  - id: "COMP_MermaidParser"
+    uplink: "COMP_BuildManager"
+    downlinks:
+      - "COMP_BrowserPool"
+    requirements:
+      - "REQ_SmartCaching"
   - id: "COMP_ProbeManager"
     uplink: "REQ_AutomatedProbing"
     requirements:
@@ -51,6 +60,14 @@ entities:
   - id: "COMP_SidebarControllers"
     uplink: "COMP_InteractiveComments"
     description: "Handles the logic for the context sidebar and unified ID resolution."
+  - id: "COMP_MermaidParser"
+    uplink: "COMP_BuildManager"
+    requirements:
+      - "REQ_SmartCaching"
+  - id: "COMP_BrowserPool"
+    uplink: "COMP_MermaidParser"
+    requirements:
+      - "REQ_Performance"
 ---
 
 classDiagram

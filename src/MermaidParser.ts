@@ -15,6 +15,7 @@ import chalk from 'chalk';
 const require = createRequire(import.meta.url);
 
 /**
+ * @foundryspec COMP_MermaidParser
  * Service for parsing Mermaid diagrams with intelligent caching
  */
 export class MermaidParser {
