@@ -195,7 +195,7 @@ export class BuildManager {
       if (!id) return;
       const ups = Array.isArray(uplinks) ? uplinks : uplinks ? [uplinks] : [];
       const downs = Array.isArray(downlinks) ? downlinks : downlinks ? [downlinks] : [];
-      const reqs = Array.isArray(requirements) ? requirements : requirements ? [requirements] : []; // Treat requirements as uplinks for traceability purposes? Or separate?
+      const reqs = Array.isArray(requirements) ? requirements : requirements ? [requirements] : [];
       // In the deprecated logic, reqs were distinct. But for Rule Engine 'mustTraceTo', we usually trace uplinks.
       // Let's add requirements to nodes, but standard rules might only check uplinks.
       // Actually, for COMP -> REQ, 'requirements' field acts as an uplink.
@@ -209,10 +209,25 @@ export class BuildManager {
       if (!nodeMap.has(id)) nodeMap.set(id, { uplinks: [], downlinks: [] });
       const node = nodeMap.get(id)!;
       effectiveUplinks.forEach((u) => {
-        if (typeof u === 'string' && !node.uplinks.includes(u)) node.uplinks.push(u);
+        if (typeof u === 'string') {
+           if (!node.uplinks.includes(u)) node.uplinks.push(u);
+           
+           // Inferred Downlink (Child -> Parent means Parent has Downlink to Child)
+           if (!nodeMap.has(u)) nodeMap.set(u, { uplinks: [], downlinks: [] });
+           const parentNode = nodeMap.get(u)!;
+           if (!parentNode.downlinks.includes(id)) parentNode.downlinks.push(id);
+        }
       });
+      
+      // Process Downlinks (Parent -> Child)
       downs.forEach((d) => {
-        if (typeof d === 'string' && !node.downlinks.includes(d)) node.downlinks.push(d);
+        if (typeof d === 'string') {
+          if (!node.downlinks.includes(d)) node.downlinks.push(d);
+          // Inferred Uplink
+          if (!nodeMap.has(d)) nodeMap.set(d, { uplinks: [], downlinks: [] });
+          const childNode = nodeMap.get(d)!;
+          if (!childNode.uplinks.includes(id)) childNode.uplinks.push(id);
+        }
       });
     };
 
@@ -229,12 +244,20 @@ export class BuildManager {
 
       // Collect Referenced IDs (for Orphan checks)
       collect(data.uplink || data.traceability?.uplink);
+      // If we have an uplink, we are effectively referenced by the parent (Inferred Downlink)
+      if (data.uplink || data.traceability?.uplink) {
+          collect(data.id || data.traceability?.id);
+      }
+
       collect(data.downlinks || data.traceability?.downlinks);
       collect(data.requirements);
 
       const entities = Array.isArray(data.entities) ? data.entities : [];
       for (const ent of entities) {
         collect(ent.uplink);
+        // If entity has uplink, it is referenced
+        if (ent.uplink && ent.id) referencedIds.add(ent.id);
+        
         collect(ent.downlinks);
         collect(ent.requirements);
       }

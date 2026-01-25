@@ -300,7 +300,12 @@ export class RuleEngine {
 
                 // A. Orphan Check
                 if (checks.traceability.mustBeLinked && !referencedIds.has(ent.id)) {
-                    errors.push(`Orphan detected: Node "${ent.id}" is not linked to by any other document.`);
+                    // Try to suggest a parent based on common patterns or ROOT
+                    const suggestion = referencedIds.has('ROOT') ? 'ROOT' : 'Parent_ID';
+                    errors.push(
+                        `❌ Orphan Detected: Entity "${ent.id}" is disconnected from the graph.\n` +
+                        `   👉 Fix: Add 'uplink: ${suggestion}' (or appropriate parent) to ${asset.relPath}`
+                    );
                 }
 
                 // B. Recursive Uplink Check (mustTraceTo)
