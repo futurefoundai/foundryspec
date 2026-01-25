@@ -5,8 +5,13 @@ description: Detailed decomposition of the FoundrySpec engine components.
 entities:
   - id: "COMP_Group"
     uplink: "REQ_NonFunctional"
+    requirements:
+      - "REQ_ZeroMaintenance"
   - id: "COMP_ClickInterceptor"
     uplink: "REQ_Functional"
+    requirements:
+      - "REQ_SmartInterception"
+      - "REQ_MultiDestinationNav"
   - id: "COMP_InteractiveComments"
     uplink: "REQ_InteractiveComments"
     downlinks:
@@ -22,6 +27,8 @@ entities:
       - "REQ_Performance"
       - "REQ_SmartCaching"
       - "REQ_SmartInference"
+      - "REQ_ZeroMaintenance"
+      - "REQ_SyntheticHub"
     downlinks:
       - "COMP_RuleEngine"
       - "COMP_MermaidParser"
@@ -47,6 +54,7 @@ entities:
       - "COMP_DevServer"
     requirements:
       - "REQ_Functional"
+      - "REQ_SafeRemoval"
   - id: "COMP_DevServer"
     uplink: "REQ_Functional"
     requirements:
@@ -56,6 +64,8 @@ entities:
     requirements:
       - "REQ_Core"
       - "REQ_HumanReadable"
+      - "REQ_Integrity"
+      - "REQ_EntityVerification"
   - id: "COMP_SidebarControllers"
     uplink: "COMP_InteractiveComments"
     description: "Handles the logic for the context sidebar and unified ID resolution."

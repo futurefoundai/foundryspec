@@ -8,105 +8,59 @@ entities:
     uplink: 
       - GRP_Requirements
       - PER_SystemAnalyst
-    downlinks:
-      - REQ_SafeRemoval
-      - REQ_Functional
-      - REQ_NonFunctional
   - id: "REQ_Functional"
     classification: Functional
     uplink: 
       - "REQ_Core"
       - "PER_SystemAnalyst"
-    downlinks:
-      - "COMP_CLI"
-      - "COMP_GitManager"
-      - "COMP_ClickInterceptor"
-      - "CTX_System"
-      - "REQ_SmartInterception"
-      - "REQ_EntityVerification"
-      - "REQ_MultiDestinationNav"
   - id: "REQ_NonFunctional"
     classification: Non-Functional
     uplink: 
       - "REQ_Core"
       - "PER_CodingAgent"
-    downlinks:
-      - "REQ_Integrity"
-      - "REQ_LocalFirst"
-      - "REQ_ZeroMaintenance"
-      - "REQ_Performance"
-      - "REQ_SmartCaching"
-      - "REQ_HumanReadable"
   - id: "REQ_Integrity"
     classification: Non-Functional
     uplink: "REQ_NonFunctional"
-    downlinks:
-      - "COMP_RuleEngine"
   - id: "REQ_LocalFirst"
     classification: Non-Functional
     uplink: "REQ_NonFunctional"
-    downlinks:
-      - "CTX_System"
   - id: "REQ_ZeroMaintenance"
     classification: Non-Functional
     uplink: "REQ_NonFunctional"
-    downlinks:
-      - "COMP_BuildManager"
-      - "COMP_Group"
   - id: "REQ_Performance"
     classification: Non-Functional
     uplink: "REQ_NonFunctional"
-    downlinks:
-      - "COMP_BuildManager"
   - id: "REQ_SmartCaching"
     classification: Non-Functional
     uplink: "REQ_NonFunctional"
-    downlinks:
-      - "COMP_BuildManager"
   - id: "REQ_HumanReadable"
     classification: Non-Functional
     uplink: "REQ_NonFunctional"
-    downlinks:
-      - "COMP_RuleEngine"
   - id: "REQ_DynamicRoot"
     classification: Functional
     uplink: "REQ_Functional"
-    downlinks:
-      - "REQ_SyntheticHub"
   - id: "REQ_SyntheticHub"
     classification: Functional
     title: Synthetic Navigation Hub
     description: The system must automatically generate root and category indices to eliminate manual maintenance.
     uplink: "REQ_DynamicRoot"
-    downlinks:
-      - "COMP_BuildManager"
   - id: REQ_ZeroConfig
     classification: Functional
     uplink: REQ_Functional
-    downlinks:
-      - COMP_ConfigStore
   - id: REQ_SafeRemoval
     classification: Functional
     uplink: REQ_Core
-    downlinks:
-      - COMP_CLI
   - id: REQ_SmartInterception
     classification: Functional
     uplink: REQ_Functional
-    downlinks:
-      - COMP_ClickInterceptor
   - id: REQ_EntityVerification
     classification: Functional
     uplink: REQ_Functional
-    downlinks:
-      - COMP_RuleEngine
   - id: REQ_MultiDestinationNav
     classification: Functional
     title: Multi-Destination Navigation
     description: The system shall provide a selection modal when a node corresponds to multiple architectural views.
     uplink: REQ_Functional
-    downlinks:
-      - COMP_ClickInterceptor
   - id: REQ_SmartInference
     classification: Functional
     title: Smart Graph Inference
