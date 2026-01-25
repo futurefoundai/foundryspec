@@ -577,7 +577,6 @@ async function loadDiagram(filePath, isBack = false) {
         currentViewPath = filePath.replace(/\\/g, '/');
         content = content.replace(/^---[\s\S]*?---\s*/, '');
         if (filePath.endsWith('.md')) {
-        if (filePath.endsWith('.md')) {
             openFootnoteSidebar(filePath, content);
             return;
         }
