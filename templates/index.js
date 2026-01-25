@@ -470,35 +470,7 @@ async function renderSidebarContent() {
     const content = document.getElementById('sidebar-content');
     content.innerHTML = '';
 
-    // 1. Related Diagrams (Data, Seq, Flow, State)
-    const allTargets = idMap[activeNodeId] || [];
-    const related = allTargets.filter(t => ['DATA', 'SEQ', 'FLOW', 'STATE'].some(p => t.type.toUpperCase().startsWith(p)));
-    
-    if (related.length > 0) {
-        const h4 = document.createElement('h4');
-        h4.style.fontSize = '0.7rem'; h4.style.textTransform = 'uppercase';
-        h4.style.color = 'var(--text-secondary)'; h4.style.margin = '1rem 0 0.5rem 0';
-        h4.innerText = 'Related Diagrams';
-        content.appendChild(h4);
-
-        related.forEach(t => {
-            const item = document.createElement('div');
-            item.className = 'design-item';
-            item.onclick = () => { closeSidebar(); loadDiagram(t.path); };
-            item.innerHTML = `
-                <div style="font-size:1.2rem; color:var(--accent)">${t.type.startsWith('DATA') ? '📊' : t.type.startsWith('SEQ') ? '↔️' : t.type.startsWith('STATE') ? '🚦' : '🌲'}</div>
-                <div>
-                    <div style="font-weight:600; font-size:0.85rem;">${t.title}</div>
-                    <div style="font-size:0.7rem; color:var(--text-secondary)">${t.type}</div>
-                </div>
-            `;
-            content.appendChild(item);
-        });
-        const sep = document.createElement('hr'); sep.style.border = '0'; sep.style.borderTop = '1px solid var(--border)'; sep.style.margin = '1rem 0';
-        content.appendChild(sep);
-    }
-
-    // 2. Comments
+    // 1. Comments
     const usi = getUSI(activeNodeId, currentViewPath);
     const localComments = commentsRegistry[usi] || [];
     const otherComments = Object.keys(commentsRegistry)
@@ -533,8 +505,7 @@ async function renderSidebarContent() {
     renderBatch('Comments', localComments, true, usi);
     renderBatch('Other Contexts', otherComments, false);
 
-    // 3. AI Prompts (Collapsed by default or just listed?)
-    // Let's list them cleanly at bottom
+    // 2. AI Prompts
     const aiContainer = document.createElement('div');
     aiContainer.style.marginTop = '1rem';
     
@@ -556,7 +527,7 @@ async function renderSidebarContent() {
         promptBox.className = 'ai-prompt-box';
         promptBox.innerHTML = `
             <div class="ai-prompt-text">${prompts[key]}</div>
-            <button onclick="copyPrompt('${prompts[key]}')" style="background:var(--accent); color:#fff; border:none; padding:4px 8px; border-radius:4px; font-size:0.7rem; cursor:pointer;">Copy</button>
+            <button onclick="appendPrompt('${prompts[key]}')" style="background:var(--accent); color:#fff; border:none; padding:4px 8px; border-radius:4px; font-size:0.7rem; cursor:pointer;">Add</button>
         `;
         aiContainer.appendChild(promptBox);
     });
@@ -567,9 +538,14 @@ async function renderSidebarContent() {
     if (footer) footer.style.display = 'block';
 }
 
-function copyPrompt(text) {
-    navigator.clipboard.writeText(text);
-    alert('Prompt copied to clipboard! Paste it into the comments to request generation.');
+function appendPrompt(text) {
+    const input = document.getElementById('sidebar-comment-input');
+    if (input) {
+        const current = input.value;
+        input.value = current ? current + '\n' + text : text;
+        input.focus();
+        input.scrollTop = input.scrollHeight;
+    }
 }
 // @foundryspec/end COMP_SidebarControllers
 
