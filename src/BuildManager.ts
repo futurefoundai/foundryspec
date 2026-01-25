@@ -307,17 +307,14 @@ export class BuildManager {
       build: { outputDir: 'internal', assetsDir: 'assets' },
     };
 
-    await this.generateHub(hubConfig, outputDir, idToFileMap, assets, codeMap);
-
-    // Copy System Templates
-    const templateDir = path.resolve(__dirname, '../templates');
-    const hubAssets = ['index.css', 'index.js'];
-    for (const asset of hubAssets) {
-      const assetPath = path.join(templateDir, asset);
-      if (await fs.pathExists(assetPath)) {
-        await fs.copy(assetPath, path.join(outputDir, asset));
-      }
+    // Copy System Templates FIRST
+    const templateDir = path.resolve(__dirname, '../templates/hub');
+    if (await fs.pathExists(templateDir)) {
+      await fs.copy(templateDir, outputDir);
     }
+
+    // Generate Hub (Overwriting index.html with hydration)
+    await this.generateHub(hubConfig, outputDir, idToFileMap, assets, codeMap);
 
     // Copy Project Documentation
     console.log(chalk.gray(`Copying project documentation to internal build...`));
@@ -507,7 +504,7 @@ ${standaloneAssets
     assets: ProjectAsset[],
     codeMap: Map<string, string[]>,
   ): Promise<void> {
-    const templatePath = path.resolve(__dirname, '../templates/index.html');
+    const templatePath = path.resolve(__dirname, '../templates/hub/index.html');
     if (!(await fs.pathExists(templatePath))) {
       throw new Error('Hub template not found. Please reinstall FoundrySpec.');
     }

@@ -98,11 +98,11 @@
     <!-- Initialization & External Logic -->
     <script>
       // Injected by FoundrySpec
-      const idMap = {{idMap}};
-      const projectName = "{{projectName}}";
-      const projectId = "{{projectId}}";
-      const projectVersion = "{{version}}";
+      window.idMap = {{idMap}};
+      window.projectName = "{{projectName}}";
+      window.projectId = "{{projectId}}";
+      window.projectVersion = "{{version}}";
     </script>
-    <script src="index.js"></script>
+    <script type="module" src="index.js"></script>
   </body>
 </html>

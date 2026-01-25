@@ -16,7 +16,8 @@
     "prepublishOnly": "npm run build",
     "docs:build": "foundryspec build",
     "docs:serve": "foundryspec serve",
-    "lint": "eslint 'src/**/*.ts'",
+    "lint": "eslint 'src/**/*.ts' && npm run lint:templates",
+    "lint:templates": "eslint 'templates/hub/**/*.js' --no-ignore",
     "lint:fix": "eslint 'src/**/*.ts' --fix",
     "format": "prettier --write 'src/**/*.ts'"
   },

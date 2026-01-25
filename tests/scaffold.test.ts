@@ -77,5 +77,19 @@ describe('Scaffold & Build Verification', () => {
         // Verify key assets were copied
         expect(await fs.pathExists(path.join(buildOutputDir, 'assets/root.mermaid'))).toBe(true);
         expect(await fs.pathExists(path.join(buildOutputDir, 'assets/requirements/REQ_Core.mermaid'))).toBe(true);
+        
+        // Verify HUB Integrity (Refactored location)
+        expect(await fs.pathExists(path.join(buildOutputDir, 'index.css'))).toBe(true);
+        expect(await fs.pathExists(path.join(buildOutputDir, 'index.js'))).toBe(true);
+        
+        // Verify index.html contains critical UI elements
+        const indexHtml = await fs.readFile(path.join(buildOutputDir, 'index.html'), 'utf8');
+        expect(indexHtml).toContain('id="footnote-sidebar"'); // Footnote sidebar
+        expect(indexHtml).toContain('id="menu-state"');       // State support
+        
+        // Verify index.js contains key functions
+        const indexJs = await fs.readFile(path.join(buildOutputDir, 'index.js'), 'utf8');
+        expect(indexJs).toContain('function openFootnoteSidebar');
+        expect(indexJs).toContain('function appendPrompt');
     }, 60000); // Increased timeout for build
 });

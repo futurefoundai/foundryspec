@@ -119,6 +119,22 @@ body {
   font-weight: 500;
 }
 
+.breadcrumb-link {
+    cursor: pointer;
+    color: var(--accent);
+    transition: color 0.2s;
+}
+
+.breadcrumb-link:hover {
+    color: var(--text-primary);
+}
+
+.breadcrumb-active {
+    color: var(--text-primary);
+    font-weight: 600;
+    cursor: default;
+}
+
 #viewer {
   position: relative;
   flex-grow: 1;
@@ -557,7 +573,7 @@ g[class*="mindmap-node-l3"] > text,
   transform: scale(2.0); /* Forward exit: zoom into node */
   opacity: 0;
   pointer-events: none;
-  transition: transform 0.8s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease;
+  transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease;
 }
 
 .initial {
@@ -569,7 +585,7 @@ g[class*="mindmap-node-l3"] > text,
   transform: scale(0.6); /* Backward exit: recede into distance */
   opacity: 0;
   pointer-events: none;
-  transition: transform 0.8s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease;
+  transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease;
 }
 
 .initial-reverse {
