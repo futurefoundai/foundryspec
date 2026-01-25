@@ -55,7 +55,7 @@ To maintain architectural integrity, every spec file MUST include these top-leve
 
 1.  **`id`**: A unique stable identifier (e.g., `PER_User`, `REQ_Login`, `COMP_Auth`).
 2.  **`uplink`**: (Optional) The ID of the parent asset in the documentation graph.
-3.  **`downlinks`**: (Optional) An array of child IDs.
+3.  **`downlinks`**: (Optional - Deprecated) An array of child IDs. Prefer defining relationships via `uplink` on the child node (reverse inference).
 4.  **`requirements`**: (Required for Components/Features) An array of granular `REQ_` IDs that this asset implements.
 5.  **`entities`**: (Optional) A list of internal IDs defined within this file.
 

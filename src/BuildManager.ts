@@ -14,8 +14,6 @@ import fs from 'fs-extra';
 import path from 'path';
 import chalk from 'chalk';
 import { glob } from 'glob';
-import puppeteer from 'puppeteer';
-import { createRequire } from 'module';
 import matter from 'gray-matter';
 
 import { fileURLToPath } from 'url';
@@ -25,7 +23,6 @@ import { ConfigStore } from './ConfigStore.js';
 import { RuleEngine } from './RuleEngine.js';
 import { ProbeManager } from './ProbeManager.js';
 import { MermaidParser } from './MermaidParser.js';
-import { BrowserPool } from './BrowserPool.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 

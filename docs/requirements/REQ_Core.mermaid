@@ -107,6 +107,12 @@ entities:
     uplink: REQ_Functional
     downlinks:
       - COMP_ClickInterceptor
+  - id: REQ_SmartInference
+    classification: Functional
+    title: Smart Graph Inference
+    description: The system shall infer bi-directional relationships (uplink/downlink) from a single source of truth (uplink) to reduce documentation boilerplate.
+    uplink: REQ_Functional
+    # No downlinks needed! Dogfooding feature.
 ---
 
 requirementDiagram
@@ -141,6 +147,14 @@ requirementDiagram
     Functional -contains-> Smart_Interception
     Functional -contains-> Entity_Verification
     Functional -contains-> Multi_Destination_Nav
+    Functional -contains-> Smart_Inference
+
+    requirement Smart_Inference {
+        id: "REQ_SmartInference"
+        text: "The system shall automatically infer downstream links from upstream definitions, enabling 'uplink-only' documentation."
+        risk: Low
+        verifymethod: Test
+    }
 
     requirement Safe_Removal {
         id: "REQ_SafeRemoval"
