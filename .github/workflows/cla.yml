@@ -1,0 +1,32 @@
+name: 'CLA Assistant'
+on:
+  issue_comment:
+    types: [created]
+  pull_request_target:
+    types: [opened, closed, synchronize]
+
+# Explicitly grant permissions
+permissions:
+  actions: write
+  contents: write
+  pull-requests: write
+  statuses: write
+
+jobs:
+  clabot:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 'CLA Assistant'
+        if: (github.event.comment.body == 'recheck' || github.event.comment.body == 'I have read the CLA Document and I hereby sign the CLA') || github.event_name == 'pull_request_target'
+        uses: contributor-assistant/github-action@v2.4.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # You can create a PERSONAL_ACCESS_TOKEN and add it to repo secrets if needed for keeping a storage file in a separate repo
+          # PERSONAL_ACCESS_TOKEN: ${{ secrets.CLA_TOKEN }}
+        with:
+          path-to-signatures: 'signatures/version1/cla.json'
+          path-to-cla-document: 'https://github.com/futurefoundai/foundryspec/blob/main/CLA.md'
+          # Branch should not be protected where 'path-to-signatures' is stored
+          branch: 'main'
+          allowlist: bot*,
+          # message-on-new-contributor: 'Welcome! Please sign the CLA to continue.'
