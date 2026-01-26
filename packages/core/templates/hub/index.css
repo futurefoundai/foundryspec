@@ -787,12 +787,51 @@ rect.activation2 {
 
 /* Alt/Loop/Opt/Par Boxes (Grouping) */
 .labelBox,
-rect.labelBox, rect {
+rect.labelBox,
+rect {
     fill: var(--bg-primary) !important;
     stroke: var(--border) !important;
     stroke-width: 1.5px !important;
     opacity: 0.9 !important;
 }
+
+/* SVG Pan-Zoom Controls */
+g.svg-pan-zoom_reset-pan-zoom rect,
+g.svg-pan-zoom_zoom-in rect,
+g.svg-pan-zoom_zoom-out rect {
+    fill: var(--bg-secondary) !important;
+    stroke: var(--accent) !important;
+    stroke-width: 1.5px !important;
+    opacity: 1 !important;
+    transition: all 0.2s ease !important;
+}
+
+g.svg-pan-zoom_reset-pan-zoom:hover rect,
+g.svg-pan-zoom_zoom-in:hover rect,
+g.svg-pan-zoom_zoom-out:hover rect {
+    fill: var(--accent) !important;
+    stroke: var(--accent) !important;
+}
+
+g.svg-pan-zoom_reset-pan-zoom line,
+g.svg-pan-zoom_zoom-in line,
+g.svg-pan-zoom_zoom-out line,
+g.svg-pan-zoom_reset-pan-zoom path,
+g.svg-pan-zoom_zoom-in path,
+g.svg-pan-zoom_zoom-out path {
+    stroke: var(--text-primary) !important;
+    stroke-width: 1.5px !important;
+}
+
+g.svg-pan-zoom_reset-pan-zoom:hover line,
+g.svg-pan-zoom_zoom-in:hover line,
+g.svg-pan-zoom_zoom-out:hover line,
+g.svg-pan-zoom_reset-pan-zoom:hover path,
+g.svg-pan-zoom_zoom-in:hover path,
+g.svg-pan-zoom_zoom-out:hover path {
+    stroke: #ffffff !important;
+}
+
 
 /* Alt/Loop/Opt Labels */
 .labelText,

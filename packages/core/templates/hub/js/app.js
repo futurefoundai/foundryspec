@@ -5,6 +5,33 @@ import { loadDiagram } from './diagram.js';
 import { resolveActiveNodeId } from './utils.js';
 import { openSidebar, openNavigationModal, handleFootnoteSelection, setLoadDiagramFn, updateUI } from './ui.js';
 
+/**
+ * Load metadata from JSON files
+ */
+async function loadMetadata() {
+    try {
+        const [idMapResponse, metadataResponse] = await Promise.all([
+            fetch('idMap.json'),
+            fetch('metadataRegistry.json')
+        ]);
+        
+        if (idMapResponse.ok) {
+            globals.idMap = await idMapResponse.json();
+            window.idMap = globals.idMap;
+        }
+        
+        if (metadataResponse.ok) {
+            globals.metadataRegistry = await metadataResponse.json();
+            window.metadataRegistry = globals.metadataRegistry;
+        }
+        
+        return true;
+    } catch (error) {
+        console.error('[FoundrySpec] Failed to load metadata:', error);
+        return false;
+    }
+}
+
 export async function ioInitCustomCSS() {
     const cssFiles = ['assets/theme.css', 'assets/custom.css'];
     for (const file of cssFiles) {
@@ -110,6 +137,12 @@ export async function initApp() {
     const domReady = !!(backButton && viewer);
     if (!mermaidReady || !domReady) { setTimeout(initApp, 200); return; }
 
+    // Load metadata from JSON files
+    const metadataLoaded = await loadMetadata();
+    if (!metadataLoaded) {
+        console.error('[FoundrySpec] Failed to load metadata, some features may not work');
+    }
+
     // Initialize Mermaid with theme based on current mode
     updateMermaidTheme();
 
@@ -156,16 +189,71 @@ export async function initApp() {
 
         const key = resolveActiveNodeId(nodeContainer, viewer, globals.idMap);
 
-        if (key && globals.idMap[key]) {
-            const rawTargets = globals.idMap[key];
-            const targets = Array.isArray(rawTargets) ? rawTargets : [{ path: rawTargets, title: key, type: 'diagram' }];
+        if (key) {
+            // Check if node has metadata (downlinks or references)
+            const metadata = globals.metadataRegistry[key];
             
-            if (targets.length === 1) {
-                loadDiagram(targets[0].path);
-            } else {
-                openNavigationModal(key, targets);
+            if (metadata) {
+                // Collect all navigation targets from downlinks and backlinks
+                const navigationTargets = [];
+                
+                // Helper to convert string | string[] to array
+                const toArray = (val) => {
+                    if (!val) return [];
+                    return Array.isArray(val) ? val : [val];
+                };
+                
+                // Add downlinks
+                const downlinks = toArray(metadata.downlinks);
+                downlinks.forEach(dlId => {
+                    if (globals.idMap[dlId]) {
+                        const dlTargets = globals.idMap[dlId];
+                        const dlTarget = Array.isArray(dlTargets) ? dlTargets[0] : dlTargets;
+                        navigationTargets.push({
+                            ...dlTarget,
+                            title: `${dlId} (downlink)`,
+                            id: dlId,
+                            category: 'downlink'
+                        });
+                    }
+                });
+                
+                // Add references (backlinks) - diagrams that reference this node
+                const references = toArray(metadata.referencedBy);
+                references.forEach(refId => {
+                    if (globals.idMap[refId]) {
+                        const refTargets = globals.idMap[refId];
+                        const refTarget = Array.isArray(refTargets) ? refTargets[0] : refTargets;
+                        navigationTargets.push({
+                            ...refTarget,
+                            title: `${refId} (references this)`,
+                            id: refId,
+                            category: 'reference'
+                        });
+                    }
+                });
+                
+                // If we have navigation targets from metadata, use them
+                if (navigationTargets.length === 1) {
+                    loadDiagram(navigationTargets[0].path);
+                    return;
+                } else if (navigationTargets.length > 1) {
+                    openNavigationModal(key, navigationTargets);
+                    return;
+                }
             }
-            return;
+            
+            // Fallback: use idMap targets (current behavior for nodes without metadata)
+            if (globals.idMap[key]) {
+                const rawTargets = globals.idMap[key];
+                const targets = Array.isArray(rawTargets) ? rawTargets : [{ path: rawTargets, title: key, type: 'diagram' }];
+                
+                if (targets.length === 1) {
+                    loadDiagram(targets[0].path);
+                } else {
+                    openNavigationModal(key, targets);
+                }
+            }
         }
     });
 

@@ -1,64 +1,15 @@
 {
-  "name": "@futurefoundaihq/foundryspec",
-  "version": "1.0.3",
-  "description": "Intent Driven Development Infrastructure for human-AI CollabOps",
-  "main": "index.js",
-  "type": "module",
-  "bin": {
-    "foundryspec": "dist/index.js"
-  },
-  "publishConfig": {
-    "access": "public"
-  },
-  "scripts": {
-    "test": "vitest run",
-    "build": "tsc",
-    "prepublishOnly": "npm run build",
-    "docs:build": "foundryspec build",
-    "docs:serve": "foundryspec serve",
-    "lint": "eslint 'src/**/*.ts' && npm run lint:templates",
-    "lint:templates": "eslint 'templates/hub/**/*.js' --no-ignore",
-    "lint:fix": "eslint 'src/**/*.ts' --fix",
-    "format": "prettier --write 'src/**/*.ts'"
-  },
-  "keywords": [
-    "documentation",
-    "mermaid",
-    "architecture",
-    "ai-agent",
-    "c4-model",
-    "specification",
-    "scaffolding",
-    "Intent Driven Development"
+  "name": "@futurefoundaihq/foundryspec-monorepo",
+  "private": true,
+  "description": "Monorepo for FoundrySpec",
+  "workspaces": [
+    "packages/*"
   ],
-  "author": "FutureFoundAI",
-  "license": "AGPL-3.0-only",
-  "dependencies": {
-    "@types/inquirer": "^9.0.9",
-    "chalk": "^5.3.0",
-    "commander": "^11.1.0",
-    "ejs": "^3.1.9",
-    "fs-extra": "^11.2.0",
-    "glob": "^10.3.10",
-    "gray-matter": "^4.0.3",
-    "inquirer": "^13.2.1",
-    "js-yaml": "^4.1.1",
-    "mermaid": "^10.8.0",
-    "puppeteer": "^24.3.0",
-    "simple-git": "^3.22.0",
-    "typescript": "^5.9.3"
+  "scripts": {
+    "test": "npm run test --workspaces",
+    "build": "npm run build --workspaces",
+    "lint": "npm run lint --workspaces"
   },
-  "devDependencies": {
-    "@types/fs-extra": "^11.0.4",
-    "@types/js-yaml": "^4.0.9",
-    "@types/serve-handler": "^6.1.4",
-    "@typescript-eslint/eslint-plugin": "^8.53.1",
-    "@typescript-eslint/parser": "^8.53.1",
-    "eslint": "^9.39.2",
-    "eslint-config-prettier": "^10.1.8",
-    "prettier": "^3.8.1",
-    "serve-handler": "^6.1.6",
-    "typescript-eslint": "^8.53.1",
-    "vitest": "^4.0.18"
-  }
+  "author": "FutureFoundAI",
+  "license": "AGPL-3.0-only"
 }

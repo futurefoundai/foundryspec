@@ -314,7 +314,7 @@ export class BuildManager {
     }
 
     // Generate Hub (Overwriting index.html with hydration)
-    await this.generateHub(hubConfig, outputDir, idToFileMap, assets, codeMap);
+    await this.generateHub(hubConfig, outputDir, idToFileMap, assets, codeMap, nodeMap);
 
     // Copy Project Documentation
     console.log(chalk.gray(`Copying project documentation to internal build...`));
@@ -327,19 +327,11 @@ export class BuildManager {
       await fs.writeFile(destPath, asset.content);
     }
 
-    // Ensure comments path exists in storage (not dist)
-    const storageDir = this.configStore.getStorageDir(this.projectId);
-    await fs.ensureDir(storageDir);
-    const commentsPath = this.configStore.getCommentsPath(this.projectId);
-    if (!(await fs.pathExists(commentsPath))) {
-      await fs.writeJson(commentsPath, {});
-    }
 
     console.log(
       chalk.green(`
 ✅ Build complete!
-   Internal Location: ${outputDir}
-   Comments Storage:  ${commentsPath}`),
+   Internal Location: ${outputDir}`),
     );
     console.timeEnd('Build process');
   }
@@ -503,6 +495,7 @@ ${standaloneAssets
     idToSpecFile: Map<string, string>,
     assets: ProjectAsset[],
     codeMap: Map<string, string[]>,
+    nodeMap: Map<string, { uplinks: string[]; downlinks: string[] }>,
   ): Promise<void> {
     const templatePath = path.resolve(__dirname, '../templates/hub/index.html');
     if (!(await fs.pathExists(templatePath))) {
@@ -585,14 +578,108 @@ ${standaloneAssets
       }
     }
 
+    // 4. Build Metadata Registry for Navigation using INFERRED downlinks from nodeMap
+    interface NodeMetadata {
+      id: string;
+      title?: string;
+      uplink?: string | string[];
+      downlinks: string[]; // INFERRED from nodeMap
+      requirements?: string | string[];
+      referencedBy: string[]; // Diagrams that reference this node (participants, etc.)
+    }
+    
+    const metadataRegistry: Record<string, NodeMetadata> = {};
+    
+    // Initialize registry from nodeMap (which has INFERRED downlinks)
+    nodeMap.forEach((graphData, id) => {
+      if (!metadataRegistry[id]) {
+        metadataRegistry[id] = {
+          id,
+          downlinks: [...graphData.downlinks], // Use inferred downlinks from nodeMap
+          referencedBy: []
+        };
+      } else {
+        metadataRegistry[id].downlinks = [...graphData.downlinks];
+      }
+      
+      // Store uplinks for reference (though not used in navigation)
+      if (graphData.uplinks.length > 0) {
+        metadataRegistry[id].uplink = graphData.uplinks.length === 1 
+          ? graphData.uplinks[0] 
+          : graphData.uplinks;
+      }
+    });
+    
+    // Add titles and requirements from assets
+    for (const asset of assets) {
+      const id = asset.data?.id;
+      if (id && metadataRegistry[id]) {
+        metadataRegistry[id].title = asset.data.title;
+        metadataRegistry[id].requirements = asset.data.requirements;
+      }
+      
+      // Process entities
+      const entities = Array.isArray(asset.data.entities) ? asset.data.entities : [];
+      for (const ent of entities) {
+        if (ent.id && metadataRegistry[ent.id]) {
+          metadataRegistry[ent.id].requirements = ent.requirements;
+        }
+      }
+    }
+    
+    // Extract participants/references from diagram content for referencedBy
+    for (const asset of assets) {
+      const assetId = asset.data?.id;
+      if (!assetId) continue;
+      
+      const content = asset.content;
+      
+      // Extract participants from sequence diagrams
+      if (content.includes('sequenceDiagram')) {
+        const participantRegex = /participant\s+([A-Z][A-Z0-9_]*)/gi;
+        let match;
+        while ((match = participantRegex.exec(content)) !== null) {
+          const participantId = match[1];
+          if (participantId && participantId !== assetId) {
+            // This sequence references participantId
+            if (!metadataRegistry[participantId]) {
+              metadataRegistry[participantId] = { id: participantId, downlinks: [], referencedBy: [] };
+            }
+            if (!metadataRegistry[participantId].referencedBy.includes(assetId)) {
+              metadataRegistry[participantId].referencedBy.push(assetId);
+            }
+          }
+        }
+      }
+      
+      // Extract class references from class diagrams
+      if (content.includes('classDiagram')) {
+        // Match class definitions and relationships to find referenced IDs
+        const classRefRegex = /\b([A-Z][A-Z0-9_]*)\b/g;
+        let match;
+        while ((match = classRefRegex.exec(content)) !== null) {
+          const refId = match[1];
+          // Only track if it's a known FoundrySpec ID (exists in metadataRegistry)
+          if (refId !== assetId && metadataRegistry[refId]) {
+            if (!metadataRegistry[refId].referencedBy.includes(assetId)) {
+              metadataRegistry[refId].referencedBy.push(assetId);
+            }
+          }
+        }
+      }
+    }
+
+    // Write metadata as separate JSON files for cleaner loading
+    await fs.writeJson(path.join(outputDir, 'idMap.json'), mapObj, { spaces: 2 });
+    await fs.writeJson(path.join(outputDir, 'metadataRegistry.json'), metadataRegistry, { spaces: 2 });
+
     const rendered = templateContent
       .replace(/{{projectName}}/g, config.projectName)
       .replace(
         /{{projectId}}/g,
         (config as unknown as { projectId: string }).projectId || 'unboarded-project',
       )
-      .replace(/{{version}}/g, config.version)
-      .replace(/{{idMap}}/g, JSON.stringify(mapObj));
+      .replace(/{{version}}/g, config.version);
 
     await fs.writeFile(path.join(outputDir, 'index.html'), rendered);
   }

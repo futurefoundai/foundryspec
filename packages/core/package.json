@@ -1,0 +1,108 @@
+{
+  "name": "@futurefoundaihq/foundryspec",
+  "version": "1.0.3",
+  "description": "Intent Driven Development Infrastructure for human-AI CollabOps",
+  "main": "dist/index.js",
+  "type": "module",
+  "bin": {
+    "foundryspec": "dist/index.js"
+  },
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./interfaces/IPlugin": {
+      "import": "./dist/interfaces/IPlugin.js",
+      "types": "./dist/interfaces/IPlugin.d.ts"
+    },
+    "./interfaces/IStorageProvider": {
+      "import": "./dist/interfaces/IStorageProvider.js",
+      "types": "./dist/interfaces/IStorageProvider.d.ts"
+    },
+    "./interfaces/ICommentSystem": {
+      "import": "./dist/interfaces/ICommentSystem.js",
+      "types": "./dist/interfaces/ICommentSystem.d.ts"
+    },
+    "./di/ServiceContainer": {
+      "import": "./dist/di/ServiceContainer.js",
+      "types": "./dist/di/ServiceContainer.d.ts"
+    },
+    "./ConfigStore": {
+      "import": "./dist/ConfigStore.js",
+      "types": "./dist/ConfigStore.d.ts"
+    }
+  },
+  "typesVersions": {
+    "*": {
+      "interfaces/IPlugin": ["dist/interfaces/IPlugin.d.ts"],
+      "interfaces/IStorageProvider": ["dist/interfaces/IStorageProvider.d.ts"],
+      "interfaces/ICommentSystem": ["dist/interfaces/ICommentSystem.d.ts"],
+      "di/ServiceContainer": ["dist/di/ServiceContainer.d.ts"],
+      "ConfigStore": ["dist/ConfigStore.d.ts"]
+    }
+  },
+  "files": [
+    "dist",
+    "templates",
+    "README.md",
+    "LICENSE"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "build": "tsc",
+    "prepublishOnly": "npm run build",
+    "docs:build": "node dist/index.js build",
+    "lint": "eslint 'src/**/*.ts' && npm run lint:templates",
+    "lint:templates": "eslint 'templates/hub/**/*.js' --no-ignore",
+    "lint:fix": "eslint 'src/**/*.ts' --fix",
+    "format": "prettier --write 'src/**/*.ts'"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/futurefoundai/foundryspec.git"
+  },
+  "keywords": [
+    "documentation",
+    "mermaid",
+    "architecture",
+    "ai-agent",
+    "c4-model",
+    "specification",
+    "scaffolding",
+    "Intent Driven Development"
+  ],
+  "author": "FutureFoundAI",
+  "license": "AGPL-3.0-only",
+  "dependencies": {
+    "@types/inquirer": "^9.0.9",
+    "chalk": "^5.3.0",
+    "commander": "^11.1.0",
+    "ejs": "^3.1.9",
+    "fs-extra": "^11.2.0",
+    "glob": "^10.3.10",
+    "gray-matter": "^4.0.3",
+    "inquirer": "^13.2.1",
+    "js-yaml": "^4.1.1",
+    "mermaid": "^10.8.0",
+    "puppeteer": "^24.3.0",
+    "simple-git": "^3.22.0",
+    "typescript": "^5.9.3"
+  },
+  "devDependencies": {
+    "@types/fs-extra": "^11.0.4",
+    "@types/js-yaml": "^4.0.9",
+    "@types/serve-handler": "^6.1.4",
+    "@typescript-eslint/eslint-plugin": "^8.53.1",
+    "@typescript-eslint/parser": "^8.53.1",
+    "eslint": "^9.39.2",
+    "eslint-config-prettier": "^10.1.8",
+    "prettier": "^3.8.1",
+    "serve-handler": "^6.1.6",
+    "typescript-eslint": "^8.53.1",
+    "vitest": "^4.0.18"
+  }
+}

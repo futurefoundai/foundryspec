@@ -4,8 +4,13 @@ import { ScaffoldManager } from '../ScaffoldManager.js';
 import { ProbeManager } from '../ProbeManager.js';
 import { BuildManager } from '../BuildManager.js';
 import { DevServer } from '../DevServer.js';
+import { ServiceContainer } from '../di/ServiceContainer.js';
 
-export function registerCoreCommands(program: Command, findProjectRoot: (dir: string) => Promise<string>) {
+export function registerCoreCommands(
+    program: Command, 
+    findProjectRoot: (dir: string) => Promise<string>,
+    container: ServiceContainer
+) {
     program
         .command('init')
         .description('Scaffold a new FoundrySpec documentation project')
@@ -48,7 +53,7 @@ export function registerCoreCommands(program: Command, findProjectRoot: (dir: st
         .action(async (options: { port: string }) => {
             try {
                 const root = await findProjectRoot(process.cwd());
-                const server = new DevServer(root);
+                const server = new DevServer(root, container);
                 await server.serve(options.port);
             } catch (err: unknown) {
                 const msg = err instanceof Error ? err.message : String(err);

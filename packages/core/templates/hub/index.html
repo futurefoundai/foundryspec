@@ -98,7 +98,9 @@
     <!-- Initialization & External Logic -->
     <script>
       // Injected by FoundrySpec
-      window.idMap = {{idMap}};
+      // idMap and metadataRegistry will be loaded asynchronously from JSON files
+      window.idMap = null;
+      window.metadataRegistry = null;
       window.projectName = "{{projectName}}";
       window.projectId = "{{projectId}}";
       window.projectVersion = "{{version}}";

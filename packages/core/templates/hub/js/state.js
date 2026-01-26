@@ -18,6 +18,7 @@ export const setCurrentViewPath = (v) => { currentViewPath = v; };
 // Globals wrapper
 export const globals = {
     idMap: window.idMap,
+    metadataRegistry: window.metadataRegistry || {},
     projectId: window.projectId,
     projectName: window.projectName,
     projectVersion: window.projectVersion,

@@ -1,5 +1,5 @@
 /node_modules
-/dist
+dist
 /my-test-docs
 .DS_Store
 *.log
@@ -12,3 +12,6 @@
 /foundryspec/build-info.txt
 .foundryspec/dist
 foundryspec-debug.log
+
+# Monorepo
+packages/enterprise
