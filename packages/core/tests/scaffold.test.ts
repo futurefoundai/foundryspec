@@ -15,7 +15,7 @@ describe('Scaffold & Build Verification', () => {
     const originalCwd = process.cwd;
     
     beforeEach(async () => {
-        await fs.ensureDir(TEST_DIR);
+        await fs.emptyDir(TEST_DIR);
         await fs.ensureDir(MOCK_HOME);
         
         // Mock process.cwd() to return TEST_DIR

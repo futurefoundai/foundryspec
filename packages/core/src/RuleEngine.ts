@@ -8,12 +8,15 @@
 import fs from 'fs-extra';
 import yaml from 'js-yaml';
 import chalk from 'chalk';
+import path from 'path';
+
 import { ProjectAsset } from './types/assets.js';
 import { 
     RuleTarget, 
     Rule, 
     HubCategory, 
-    RuleSet 
+    RuleSet,
+    ProjectContext
 } from './types/rules.js';
 import { 
     DiagramAnalyzer, 
@@ -26,16 +29,9 @@ import {
     StateDiagramAnalyzer
 } from './analyzers/index.js';
 
-export interface ProjectContext {
-    referencedIds: Set<string>;
-    nodeMap: Map<string, { uplinks: string[], downlinks: string[] }>;
-    idToFileMap: Map<string, string>;
-}
-
 // @foundryspec/start COMP_RuleEngine
 export class RuleEngine {
     private rules: Rule[] = [];
-    private hubCategories: HubCategory[] = [];
     private analyzers: Record<string, DiagramAnalyzer> = {
         'mindmap': new MindmapAnalyzer(),
         'sequenceDiagram': new SequenceAnalyzer(),
@@ -73,28 +69,53 @@ export class RuleEngine {
     }
 
     async loadRules(rulesPath: string): Promise<void> {
-        if (!await fs.pathExists(rulesPath)) return;
-        
-        try {
-            const content = await fs.readFile(rulesPath, 'utf8');
-            const data = yaml.load(content) as RuleSet;
-            if (data && Array.isArray(data.rules)) {
-                this.rules.push(...data.rules);
+        // 1. Load Deprecated YAML Rules (if path points to yaml)
+        if (rulesPath.endsWith('.yaml')) {
+            console.warn(chalk.yellow(`Warning: Loading rules from YAML is deprecated. Please migrate to JavaScript rules.`));
+            if (!await fs.pathExists(rulesPath)) return;
+            try {
+                const content = await fs.readFile(rulesPath, 'utf8');
+                const data = yaml.load(content) as RuleSet;
+                if (data && Array.isArray(data.rules)) {
+                    this.rules.push(...data.rules);
+                }
+            } catch (err) {
+                console.error(chalk.red(`Failed to load rules from ${rulesPath}:`), err);
             }
-            // Hub definitions are now embedded in rules, so we don't load data.hub separately.
-        } catch (err) {
-            console.error(chalk.red(`Failed to load rules from ${rulesPath}:`), err);
+            return;
+        }
+
+        // 2. Load JavaScript/TypeScript Rules from Directory
+        // Assumes rulesPath is a directory containing individual rule files
+        if (await fs.pathExists(rulesPath)) {
+            const files = await fs.readdir(rulesPath);
+            const scriptFiles = files.filter(f => (f.endsWith('.js') || f.endsWith('.ts')) && !f.endsWith('.d.ts'));
+
+            for (const file of scriptFiles) {
+                try {
+                    const modulePath = path.join(rulesPath, file);
+                    // Use dynamic import for ES modules
+                    const module = await import(modulePath);
+                    if (module.rule) {
+                        this.rules.push(module.rule);
+                    } else if (module.default) {
+                        this.rules.push(module.default);
+                    }
+                } catch (err) {
+                    console.error(chalk.red(`Failed to load rule from ${file}:`), err);
+                }
+            }
         }
     }
 
-    validateAsset(asset: ProjectAsset, context?: ProjectContext): void {
+    async validateAsset(asset: ProjectAsset, context?: ProjectContext): Promise<void> {
         // Skip validation for synthetic assets (e.g., generated root.mermaid)
         if (!asset.absPath) return;
 
         const applicableRules = this.rules.filter(rule => this.matchesTarget(asset, rule.target));
 
         for (const rule of applicableRules) {
-            this.executeRule(asset, rule, context);
+            await this.executeRule(asset, rule, context);
         }
         
         // Governance Check: Verify ID matches folder prefix rule
@@ -136,9 +157,26 @@ export class RuleEngine {
         return false;
     }
 
-    private executeRule(asset: ProjectAsset, rule: Rule, context?: ProjectContext): void {
+    private async executeRule(asset: ProjectAsset, rule: Rule, context?: ProjectContext): Promise<void> {
         const { checks = {}, enforcement } = rule;
         const errors: string[] = [];
+
+        // 0. Custom JS Validation (New System)
+        if (rule.validate) {
+            try {
+                const validationResult = await rule.validate(asset, context || {
+                    referencedIds: new Set(),
+                    nodeMap: new Map(),
+                    idToFileMap: new Map()
+                });
+                
+                if (Array.isArray(validationResult)) {
+                    errors.push(...validationResult);
+                }
+            } catch (err) {
+                errors.push(`Rule execution error: ${err instanceof Error ? err.message : String(err)}`);
+            }
+        }
 
         // 1. Syntax Check
         if (checks.mermaidType && asset.relPath.endsWith('.mermaid')) {

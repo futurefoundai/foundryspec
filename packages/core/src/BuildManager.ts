@@ -90,7 +90,8 @@ export class BuildManager {
     await fs.emptyDir(outputDir);
 
     // --- 0. Load Build Rules ---
-    const systemRulesPath = path.resolve(__dirname, '../templates/rules/default-rules.yaml');
+    // Point to the adjacent 'rules' directory where JS/TS rule files reside
+    const systemRulesPath = path.resolve(__dirname, 'rules');
     await this.ruleEngine.loadRules(systemRulesPath);
 
     // Load Global Project Rules (Centralized Storage)
