@@ -5,6 +5,7 @@ dist
 *.log
 .personal_access_token
 .vscode
+.foundry
 
 # FoundrySpec self-documentation build artifacts
 /foundryspec/dist

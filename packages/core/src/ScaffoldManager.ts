@@ -121,7 +121,7 @@ export class ScaffoldManager {
             content = await fs.readFile(gitignorePath, 'utf8');
         }
 
-        const ignores = ['dist', '.foundryspec/dist', 'foundryspec-debug.log'];
+        const ignores = ['dist', '.foundryspec/dist', 'foundryspec-debug.log', '.foundry'];
         let updated = false;
 
         for (const ignore of ignores) {

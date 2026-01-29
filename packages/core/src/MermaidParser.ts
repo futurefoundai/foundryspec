@@ -1,111 +1,88 @@
+
 /**
  * © 2026 FutureFoundAI. All rights reserved.
  */
 
 import crypto from 'crypto';
-import fs from 'fs-extra';
-import path from 'path';
-import os from 'os';
-import { createRequire } from 'module';
-import { BrowserPool } from './BrowserPool.js';
-import { ParseCache, ParseCacheEntry, ParseResult } from './types/cache.js';
+import { CacheManager } from './CacheManager.js';
+import { ParseResult } from './types/cache.js';
 import { RuleEngine } from './RuleEngine.js';
-import chalk from 'chalk';
+import { createRequire } from 'module';
+import * as Mappers from './parsers/IntentMappers.js';
 
 const require = createRequire(import.meta.url);
 
 /**
  * @foundryspec COMP_MermaidParser
- * Service for parsing Mermaid diagrams with intelligent caching
+ * Service for parsing Mermaid diagrams with intelligent caching and
+ * "Ultra Sonic" pure Node.js AST extraction (no JSDOM/Puppeteer).
  */
 export class MermaidParser {
-    private cache: ParseCache;
-    private cacheDir: string;
-    private cacheFile: string;
-    private cacheDirty = false;
+    private cacheManager: CacheManager;
     private ruleEngine: RuleEngine;
 
-    constructor(ruleEngine: RuleEngine) {
+    // Parsers map (lazy loaded if needed, but we require them statically for now)
+    private parsers: Record<string, any> = {
+        flowchart: require('./parsers/generated/flowchartParser.cjs'),
+        sequence: require('./parsers/generated/sequenceParser.cjs'),
+        er: require('./parsers/generated/erParser.cjs'),
+        class: require('./parsers/generated/classParser.cjs'),
+        state: require('./parsers/generated/stateParser.cjs'),
+        mindmap: require('./parsers/generated/mindmapParser.cjs'),
+        requirement: require('./parsers/generated/requirementParser.cjs'),
+        // Aliases
+        graph: require('./parsers/generated/flowchartParser.cjs'),
+        sequencediagram: require('./parsers/generated/sequenceParser.cjs'),
+        erdiagram: require('./parsers/generated/erParser.cjs'),
+        classdiagram: require('./parsers/generated/classParser.cjs'),
+        statediagram: require('./parsers/generated/stateParser.cjs'),
+        requirementdiagram: require('./parsers/generated/requirementParser.cjs'),
+        // Aliases (CamelCase kept just in case detectType changes)
+        sequenceDiagram: require('./parsers/generated/sequenceParser.cjs'),
+        erDiagram: require('./parsers/generated/erParser.cjs'),
+        classDiagram: require('./parsers/generated/classParser.cjs'),
+        stateDiagram: require('./parsers/generated/stateParser.cjs'),
+        requirementDiagram: require('./parsers/generated/requirementParser.cjs'),
+    };
+
+    constructor(ruleEngine: RuleEngine, cacheManager: CacheManager) {
         this.ruleEngine = ruleEngine;
-        // Cache location: ~/.foundryspec/cache/
-        this.cacheDir = path.join(os.homedir(), '.foundryspec', 'cache');
-        this.cacheFile = path.join(this.cacheDir, 'parse-cache.json');
-        this.cache = this.loadCache();
+        this.cacheManager = cacheManager;
     }
 
-    /**
-     * Load cache from disk
-     */
-    private loadCache(): ParseCache {
-        try {
-            if (fs.existsSync(this.cacheFile)) {
-                const data = fs.readFileSync(this.cacheFile, 'utf-8');
-                return JSON.parse(data);
-            }
-        } catch (error) {
-            console.warn(chalk.yellow('Failed to load parse cache, starting fresh'));
-        }
-
-        return {
-            version: '1.0.0',
-            lastUpdated: Date.now(),
-            entries: {},
-        };
-    }
-
-    /**
-     * Save cache to disk
-     */
-    private async saveCache(): Promise<void> {
-        if (!this.cacheDirty) return;
-
-        try {
-            await fs.ensureDir(this.cacheDir);
-            this.cache.lastUpdated = Date.now();
-            await fs.writeFile(this.cacheFile, JSON.stringify(this.cache, null, 2));
-            this.cacheDirty = false;
-        } catch (error) {
-            console.warn(chalk.yellow('Failed to save parse cache'));
-        }
-    }
-
-    /**
-     * Compute SHA256 hash of content
-     */
     private hashContent(content: string): string {
         return crypto.createHash('sha256').update(content).digest('hex');
     }
 
-    /**
-     * Parse a Mermaid diagram with caching
-     */
     async parseWithCache(filePath: string, content: string): Promise<ParseResult> {
-        const hash = this.hashContent(content);
+        let hash: string;
+        try {
+            hash = await this.cacheManager.getFileHash(filePath);
+        } catch {
+            hash = this.hashContent(content);
+        }
 
-        // Check cache
-        if (this.cache.entries[hash]) {
-            const entry = this.cache.entries[hash];
+        const cached = this.cacheManager.getArtifact(hash);
+        if (cached) {
             return {
-                diagramType: entry.diagramType,
-                nodes: entry.nodes,
-                relationships: entry.relationships,
+                diagramType: cached.diagramType,
+                nodes: cached.nodes || [],
+                relationships: cached.relationships || [],
                 fromCache: true,
             };
         }
 
-        // Cache miss - parse with mermaid
         const result = await this.parseMermaid(content);
 
-        // Store in cache
-        this.cache.entries[hash] = {
-            contentHash: hash,
-            timestamp: Date.now(),
-            filePath: filePath,
+        this.cacheManager.setArtifact(hash, {
             diagramType: result.diagramType,
+            ast: result.ast,
+            validationErrors: result.validationErrors || [],
+            timestamp: Date.now(),
+            version: '2.0.0', // Ultra Sonic Version
             nodes: result.nodes,
-            relationships: result.relationships,
-        };
-        this.cacheDirty = true;
+            relationships: result.relationships
+        });
 
         return {
             ...result,
@@ -114,112 +91,217 @@ export class MermaidParser {
     }
 
     /**
-     * Parse diagram using Mermaid in browser context for validation,
-     * then use analyzers for node extraction
+     * "Ultra Sonic" Pure AST Parsing
      */
     private async parseMermaid(content: string): Promise<Omit<ParseResult, 'fromCache'>> {
-        const browser = await BrowserPool.getBrowser();
-        const page = await browser.newPage();
+        const cleaned = this.cleanContent(content);
+        const type = this.detectType(cleaned);
+        const parserModule = this.resolveParser(type);
+
+        if (!parserModule) {
+            // Fallback or unknown type
+            return { diagramType: type, nodes: [], relationships: [] };
+        }
+
+        // Prepare Intent Capture Mapper
+        const mapper = this.createMapper(type);
+        
+        // Jison Parser Instance
+        const originalParser = parserModule.parser || parserModule;
+        
+        // Inject yy
+        let parserInstance = originalParser;
+        try {
+             // Create a lightweight wrapper to avoid shared state across parses
+             parserInstance = Object.create(originalParser);
+        } catch (e) {
+             // Fallback
+        }
+        parserInstance.yy = mapper;
 
         try {
-            await page.setContent('<!DOCTYPE html><html><body><div id="container"></div></body></html>');
+            // Execute Parse
+            const parseResult = parserInstance.parse(cleaned);
             
-            const mermaidPath = require.resolve('mermaid/dist/mermaid.min.js');
-            await page.addScriptTag({ path: mermaidPath });
+            const normalized = this.normalizeIntent(mapper, type, parseResult);
+            normalized.ast = this.sanitizeAST(parseResult);
+            
+            return normalized;
 
-            // Validate syntax with mermaid
-            const diagramType = await page.evaluate((diagram) => {
-                // @ts-expect-error Mermaid types not fully covered
-                mermaid.initialize({ startOnLoad: false });
-
-                // Validate syntax
-                // @ts-expect-error Mermaid types not fully covered
-                mermaid.parse(diagram);
-
-                // Infer diagram type from content - use keys that match RuleEngine analyzers
-                const lines = diagram.trim().split('\n');
-                let type = 'unknown';
-                
-                for (const line of lines) {
-                    const trimmed = line.trim();
-                    if (trimmed.startsWith('sequenceDiagram')) type = 'sequenceDiagram';
-                    else if (trimmed.startsWith('classDiagram')) type = 'classDiagram';
-                    else if (trimmed.startsWith('graph ')) type = 'graph';
-                    else if (trimmed.startsWith('flowchart ')) type = 'flowchart';
-                    else if (trimmed.startsWith('stateDiagram')) type = 'stateDiagram';
-                    else if (trimmed.startsWith('erDiagram')) type = 'erDiagram';
-                    else if (trimmed.startsWith('mindmap')) type = 'mindmap';
-                    else if (trimmed.startsWith('requirementDiagram')) type = 'requirementDiagram';
-                    else if (trimmed.startsWith('C4Context')) type = 'C4Context';
-                    else if (trimmed.startsWith('C4Container')) type = 'C4Container';
-                    
-                    if (type !== 'unknown') break;
-                }
-
-                return type;
-            }, content);
-
-            // Use RuleEngine's analyzers to extract nodes
-            const analysis = this.ruleEngine.analyzeContent(content, diagramType);
-
-            return {
-                diagramType,
-                nodes: analysis.nodes,
-                relationships: analysis.relationships,
+        } catch (e: any) {
+            // Propagate error for strict build
+            return { 
+                diagramType: type, 
+                nodes: [], 
+                relationships: [], 
+                validationErrors: [{ line: 0, message: e.message }] 
             };
-        } finally {
-            await page.close();
         }
     }
 
-    /**
-     * Clear the cache
-     */
-    async clearCache(): Promise<void> {
-        this.cache = {
-            version: '1.0.0',
-            lastUpdated: Date.now(),
-            entries: {},
-        };
-        this.cacheDirty = true;
-        await this.saveCache();
+    private cleanContent(content: string): string {
+         // Remove frontmatter
+        return content.replace(/^---\n[\s\S]*?\n---\n/, '')
+                             .replace(/%%.*\n/g, '')
+                             .trim();
     }
 
-    /**
-     * Get cache statistics
-     */
-    getCacheStats(): { entries: number; size: number } {
+    private detectType(cleaned: string): string {
+        const match = cleaned.match(/^([a-zA-Z0-9_-]+)/);
+        return match ? match[1].toLowerCase() : 'unknown';
+    }
+
+    private resolveParser(type: string): any {
+        const lowerType = type.toLowerCase();
+        if (this.parsers[lowerType]) return this.parsers[lowerType];
+
+        // Prefix match
+        const prefixes = ['flowchart', 'sequence', 'er', 'class', 'state', 'requirement'];
+        for (const p of prefixes) {
+            if (lowerType.startsWith(p)) return (this.parsers as any)[p];
+        }
+
+        if (lowerType === 'graph') return this.parsers.flowchart;
+        
+        return null;
+    }
+
+    private normalizeIntent(mapper: Mappers.BaseMapper, type: string, ast: any): Omit<ParseResult, 'fromCache'> {
+        const nodeSet = new Set<string>();
+        const relationships: any[] = [];
+
+        // 1. Captured via hooks
+        mapper.nodes.forEach((n: any) => {
+            const id = n.id || n.name;
+            if (id) nodeSet.add(id);
+        });
+
+        // 2. Specialized Logic for AST-based returns (Sequence, State)
+        const processAST = (ast: any) => {
+            if (!ast) return;
+            if (Array.isArray(ast)) {
+                ast.forEach(processAST);
+                return;
+            }
+
+            // Sequence Statements
+            if (ast.type === 'addParticipant' || ast.type === 'addActor') {
+                const name = ast.actor?.name || ast.actor;
+                if (name) nodeSet.add(name);
+            }
+            if (ast.type === 'addMessage') {
+                const from = ast.from?.name || ast.from;
+                const to = ast.to?.name || ast.to;
+                if (from && to) {
+                    relationships.push({ from, to, text: ast.msg, type: 'message' });
+                }
+            }
+
+            // State Diagram Statements
+            if (ast.stmt === 'state') {
+                if (ast.id && ast.id !== '[*]') nodeSet.add(ast.id);
+                if (ast.doc) processAST(ast.doc);
+            }
+            if (ast.stmt === 'relation') {
+                const s1 = ast.state1?.id || ast.state1;
+                const s2 = ast.state2?.id || ast.state2;
+                const from = s1 === '[*]' ? 'START_NODE' : s1;
+                const to = s2 === '[*]' ? 'START_NODE' : s2;
+                if (from && to) {
+                    relationships.push({ from, to, text: ast.description, type: 'relation' });
+                }
+            }
+        };
+
+        if (mapper instanceof Mappers.SequenceMapper) {
+            processAST(ast);
+        }
+        if (mapper instanceof Mappers.StateMapper) {
+            processAST(ast);
+        }
+
+        relationships.push(...mapper.edges);
+
+        // 3. Collect implicit nodes from edges (e.g. in Class diagrams)
+        relationships.forEach(rel => {
+            if (rel.from && typeof rel.from === 'string') nodeSet.add(rel.from);
+            if (rel.to && typeof rel.to === 'string') nodeSet.add(rel.to);
+        });
+
         return {
-            entries: Object.keys(this.cache.entries).length,
-            size: JSON.stringify(this.cache).length,
+            diagramType: type,
+            nodes: Array.from(nodeSet),
+            relationships,
+            ast: null 
         };
     }
 
-    /**
-     * Cleanup old entries (older than 30 days)
-     */
-    async cleanup(): Promise<void> {
-        const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
-        let removed = 0;
+    private sanitizeAST(ast: any): any {
+        if (!ast || typeof ast !== 'object') return ast;
 
-        for (const [hash, entry] of Object.entries(this.cache.entries)) {
-            if (entry.timestamp < thirtyDaysAgo) {
-                delete this.cache.entries[hash];
-                removed++;
+        // Create a copy without circular parser/lexer refs
+        const sanitized: any = {};
+        for (const key of Object.keys(ast)) {
+            if (key === 'parser' || key === 'lexer' || key === 'yy') continue;
+            
+            const val = ast[key];
+            if (Array.isArray(val)) {
+                sanitized[key] = val.map(item => typeof item === 'object' ? '[Object]' : item);
+            } else if (typeof val === 'object' && val !== null) {
+                sanitized[key] = '[Object]';
+            } else {
+                sanitized[key] = val;
             }
         }
-
-        if (removed > 0) {
-            console.log(chalk.gray(`Cleaned up ${removed} old cache entries`));
-            this.cacheDirty = true;
-            await this.saveCache();
-        }
+        return sanitized;
     }
 
-    /**
-     * Ensure cache is saved before exit
-     */
+    private createMapper(type: string): Mappers.BaseMapper {
+        const lowerType = type.toLowerCase();
+        
+        if (lowerType.startsWith('flowchart') || lowerType === 'graph') {
+            return new Mappers.FlowchartMapper();
+        }
+        if (lowerType.startsWith('sequence')) {
+            return new Mappers.SequenceMapper();
+        }
+        if (lowerType.startsWith('class')) {
+            return new Mappers.ClassMapper();
+        }
+        if (lowerType.startsWith('state')) {
+            return new Mappers.StateMapper();
+        }
+        if (lowerType.startsWith('er')) {
+            return new Mappers.ERMapper();
+        }
+        if (lowerType === 'mindmap') {
+            return new Mappers.MindmapMapper();
+        }
+        if (lowerType.startsWith('requirement')) {
+            return new Mappers.RequirementMapper();
+        }
+
+        // Default fallback to basic mapper
+        return new (class extends Mappers.BaseMapper {})();
+    }
+
+    async clearCache(): Promise<void> {
+        await this.cacheManager.clear();
+    }
+
+    getCacheStats(): { entries: number; size: number } {
+        const stats = this.cacheManager.getStats();
+        return {
+            entries: stats.artifacts,
+            size: 0 
+        };
+    }
+
+    async cleanup(): Promise<void> {
+        await this.cacheManager.prune();
+    }
+
     async flush(): Promise<void> {
-        await this.saveCache();
+        await this.cacheManager.flush();
     }
 }

@@ -24,6 +24,12 @@ export interface ParseCacheEntry {
         to: string;
         label?: string;
     }>;
+
+    /** Syntax/Validation errors found during parsing */
+    validationErrors?: Array<{ line: number; message: string }>;
+
+    /** Internal AST from the parser (sanitized) */
+    ast?: any;
     
     /** Original file path (for debugging) */
     filePath: string;
@@ -62,4 +68,10 @@ export interface ParseResult {
     
     /** Whether this came from cache */
     fromCache: boolean;
+
+    /** Syntax/Validation errors found during parsing */
+    validationErrors?: Array<{ line: number; message: string }>;
+
+    /** Internal AST from the parser (sanitized) */
+    ast?: any;
 }

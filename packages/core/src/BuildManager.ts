@@ -23,18 +23,23 @@ import { ConfigStore } from './ConfigStore.js';
 import { RuleEngine } from './RuleEngine.js';
 import { ProbeManager } from './ProbeManager.js';
 import { MermaidParser } from './MermaidParser.js';
+import { CacheManager } from './CacheManager.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 /**
  * @foundryspec COMP_BuildManager
  */
+
+// ...
+
 export class BuildManager {
   private projectRoot: string;
   private docsDir: string;
   private configStore: ConfigStore;
   private ruleEngine: RuleEngine;
   private mermaidParser: MermaidParser;
+  private cacheManager: CacheManager;
   private projectId: string | null = null;
   private projectName: string = "FoundrySpec Project";
 
@@ -44,7 +49,8 @@ export class BuildManager {
     this.docsDir = path.join(this.projectRoot, 'docs');
     this.configStore = new ConfigStore();
     this.ruleEngine = new RuleEngine();
-    this.mermaidParser = new MermaidParser(this.ruleEngine);
+    this.cacheManager = new CacheManager(this.projectRoot);
+    this.mermaidParser = new MermaidParser(this.ruleEngine, this.cacheManager);
   }
 
   private async resolveProject(): Promise<void> {
@@ -80,8 +86,12 @@ export class BuildManager {
   async build(): Promise<void> {
     await this.resolveProject();
     if (!this.projectId) throw new Error('Project ID validation failed.');
+    
+    // Initialize Cache Manager (Tier 1 & 2)
+    await this.cacheManager.init();
 
-    const outputDir = this.configStore.getBuildDir(this.projectId);
+    try {
+        const outputDir = this.configStore.getBuildDir(this.projectId);
     console.time('Build process');
     console.log(chalk.gray(`Construction started for: ${this.projectName}`));
     console.log(chalk.gray(`Source: ${this.docsDir}`));
@@ -273,6 +283,11 @@ export class BuildManager {
       }
     }
 
+
+    // --- 5. Puppeteer Syntax Check & Caching ---
+    // We run this BEFORE validation so that RuleEngine can use the cached ASTs.
+    await this.checkMermaidSyntax(assets);
+
     // Perform Rule-Based Validation with project context
     for (const asset of assets) {
       this.ruleEngine.validateAsset(asset, { referencedIds, nodeMap, idToFileMap });
@@ -296,8 +311,8 @@ export class BuildManager {
 
     await this.validateMindmapLabels(assets, idToFileMap);
 
-    // --- 5. Puppeteer Syntax Check ---
-    await this.checkMermaidSyntax(assets);
+    // --- 5. Puppeteer Syntax Check (Moved up) ---
+    // await this.checkMermaidSyntax(assets);
 
     // --- 6. Generate Internal Output ---
     const hubConfig: FoundryConfig = {
@@ -334,8 +349,15 @@ export class BuildManager {
 ✅ Build complete!
    Internal Location: ${outputDir}`),
     );
-    console.timeEnd('Build process');
+  } catch (err) {
+      console.error(chalk.red('\n❌ Build failed.'));
+      throw err;
+  } finally {
+      // CLEANUP
+      await this.cacheManager.flush();
+      console.timeEnd('Build process');
   }
+}
 
   private async generateSyntheticAssets(assets: ProjectAsset[]): Promise<ProjectAsset[]> {
     console.log(chalk.blue('🏗️  Informing synthetic architectural hub...'));
@@ -466,12 +488,26 @@ ${standaloneAssets
     // Parse all diagrams (with caching)
     for (const asset of mermaidAssets) {
       try {
-        const result = await this.mermaidParser.parseWithCache(asset.relPath, asset.content);
+        const result = await this.mermaidParser.parseWithCache(asset.absPath, asset.content);
+        
+        if (result.validationErrors && result.validationErrors.length > 0) {
+            console.error(chalk.red(`\n❌ Syntax error in ${asset.relPath}:`));
+            result.validationErrors.forEach(e => console.error(chalk.yellow(`Line ${e.line}: ${e.message}`)));
+            throw new Error(`Build failed due to Mermaid syntax errors.`);
+        }
+
         if (result.fromCache) {
           cacheHits++;
         } else {
           cacheMisses++;
         }
+        
+        // Attach analysis for RuleEngine to use later
+        asset.analysis = {
+            type: result.diagramType,
+            nodes: result.nodes,
+            relationships: result.relationships
+        };
       } catch (err: unknown) {
         console.error(chalk.red(`\n❌ Syntax error in ${asset.relPath}:`));
         const message = err instanceof Error ? err.message : String(err);

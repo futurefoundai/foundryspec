@@ -10,4 +10,9 @@ export interface ProjectAsset {
     content: string;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     data: any; // Frontmatter data is loosely typed
+    analysis?: {
+        type: string;
+        nodes: string[];
+        relationships: { from: string; to: string; label?: string }[];
+    };
 }

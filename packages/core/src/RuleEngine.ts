@@ -209,11 +209,21 @@ export class RuleEngine {
 
         // 4. Structural Check
         if (checks.requiredNodes && checks.mermaidType) {
-            const analyzer = this.analyzers[checks.mermaidType];
-            if (analyzer) {
-                const analysis = analyzer.analyze(asset.content);
+            let nodes: string[] = [];
+            
+            // Optimization: Use cached analysis if available
+            if (asset.analysis && asset.analysis.type === checks.mermaidType) {
+                nodes = asset.analysis.nodes;
+            } else {
+                const analyzer = this.analyzers[checks.mermaidType];
+                if (analyzer) {
+                    nodes = analyzer.analyze(asset.content).nodes;
+                }
+            }
+
+            if (nodes.length > 0 || this.analyzers[checks.mermaidType]) {
                 for (const requiredNode of checks.requiredNodes) {
-                    if (!analysis.nodes.some(n => n.toLowerCase() === requiredNode.toLowerCase())) {
+                    if (!nodes.some(n => n.toLowerCase() === requiredNode.toLowerCase())) {
                         errors.push(`Missing required node: "${requiredNode}"`);
                     }
                 }
@@ -230,10 +240,19 @@ export class RuleEngine {
         
         // 5. Allowed Node Prefixes Check (Entity Verification)
         if (checks.allowedNodePrefixes && checks.mermaidType) {
-            const analyzer = this.analyzers[checks.mermaidType];
-            if (analyzer) {
-                const analysis = analyzer.analyze(asset.content);
-                for (const node of analysis.nodes) {
+            let nodes: string[] = [];
+            
+            if (asset.analysis && asset.analysis.type === checks.mermaidType) {
+                nodes = asset.analysis.nodes;
+            } else {
+                const analyzer = this.analyzers[checks.mermaidType];
+                if (analyzer) {
+                    nodes = analyzer.analyze(asset.content).nodes;
+                }
+            }
+
+            if (nodes.length > 0) {
+                for (const node of nodes) {
                     const hasValidPrefix = checks.allowedNodePrefixes.some(p => node.startsWith(p));
                     if (!hasValidPrefix) {
                         errors.push(`Invalid node ID: "${node}". Must start with one of: [${checks.allowedNodePrefixes.join(', ')}]`);
