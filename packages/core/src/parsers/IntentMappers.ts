@@ -21,6 +21,7 @@ export abstract class BaseMapper {
     public setAccTitle = (t: string) => { this.accTitle = t; };
     public setAccDescription = (d: string) => { this.accDescription = d; };
     public setDiagramTitle = (t: string) => { this.diagramTitle = t; };
+    public cleanupLabel = (s: string) => s?.replace(/^[:\s]+/, '').trim();
     public parseError = (err: string) => { throw new Error(err); };
     public getLogger = () => {
         return {

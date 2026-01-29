@@ -9,6 +9,12 @@ import { ParseResult } from './types/cache.js';
 import { RuleEngine } from './RuleEngine.js';
 import { createRequire } from 'module';
 import * as Mappers from './parsers/IntentMappers.js';
+import { Worker } from 'worker_threads';
+import { fileURLToPath } from 'url';
+import path from 'path';
+import os from 'os';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const require = createRequire(import.meta.url);
 
@@ -20,6 +26,10 @@ const require = createRequire(import.meta.url);
 export class MermaidParser {
     private cacheManager: CacheManager;
     private ruleEngine: RuleEngine;
+    private workers: Worker[] = [];
+    private maxWorkers = Math.max(1, os.cpus().length - 1);
+    private workerPath = path.join(__dirname, 'ParserWorker.js');
+    private pendingRequests: Map<string, (data: any) => void> = new Map();
 
     // Parsers map (lazy loaded if needed, but we require them statically for now)
     private parsers: Record<string, any> = {
@@ -91,52 +101,50 @@ export class MermaidParser {
     }
 
     /**
-     * "Ultra Sonic" Pure AST Parsing
+     * "Ultra Sonic" Pure AST Parsing (Offloaded to worker)
      */
     private async parseMermaid(content: string): Promise<Omit<ParseResult, 'fromCache'>> {
-        const cleaned = this.cleanContent(content);
-        const type = this.detectType(cleaned);
-        const parserModule = this.resolveParser(type);
+        const type = this.detectType(this.cleanContent(content));
 
-        if (!parserModule) {
-            // Fallback or unknown type
-            return { diagramType: type, nodes: [], relationships: [] };
-        }
+        return new Promise((resolve) => {
+            const worker = this.getWorker();
+            const requestId = Math.random().toString(36).substr(2, 9);
 
-        // Prepare Intent Capture Mapper
-        const mapper = this.createMapper(type);
-        
-        // Jison Parser Instance
-        const originalParser = parserModule.parser || parserModule;
-        
-        // Inject yy
-        let parserInstance = originalParser;
-        try {
-             // Create a lightweight wrapper to avoid shared state across parses
-             parserInstance = Object.create(originalParser);
-        } catch (e) {
-             // Fallback
-        }
-        parserInstance.yy = mapper;
+            this.pendingRequests.set(requestId, resolve);
+            worker.postMessage({ content, type, requestId });
+        });
+    }
 
-        try {
-            // Execute Parse
-            const parseResult = parserInstance.parse(cleaned);
+    private getWorker(): Worker {
+        if (this.workers.length < this.maxWorkers) {
+            const worker = new Worker(this.workerPath);
             
-            const normalized = this.normalizeIntent(mapper, type, parseResult);
-            normalized.ast = this.sanitizeAST(parseResult);
-            
-            return normalized;
+            // Persistent listener for this worker
+            worker.on('message', (data: any) => {
+                const { requestId } = data;
+                const resolve = this.pendingRequests.get(requestId);
+                if (resolve) {
+                    this.pendingRequests.delete(requestId);
+                    resolve(data);
+                }
+            });
 
-        } catch (e: any) {
-            // Propagate error for strict build
-            return { 
-                diagramType: type, 
-                nodes: [], 
-                relationships: [], 
-                validationErrors: [{ line: 0, message: e.message }] 
-            };
+            this.workers.push(worker);
+            return worker;
         }
+
+        // Simple round-robin
+        const index = Math.floor(Math.random() * this.workers.length);
+        return this.workers[index];
+    }
+
+    /**
+     * Terminate all worker threads to allow the process to exit.
+     */
+    public async terminate(): Promise<void> {
+        await Promise.all(this.workers.map(w => w.terminate()));
+        this.workers = [];
+        this.pendingRequests.clear();
     }
 
     private cleanContent(content: string): string {

@@ -354,6 +354,7 @@ export class BuildManager {
       throw err;
   } finally {
       // CLEANUP
+      await this.mermaidParser.terminate();
       await this.cacheManager.flush();
       console.timeEnd('Build process');
   }
@@ -485,8 +486,8 @@ ${standaloneAssets
     let cacheHits = 0;
     let cacheMisses = 0;
 
-    // Parse all diagrams (with caching)
-    for (const asset of mermaidAssets) {
+    // Parse all diagrams (with caching) in parallel
+    await Promise.all(mermaidAssets.map(async (asset) => {
       try {
         const result = await this.mermaidParser.parseWithCache(asset.absPath, asset.content);
         
@@ -514,7 +515,7 @@ ${standaloneAssets
         console.error(chalk.yellow(message));
         throw new Error(`Build failed due to Mermaid syntax errors.`);
       }
-    }
+    }));
 
     // Show cache statistics
     if (mermaidAssets.length > 0) {
