@@ -1,0 +1,38 @@
+---
+id: "REQ_UX"
+title: Architectural Experience (UX)
+description: Requirements for human-readable labels and selection navigation.
+classification: Non-Functional
+---
+requirementDiagram
+    requirement UX {
+        id: "REQ_UX"
+        text: "The system shall provide a seamless and readable architectural review experience."
+        risk: Low
+        verifymethod: Test
+    }
+
+    requirement Human_Readable {
+        id: "REQ_HumanReadable"
+        text: "The system shall support human-readable labels in diagrams."
+        risk: Low
+        verifymethod: Test
+    }
+
+    requirement Multi_Destination_Nav {
+        id: "REQ_MultiDestinationNav"
+        text: "The system shall provide a selection modal for multi-view nodes."
+        risk: Low
+        verifymethod: Test
+    }
+
+    requirement Interactive_Comments {
+        id: "REQ_InteractiveComments"
+        text: "The system shall support feedback via interactive comments on the Hub."
+        risk: Low
+        verifymethod: Test
+    }
+
+    UX -contains-> Human_Readable
+    UX -contains-> Multi_Destination_Nav
+    UX -contains-> Interactive_Comments

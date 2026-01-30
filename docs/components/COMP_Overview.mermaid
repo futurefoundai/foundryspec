@@ -4,79 +4,33 @@ title: Component Architecture
 description: Detailed decomposition of the FoundrySpec engine components.
 entities:
   - id: "COMP_Group"
-    uplink: "REQ_NonFunctional"
     requirements:
-      - "REQ_ZeroMaintenance"
   - id: "COMP_ClickInterceptor"
-    uplink: "REQ_Functional"
     requirements:
-      - "REQ_SmartInterception"
-      - "REQ_MultiDestinationNav"
   - id: "COMP_InteractiveComments"
-    uplink: "REQ_InteractiveComments"
-    downlinks:
-      - "COMP_SidebarControllers"
     requirements:
-      - "REQ_InteractiveComments"
-      - "REQ_DeterministicIdentity"
   - id: "COMP_BuildManager"
-    uplink: "REQ_PathIntegrity"
     requirements:
-      - "REQ_PathIntegrity"
-      - "REQ_DynamicRoot"
-      - "REQ_Performance"
-      - "REQ_SmartCaching"
-      - "REQ_SmartInference"
-      - "REQ_ZeroMaintenance"
-      - "REQ_SyntheticHub"
-    downlinks:
-      - "COMP_RuleEngine"
-      - "COMP_MermaidParser"
   - id: "COMP_MermaidParser"
-    uplink: "COMP_BuildManager"
     requirements:
-      - "REQ_SmartCaching"
   - id: "COMP_ProbeManager"
-    uplink: "REQ_AutomatedProbing"
     requirements:
-      - "REQ_AutomatedProbing"
   - id: "COMP_ConfigStore"
-    uplink: "REQ_ZeroConfig"
     requirements:
-      - "REQ_ZeroConfig"
   - id: "COMP_GitManager"
-    uplink: "REQ_Functional"
     requirements:
-      - "REQ_Functional"
   - id: "COMP_CLI"
-    uplink: "REQ_Functional"
-    downlinks:
-      - "COMP_DevServer"
     requirements:
-      - "REQ_Functional"
-      - "REQ_SafeRemoval"
   - id: "COMP_DevServer"
-    uplink: "REQ_Functional"
     requirements:
-      - "REQ_Functional"
   - id: "COMP_RuleEngine"
-    uplink: "COMP_BuildManager"
     requirements:
-      - "REQ_Core"
-      - "REQ_HumanReadable"
-      - "REQ_Integrity"
-      - "REQ_EntityVerification"
   - id: "COMP_SidebarControllers"
-    uplink: "COMP_InteractiveComments"
     description: "Handles the logic for the context sidebar and unified ID resolution."
   - id: "COMP_MermaidParser"
-    uplink: "COMP_BuildManager"
     requirements:
-      - "REQ_SmartCaching"
   - id: "COMP_BrowserPool"
-    uplink: "COMP_MermaidParser"
     requirements:
-      - "REQ_Performance"
 ---
 
 classDiagram

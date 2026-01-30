@@ -1,0 +1,38 @@
+---
+id: "REQ_Automation"
+title: Automated Architectural Intelligence
+description: Requirements for automated ID resolution, inference, and verification.
+classification: Functional
+---
+requirementDiagram
+    requirement Automation {
+        id: "REQ_Automation"
+        text: "The system shall provide automated architectural intelligence and inference."
+        risk: Low
+        verifymethod: Test
+    }
+
+    requirement Smart_Interception {
+        id: "REQ_SmartInterception"
+        text: "The system shall automatically resolve architectural IDs from diagram participant groups for seamless navigation."
+        risk: Low
+        verifymethod: Test
+    }
+
+    requirement Entity_Verification {
+        id: "REQ_EntityVerification"
+        text: "The system shall ensure all interaction flows reference only valid, documented architectural entities."
+        risk: Medium
+        verifymethod: Test
+    }
+
+    requirement Smart_Inference {
+        id: "REQ_SmartInference"
+        text: "The system shall automatically infer downstream links from upstream definitions, enabling 'uplink-only' documentation."
+        risk: Low
+        verifymethod: Test
+    }
+
+    Automation -contains-> Smart_Interception
+    Automation -contains-> Entity_Verification
+    Automation -contains-> Smart_Inference

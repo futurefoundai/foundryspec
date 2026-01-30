@@ -95,8 +95,9 @@ class WorkerParser {
         const relationships: any[] = [];
 
         mapper.nodes.forEach((n: any) => {
-            const id = n.id || n.name;
-            if (id) nodeSet.add(id);
+            const id = n.id || n.name || n.text;
+            if (id) nodeSet.add(String(id));
+            if (n.text) nodeSet.add(String(n.text));
         });
 
         const processAST = (ast: any) => {

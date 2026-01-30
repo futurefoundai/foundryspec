@@ -4,12 +4,14 @@ title: Coding Agent
 description: The AI system that operates the FoundrySpec CLI.
 entities:
   - id: "PER_CodingAgent"
-    uplink: "GRP_Personas"
-    downlinks:
-      - "JRN_AutomatedEvolution"
 ---
 mindmap
   PER_CodingAgent((Coding Agent))
+    Type: Actor
+    Requirements
+      REQ_Automation
+      REQ_Performance
+      REQ_AutomatedProbing
     Role
       ROLE["FoundrySpec Operator (AI)"]
     Description

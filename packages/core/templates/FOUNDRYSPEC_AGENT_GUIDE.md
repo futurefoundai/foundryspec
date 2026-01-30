@@ -37,6 +37,22 @@ To achieve complete system understanding, you must identify four distinct types 
     - **Examples**: Legacy Mainframes, Payment Gateways.
     - **Traceability Impact**: Drives **L3 Interfaces** (e.g., "Must support XML for legacy compat").
 
+### 📐 Persona Mindmap Structure
+
+Every Persona MUST be a `mindmap` with the following branch structure:
+
+```mermaid
+mindmap
+    PER_PersonaID
+        Type: Actor | Influencer | Guardian | Proxy
+        Role
+        Description
+        Goals
+```
+
+- **Type**: Must be exactly one of the four types above.
+- **Traceability (Ghost Rule)**: Every Persona MUST Drive at least one Requirement ID (`REQ_`) via Mermaid nodes or `requirements` frontmatter. A persona without requirements is a **Ghost in the System** and will cause a build failure.
+
 ## 📝 Critical Rules for Agents
 
 ### 1. Frontmatter is Mandatory
@@ -54,10 +70,8 @@ You can invoke the FoundrySpec CLI using `foundryspec` (if installed globally) o
 To maintain architectural integrity, every spec file MUST include these top-level frontmatter fields:
 
 1.  **`id`**: A unique stable identifier (e.g., `PER_User`, `REQ_Login`, `COMP_Auth`).
-2.  **`uplink`**: (Optional) The ID of the parent asset in the documentation graph.
-3.  **`downlinks`**: (Optional - Deprecated) An array of child IDs. Prefer defining relationships via `uplink` on the child node (reverse inference).
-4.  **`requirements`**: (Required for Components/Features) An array of granular `REQ_` IDs that this asset implements.
-5.  **`entities`**: (Optional) A list of internal IDs defined within this file.
+2.  **`requirements`**: An array of granular `REQ_` IDs associated with this asset. (Mandatory for Personas and Components).
+3.  **`entities`**: (Optional) A list of internal IDs defined within this file.
 
 ### 📝 Footnote Policy (Markdown Rules)
 

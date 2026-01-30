@@ -5,17 +5,8 @@ description: Requirements for the drift detection system.
 classification: Functional
 entities:
   - id: "REQ_AutomatedProbing"
-    uplink: 
-      - "GRP_Requirements"
-      - "PER_SystemAnalyst"
-    downlinks:
-      - "COMP_ProbeManager"
-      - "REQ_GranularTraceability"
   - id: "REQ_GranularTraceability"
     classification: Functional
-    uplink: "REQ_AutomatedProbing"
-    downlinks:
-      - "COMP_ProbeManager"
 ---
 
 requirementDiagram

@@ -82,7 +82,7 @@ export class MermaidParser {
             };
         }
 
-        const result = await this.parseMermaid(content);
+        const result = await this.analyze(content);
 
         this.cacheManager.setArtifact(hash, {
             diagramType: result.diagramType,
@@ -102,8 +102,9 @@ export class MermaidParser {
 
     /**
      * "Ultra Sonic" Pure AST Parsing (Offloaded to worker)
+     * Returns raw analysis results (nodes, relationships, AST).
      */
-    private async parseMermaid(content: string): Promise<Omit<ParseResult, 'fromCache'>> {
+    public async analyze(content: string): Promise<Omit<ParseResult, 'fromCache'>> {
         const type = this.detectType(this.cleanContent(content));
 
         return new Promise((resolve) => {

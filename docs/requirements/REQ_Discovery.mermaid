@@ -1,0 +1,38 @@
+---
+id: "REQ_Discovery"
+title: Automated System Discovery
+description: Requirements for synthetic hub generation and navigation.
+classification: Functional
+---
+requirementDiagram
+    requirement Discovery {
+        id: "REQ_Discovery"
+        text: "The system shall automatically discover and index all architectural assets."
+        risk: Low
+        verifymethod: Test
+    }
+
+    requirement Dynamic_Root {
+        id: "REQ_DynamicRoot"
+        text: "The system shall automatically generate a navigation root from the folder structure."
+        risk: Medium
+        verifymethod: Test
+    }
+
+    requirement Synthetic_Hub {
+        id: "REQ_SyntheticHub"
+        text: "The build process must synthesize folder-level indices dynamically."
+        risk: Low
+        verifymethod: Test
+    }
+
+    requirement Zero_Maintenance {
+        id: "REQ_ZeroMaintenance"
+        text: "The system shall eliminate manual indexing."
+        risk: Low
+        verifymethod: Test
+    }
+
+    Discovery -contains-> Dynamic_Root
+    Discovery -contains-> Synthetic_Hub
+    Discovery -contains-> Zero_Maintenance

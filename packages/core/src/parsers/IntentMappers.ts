@@ -177,11 +177,12 @@ export class ERMapper extends BaseMapper {
 export class MindmapMapper extends BaseMapper {
     public nodeType = { DEFAULT: 0, ROUNDED: 1 };
 
-    public addNode = (id: any, text: string, type: string) => {
+    public addNode = (level: number, id: string, descr: string, type: any) => {
         this.nodes.push({ 
-            id: String(text || id), 
-            text: text || id, 
-            type: 'mindmap_node' 
+            id: id, 
+            text: descr || id, 
+            type: 'mindmap_node',
+            level 
         });
     };
 

@@ -20,6 +20,8 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 import { RuleEngine } from './RuleEngine.js';
 import { ConfigStore } from './ConfigStore.js';
+import { MermaidParser } from './MermaidParser.js';
+import { CacheManager } from './CacheManager.js';
 
 import { ProbeResult } from './types/probe.js';
 
@@ -29,13 +31,15 @@ export class ProbeManager {
     private docsDir: string;
     private ruleEngine: RuleEngine;
     private configStore: ConfigStore;
+    private mermaidParser: MermaidParser;
     private projectId: string = '';
 
-    constructor(projectRoot: string = process.cwd()) {
+    constructor(projectRoot: string = process.cwd(), mermaidParser?: MermaidParser) {
         this.projectRoot = path.resolve(projectRoot);
         this.docsDir = path.join(this.projectRoot, 'docs');
         this.ruleEngine = new RuleEngine();
         this.configStore = new ConfigStore();
+        this.mermaidParser = mermaidParser || new MermaidParser(this.ruleEngine, new CacheManager(this.projectRoot));
     }
 
     private async resolveProject(): Promise<void> {
@@ -123,16 +127,11 @@ export class ProbeManager {
             });
 
             // 2. Extract from Mermaid Diagram Content (Granular Nodes)
-            // We reuse the RuleEngine analyzers if available, or simple parsing
-            // Check for rules definition to know diagram type or infer from frontmatter/content
-            const firstLine = body.trim().split('\n')[0];
-            const diagramType = this.inferDiagramType(firstLine);
-            
-            if (diagramType) {
-                const analyzers = this.ruleEngine.getAnalyzers();
-                if (analyzers[diagramType]) {
-                    const analysis = analyzers[diagramType].analyze(body);
-                    analysis.nodes.forEach(node => {
+            // We use the MermaidParser for high-fidelity extraction
+            try {
+                const analysis = await this.mermaidParser.analyze(body);
+                if (analysis && analysis.nodes) {
+                    analysis.nodes.forEach((node: string) => {
                         // Filter for architectural IDs only (Start with uppercase standard prefixes or known patterns)
                         const islikelyId = /^[A-Z]{2,}_[A-Za-z0-9]+/.test(node);
                         if (islikelyId) {
@@ -140,6 +139,8 @@ export class ProbeManager {
                         }
                     });
                 }
+            } catch (err) {
+                // Silently skip if diagram is too broken, as we only need IDs for probe
             }
         }
         return ids;

@@ -1,0 +1,30 @@
+---
+id: "REQ_Performance"
+title: Extreme Build Performance
+description: Requirements for incremental updates, caching, and local-first execution.
+classification: Non-Functional
+---
+requirementDiagram
+    requirement Performance {
+        id: "REQ_Performance"
+        text: "The system shall provide sub-second incremental build updates."
+        risk: Medium
+        verifymethod: Test
+    }
+
+    requirement Smart_Caching {
+        id: "REQ_SmartCaching"
+        text: "The system shall implement content-addressable caching."
+        risk: Medium
+        verifymethod: Test
+    }
+
+    requirement Local_First {
+        id: "REQ_LocalFirst"
+        text: "The system shall support full build and serve capabilities without external dependencies."
+        risk: Medium
+        verifymethod: Test
+    }
+
+    Performance -contains-> Smart_Caching
+    Performance -contains-> Local_First

@@ -4,12 +4,13 @@ title: System Analyst
 description: The human domain expert who guides the system design.
 entities:
   - id: "PER_SystemAnalyst"
-    uplink: "GRP_Personas"
-    downlinks:
-      - "JRN_SpecCleanup"
 ---
 mindmap
   PER_SystemAnalyst((System Analyst))
+    Type: Actor
+    Requirements
+      REQ_Discovery
+      REQ_UX
     Role
       Architectural Lead (Human)
     Description

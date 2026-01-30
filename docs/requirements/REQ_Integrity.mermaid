@@ -1,0 +1,38 @@
+---
+id: "REQ_Integrity"
+title: System Integrity & Trust
+description: Requirements for reachability, configuration safety, and deletion protection.
+classification: Non-Functional
+---
+requirementDiagram
+    requirement Integrity {
+        id: "REQ_Integrity"
+        text: "The system shall guarantee the structural and semantic integrity of the architectural graph."
+        risk: High
+        verifymethod: Test
+    }
+
+    requirement Safe_Removal {
+        id: "REQ_SafeRemoval"
+        text: "The system shall prevent removing categories referenced by other documents."
+        risk: Medium
+        verifymethod: Test
+    }
+
+    requirement Zero_Config {
+        id: "REQ_ZeroConfig"
+        text: "The system shall operate without project-level configuration files."
+        risk: Medium
+        verifymethod: Test
+    }
+
+    requirement PathIntegrity {
+        id: "REQ_PathIntegrity"
+        text: "The build engine must verify that all links point to existing files."
+        risk: Medium
+        verifymethod: Test
+    }
+
+    Integrity -contains-> Safe_Removal
+    Integrity -contains-> Zero_Config
+    Integrity -contains-> PathIntegrity

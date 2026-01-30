@@ -13,8 +13,12 @@ import { ProjectAsset } from './assets.js';
 export interface ProjectContext {
     /** Set of all IDs referenced in the project (uplinks/downlinks) */
     referencedIds: Set<string>;
-    /** Map of all nodes to their relationship data */
-    nodeMap: Map<string, { uplinks: string[], downlinks: string[] }>;
+    /** Map of all nodes to their relationship data and metadata */
+    nodeMap: Map<string, { 
+        uplinks: string[], 
+        downlinks: string[],
+        metadata?: Record<string, any>
+    }>;
     /** Map of node IDs to the file path where they are defined */
     idToFileMap: Map<string, string>;
 }

@@ -24,12 +24,10 @@ export const rule: Rule = {
 
         for (const ent of entities) {
              if (typeof ent.id === 'string' && !context.referencedIds.has(ent.id)) {
-                 // Suggest ROOT or Parent
-                 const suggestion = context.referencedIds.has('ROOT') ? 'ROOT' : 'Parent_ID';
-                 errors.push(
+                  errors.push(
                     `❌ Orphan Detected: Entity "${ent.id}" is disconnected from the graph.\n` +
-                    `   👉 Fix: Add 'uplink: ${suggestion}' (or appropriate parent) to ${asset.relPath}`
-                 );
+                    `   👉 Fix: Ensure this ID is mentioned in a Mermaid diagram or place the file in the correct architectural folder.`
+                  );
              }
         }
         

@@ -18,55 +18,13 @@ import {
     RuleSet,
     ProjectContext
 } from './types/rules.js';
-import { 
-    DiagramAnalyzer, 
-    MindmapAnalyzer, 
-    SequenceAnalyzer, 
-    FlowchartAnalyzer, 
-    RequirementAnalyzer,
-    ClassAnalyzer,
-    C4Analyzer,
-    StateDiagramAnalyzer
-} from './analyzers/index.js';
 
 // @foundryspec/start COMP_RuleEngine
 export class RuleEngine {
     private rules: Rule[] = [];
-    private analyzers: Record<string, DiagramAnalyzer> = {
-        'mindmap': new MindmapAnalyzer(),
-        'sequenceDiagram': new SequenceAnalyzer(),
-        'graph': new FlowchartAnalyzer(),
-        'flowchart': new FlowchartAnalyzer(),
-        'requirementDiagram': new RequirementAnalyzer(),
-        'classDiagram': new ClassAnalyzer(),
-        'C4Context': new C4Analyzer(),
-        'C4Container': new C4Analyzer(),
-        'C4Component': new C4Analyzer(),
-        'stateDiagram': new StateDiagramAnalyzer()
-    };
 
     constructor() {}
 
-    public getAnalyzers(): Record<string, DiagramAnalyzer> {
-        return this.analyzers;
-    }
-
-    /**
-     * Analyze diagram content and extract nodes/relationships
-     * Used by Mermaid Parser for caching
-     */
-    public analyzeContent(content: string, diagramType: string): { nodes: string[]; relationships: Array<{ from: string; to: string; label?: string }> } {
-        const analyzer = this.analyzers[diagramType];
-        if (analyzer) {
-            const result = analyzer.analyze(content);
-            return {
-                nodes: result.nodes || [],
-                relationships: result.relationships || [],
-            };
-        }
-        // Return empty result if no analyzer for this type
-        return { nodes: [], relationships: [] };
-    }
 
     async loadRules(rulesPath: string): Promise<void> {
         // 1. Load Deprecated YAML Rules (if path points to yaml)
@@ -112,7 +70,10 @@ export class RuleEngine {
         // Skip validation for synthetic assets (e.g., generated root.mermaid)
         if (!asset.absPath) return;
 
-        const applicableRules = this.rules.filter(rule => this.matchesTarget(asset, rule.target));
+        const applicableRules = this.rules.filter(rule => 
+            (!rule.level || rule.level === 'folder' || rule.level === 'file' || rule.level === 'node') && 
+            this.matchesTarget(asset, rule.target)
+        );
 
         for (const rule of applicableRules) {
             await this.executeRule(asset, rule, context);
@@ -123,6 +84,26 @@ export class RuleEngine {
 
         // Filename Consistency Check: Verify ID matches Filename
         this.validateFilenameConsistency(asset);
+    }
+
+    /**
+     * Executes rules that apply to the entire project globally.
+     */
+    async validateProject(context: ProjectContext): Promise<void> {
+        const projectRules = this.rules.filter(rule => rule.level === 'project');
+        
+        for (const rule of projectRules) {
+            // Project-level rules use a "Null Asset" or the first available asset for triggering,
+            // but primarily rely on the ProjectContext.
+            // We'll create a dummy asset or just pass undefined if execution can handle it.
+            const dummyAsset: ProjectAsset = {
+                relPath: 'PROJECT_ROOT',
+                absPath: '',
+                content: '',
+                data: {}
+            };
+            await this.executeRule(dummyAsset, rule, context);
+        }
     }
 
     /**
@@ -208,52 +189,36 @@ export class RuleEngine {
         }
 
         // 4. Structural Check
-        if (checks.requiredNodes && checks.mermaidType) {
+        if (checks.requiredNodes) {
             let nodes: string[] = [];
             
             // Optimization: Use cached analysis if available
-            if (asset.analysis && asset.analysis.type === checks.mermaidType) {
+            if (asset.analysis) {
                 nodes = asset.analysis.nodes;
-            } else {
-                const analyzer = this.analyzers[checks.mermaidType];
-                if (analyzer) {
-                    nodes = analyzer.analyze(asset.content).nodes;
-                }
             }
 
-            if (nodes.length > 0 || this.analyzers[checks.mermaidType]) {
+            if (nodes.length > 0) {
                 for (const requiredNode of checks.requiredNodes) {
-                    if (!nodes.some(n => n.toLowerCase() === requiredNode.toLowerCase())) {
+                    if (!nodes.some((n: string) => n.toLowerCase() === requiredNode.toLowerCase())) {
                         errors.push(`Missing required node: "${requiredNode}"`);
                     }
                 }
-            } else {
-                // Fallback to basic line check if no specialized analyzer exists
-                const lines = asset.content.split('\n').map(l => l.trim().toLowerCase());
-                for (const node of checks.requiredNodes) {
-                    if (!lines.some(l => l === node.toLowerCase() || l.startsWith(`${node.toLowerCase()}(`))) {
-                        errors.push(`Missing required node (fallback check): "${node}"`);
-                    }
-                }
+            } else if (asset.relPath.endsWith('.mermaid')) {
+                errors.push(`Structural Validation Error: No nodes extracted from diagram. Ensure syntax is valid.`);
             }
         }
         
         // 5. Allowed Node Prefixes Check (Entity Verification)
-        if (checks.allowedNodePrefixes && checks.mermaidType) {
+        if (checks.allowedNodePrefixes) {
             let nodes: string[] = [];
             
-            if (asset.analysis && asset.analysis.type === checks.mermaidType) {
+            if (asset.analysis) {
                 nodes = asset.analysis.nodes;
-            } else {
-                const analyzer = this.analyzers[checks.mermaidType];
-                if (analyzer) {
-                    nodes = analyzer.analyze(asset.content).nodes;
-                }
             }
 
             if (nodes.length > 0) {
                 for (const node of nodes) {
-                    const hasValidPrefix = checks.allowedNodePrefixes.some(p => node.startsWith(p));
+                    const hasValidPrefix = checks.allowedNodePrefixes.some((p: string) => node.startsWith(p));
                     if (!hasValidPrefix) {
                         errors.push(`Invalid node ID: "${node}". Must start with one of: [${checks.allowedNodePrefixes.join(', ')}]`);
                     } else if (context && !context.idToFileMap.has(node)) {
@@ -331,7 +296,7 @@ export class RuleEngine {
                 const node = context.nodeMap.get(nodeId)!;
                 const invalidReferencers = node.uplinks.filter((uplink: string) => {
                     const allowed = checks.accessControl!.allowedReferencers!;
-                    return !allowed.some(prefix => uplink.startsWith(prefix));
+                    return !allowed.some((prefix: string) => uplink.startsWith(prefix));
                 });
                 
                 if (invalidReferencers.length > 0) {
@@ -370,14 +335,14 @@ export class RuleEngine {
                     const traceTargets = checks.traceability.mustTraceTo;
                     const canReach = (currentId: string, visited: Set<string>): boolean => {
                         if (currentId === 'ROOT') return true; // Ultimate anchor is always valid
-                        if (traceTargets.some(prefix => currentId.startsWith(prefix))) return true;
+                        if (traceTargets.some((prefix: string) => currentId.startsWith(prefix))) return true;
                         if (visited.has(currentId)) return false;
                         
                         visited.add(currentId);
                         const node = nodeMap.get(currentId);
                         if (!node) return false;
 
-                        return node.uplinks.some(upid => canReach(upid, visited));
+                        return node.uplinks.some((upid: string) => canReach(upid, visited));
                     };
 
                     if (!canReach(ent.id, new Set())) {
@@ -388,8 +353,8 @@ export class RuleEngine {
                 // C. Downlink Check (mustHaveDownlink)
                 if (checks.traceability.mustHaveDownlink && checks.traceability.mustHaveDownlink.length > 0) {
                     const node = nodeMap.get(ent.id);
-                    const implemented = node?.downlinks.some(d => 
-                        checks.traceability!.mustHaveDownlink!.some(prefix => d.startsWith(prefix))
+                    const implemented = node?.downlinks.some((d: string) => 
+                        checks.traceability!.mustHaveDownlink!.some((prefix: string) => d.startsWith(prefix))
                     );
                     
                     // Also check if we are "implemented by" something (uplink FROM below)

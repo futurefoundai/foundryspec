@@ -35,14 +35,20 @@ export function registerCoreCommands(
         .command('probe')
         .description('Analyze the project for drift between Spec and Implementation')
         .action(async () => {
+            let prober;
             try {
                 const root = await findProjectRoot(process.cwd());
-                const prober = new ProbeManager(root);
+                prober = new ProbeManager(root);
                 await prober.runProbe();
             } catch (err: unknown) {
                 const msg = err instanceof Error ? err.message : String(err);
                 console.error(chalk.red('\n❌ Probe failed:'), msg);
                 process.exit(1);
+            } finally {
+                if (prober) {
+                    // Accessing private for termination (or make it public in ProbeManager)
+                    await (prober as any).mermaidParser.terminate();
+                }
             }
         });
 

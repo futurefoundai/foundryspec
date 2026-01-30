@@ -182,18 +182,18 @@ export class BuildManager {
     const probeManager = new ProbeManager(this.projectRoot);
     const codeMap = await probeManager.scanCodebase();
 
-    // --- 4. Centralized Validation ---
-    const referencedIds: Set<string> = new Set();
+    // --- 4. Puppeteer Syntax Check & Caching (Moved up for AST-First Traceability) ---
+    // We run this BEFORE graph construction so that we can use analysis results.
+    await this.checkMermaidSyntax(assets);
 
-    // Register Hub Categories as valid reference points to avoid Orphan errors for root links
+    // --- 5. Centralized Validation ---
+    const referencedIds: Set<string> = new Set();
     const categoriesFromRules = this.ruleEngine.getHubCategories();
     categoriesFromRules.forEach((cat) => referencedIds.add(cat.id));
     referencedIds.add('ROOT');
 
-    // Construct Node Map for Graph Traversal (Rule Engine)
-    const nodeMap: Map<string, { uplinks: string[]; downlinks: string[] }> = new Map();
+    const nodeMap: Map<string, { uplinks: string[]; downlinks: string[]; metadata?: { classification?: string; isFileRoot?: boolean; personaType?: string } }> = new Map();
 
-    // Helper to populate nodeMap
     const addGraphNode = (
       id: string,
       uplinks: string | string[] | undefined,
@@ -204,14 +204,6 @@ export class BuildManager {
       const ups = Array.isArray(uplinks) ? uplinks : uplinks ? [uplinks] : [];
       const downs = Array.isArray(downlinks) ? downlinks : downlinks ? [downlinks] : [];
       const reqs = Array.isArray(requirements) ? requirements : requirements ? [requirements] : [];
-      // In the deprecated logic, reqs were distinct. But for Rule Engine 'mustTraceTo', we usually trace uplinks.
-      // Let's add requirements to nodes, but standard rules might only check uplinks.
-      // Actually, for COMP -> REQ, 'requirements' field acts as an uplink.
-      // We should merge them into 'uplinks' for the generic 'recursive trace' to work naturally,
-      // OR the rule engine needs to know about 'requirements'.
-      // For now, let's merge 'requirements' into 'uplinks' in the graph view,
-      // because logically a Component "depends on" / "traces up to" a Requirement.
-
       const effectiveUplinks = [...ups, ...reqs];
 
       if (!nodeMap.has(id)) nodeMap.set(id, { uplinks: [], downlinks: [] });
@@ -219,19 +211,15 @@ export class BuildManager {
       effectiveUplinks.forEach((u) => {
         if (typeof u === 'string') {
            if (!node.uplinks.includes(u)) node.uplinks.push(u);
-           
-           // Inferred Downlink (Child -> Parent means Parent has Downlink to Child)
            if (!nodeMap.has(u)) nodeMap.set(u, { uplinks: [], downlinks: [] });
            const parentNode = nodeMap.get(u)!;
            if (!parentNode.downlinks.includes(id)) parentNode.downlinks.push(id);
         }
       });
       
-      // Process Downlinks (Parent -> Child)
       downs.forEach((d) => {
         if (typeof d === 'string') {
           if (!node.downlinks.includes(d)) node.downlinks.push(d);
-          // Inferred Uplink
           if (!nodeMap.has(d)) nodeMap.set(d, { uplinks: [], downlinks: [] });
           const childNode = nodeMap.get(d)!;
           if (!childNode.uplinks.includes(id)) childNode.uplinks.push(id);
@@ -239,59 +227,110 @@ export class BuildManager {
       });
     };
 
+    const inferUplink = (relPath: string): string | undefined => {
+      if (relPath.includes('/footnotes/')) return undefined;
+      const cat = categoriesFromRules.find(c => relPath.startsWith(c.path + '/'));
+      return cat?.id;
+    };
+
     for (const asset of assets) {
-      const { data } = asset;
+      const { data, analysis } = asset;
+      const id = data.id || data.traceability?.id;
+      
+      // Framework Rule: Always ensure a folder-based group uplink
+      const inferredGroup = id ? inferUplink(asset.relPath) : undefined;
+      const effectiveUplinks = inferredGroup ? [inferredGroup] : [];
+
       const collect = (val: string | string[] | undefined) => {
         if (!val) return;
         if (Array.isArray(val))
-          val.forEach((v) => {
-            if (typeof v === 'string') referencedIds.add(v);
-          });
+          val.forEach((v) => { if (typeof v === 'string') referencedIds.add(v); });
         else if (typeof val === 'string') referencedIds.add(val);
       };
 
-      // Collect Referenced IDs (for Orphan checks)
-      collect(data.uplink || data.traceability?.uplink);
-      // If we have an uplink, we are effectively referenced by the parent (Inferred Downlink)
-      if (data.uplink || data.traceability?.uplink) {
-          collect(data.id || data.traceability?.id);
+      effectiveUplinks.forEach(up => collect(up));
+      if (effectiveUplinks.length > 0) collect(id);
+      collect(data.requirements);
+
+      // Incorporate AST Analysis into Graph
+      const astDownlinks: string[] = [];
+      const astUplinks: string[] = [];
+      
+      const detectedIds: string[] = [];
+      if (analysis && (analysis as any).nodes) {
+          ((analysis as any).nodes).forEach((n: any) => {
+              const nid = typeof n === 'string' ? n : n.id;
+              if (typeof nid === 'string' && /^[A-Z]{2,}_/.test(nid)) detectedIds.push(nid);
+          });
+      }
+      if (analysis && (analysis as any).relationships) {
+          ((analysis as any).relationships).forEach((rel: { to: string, type?: string }) => {
+              if (typeof rel.to === 'string') detectedIds.push(rel.to);
+          });
       }
 
-      collect(data.downlinks || data.traceability?.downlinks);
-      collect(data.requirements);
+      // Convert Set back to array to avoid confusion
+      const uniqueDetectedIds = Array.from(new Set(detectedIds));
+
+      uniqueDetectedIds.forEach(idFound => {
+          if (typeof idFound !== 'string') return;
+          // Skip self-referential links from diagram to asset
+          if (idFound === id) return;
+          
+          // Logic: Who is the parent of whom?
+          // 1. Personas are parents of Journeys & Requirements
+          if (idFound.startsWith('PER_') && (id?.startsWith('JRN_') || id?.startsWith('REQ_'))) {
+              astUplinks.push(idFound);
+          } else {
+              astDownlinks.push(idFound);
+          }
+      });
 
       const entities = Array.isArray(data.entities) ? data.entities : [];
       for (const ent of entities) {
-        collect(ent.uplink);
-        // If entity has uplink, it is referenced
-        if (ent.uplink && ent.id) referencedIds.add(ent.id);
-        
-        collect(ent.downlinks);
         collect(ent.requirements);
       }
 
+      const finalUplinks = [...effectiveUplinks, ...astUplinks];
+
       // Build Graph
-      addGraphNode(
-        data.id || data.traceability?.id,
-        data.uplink || data.traceability?.uplink,
-        data.downlinks || data.traceability?.downlinks,
-        data.requirements,
-      );
+      addGraphNode(id, finalUplinks, astDownlinks, data.requirements);
+
+      // --- Framework-Aware Metadata Processing ---
+      if (id && nodeMap.has(id)) {
+          const node = nodeMap.get(id)!;
+          node.metadata = node.metadata || {};
+          
+          if (data.classification) node.metadata.classification = data.classification;
+          if (data.id) node.metadata.isFileRoot = true;
+
+          // Special logic for Requirements: If no classification, default to Functional if top-level
+          if (id.startsWith('REQ_') && !node.metadata.classification) {
+              const hasReqParent = effectiveUplinks.some(u => u.startsWith('REQ_'));
+              if (!hasReqParent) node.metadata.classification = 'Functional';
+          }
+      }
 
       for (const ent of entities) {
-        addGraphNode(ent.id, ent.uplink, ent.downlinks, ent.requirements);
+        addGraphNode(ent.id, [], [], ent.requirements);
+        if (ent.id && nodeMap.has(ent.id)) {
+            const node = nodeMap.get(ent.id)!;
+            node.metadata = node.metadata || {};
+            if (ent.classification) node.metadata.classification = ent.classification;
+        }
       }
     }
 
 
-    // --- 5. Puppeteer Syntax Check & Caching ---
-    // We run this BEFORE validation so that RuleEngine can use the cached ASTs.
-    await this.checkMermaidSyntax(assets);
+    // --- 6. Perform Rule-Based Validation ---
 
     // Perform Rule-Based Validation with project context
     for (const asset of assets) {
-      this.ruleEngine.validateAsset(asset, { referencedIds, nodeMap, idToFileMap });
+      await this.ruleEngine.validateAsset(asset, { referencedIds, nodeMap, idToFileMap });
     }
+
+    // Run project-level validation
+    await this.ruleEngine.validateProject({ referencedIds, nodeMap, idToFileMap });
 
     // Semantic Code Check (kept here until migrated to a rule for code parsing)
     for (const [id, files] of codeMap.entries()) {
