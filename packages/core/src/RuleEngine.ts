@@ -20,6 +20,7 @@ import {
 } from './types/rules.js';
 
 // @foundryspec/start COMP_RuleEngine
+// @foundryspec COMP_Engine
 export class RuleEngine {
     private rules: Rule[] = [];
 

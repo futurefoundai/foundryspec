@@ -31,9 +31,25 @@ entities:
     requirements:
   - id: "COMP_BrowserPool"
     requirements:
+  - id: "COMP_Hub"
+    requirements:
+  - id: "COMP_Engine"
+    requirements:
 ---
 
 classDiagram
+    class COMP_Hub {
+        <<Component>>
+        +Visualizer
+        +Editor
+    }
+
+    class COMP_Engine {
+        <<Component>>
+        +RuleEngine
+        +BuildManager
+    }
+
     class COMP_Group {
         <<Component>>
         +ScaffoldManager

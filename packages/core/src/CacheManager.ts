@@ -26,6 +26,7 @@ export interface BuildArtifactEntry {
     version: string;
     // Potentially store raw nodes/relationships here too if we want to skip re-analysis
     nodes?: string[];
+    definedNodes?: string[];
     relationships?: { from: string; to: string; label?: string }[];
 }
 

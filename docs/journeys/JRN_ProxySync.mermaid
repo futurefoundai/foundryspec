@@ -1,0 +1,16 @@
+---
+id: "JRN_ProxySync"
+title: Legacy Integration Handshake
+description: Automated synchronization protocol between FoundrySpec and the Legacy Proxy.
+trigger: Scheduled sync or webhook event.
+outcome: Architectural state is reconciled with legacy protocol constraints.
+requirements: REQ_Integrity
+---
+sequenceDiagram
+    participant SYS_Foundry as FoundrySpec
+    participant PER_ExternalSystem as Legacy Proxy
+    
+    SYS_Foundry->>PER_ExternalSystem: initiateHandsake(protocol_v1)
+    PER_ExternalSystem->>PER_ExternalSystem: validateSchema()
+    PER_ExternalSystem-->>SYS_Foundry: ACK: Handshake Success
+    SYS_Foundry->>SYS_Foundry: reconcileState()

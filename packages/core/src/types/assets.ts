@@ -13,6 +13,7 @@ export interface ProjectAsset {
     analysis?: {
         type: string;
         nodes: string[];
+        definedNodes?: string[];
         relationships: { from: string; to: string; label?: string }[];
     };
 }

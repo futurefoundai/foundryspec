@@ -95,10 +95,11 @@ class WorkerParser {
         const relationships: any[] = [];
 
         mapper.nodes.forEach((n: any) => {
-            const id = n.id || n.name || n.text;
-            if (id) nodeSet.add(String(id));
+            if (n.id) nodeSet.add(String(n.id));
+            if (n.name) nodeSet.add(String(n.name));
             if (n.text) nodeSet.add(String(n.text));
         });
+
 
         const processAST = (ast: any) => {
             if (!ast) return;
@@ -129,6 +130,8 @@ class WorkerParser {
             processAST(ast);
         }
 
+        const definedNodeIds = Array.from(nodeSet);
+
         relationships.push(...mapper.edges);
         relationships.forEach(rel => {
             if (rel.from && typeof rel.from === 'string') nodeSet.add(rel.from);
@@ -138,6 +141,7 @@ class WorkerParser {
         return {
             diagramType: type,
             nodes: Array.from(nodeSet),
+            definedNodes: definedNodeIds,
             relationships,
             ast: null 
         };

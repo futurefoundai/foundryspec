@@ -1,5 +1,6 @@
 import { Rule, ProjectContext } from '../types/rules.js';
 import { ProjectAsset } from '../types/assets.js';
+import chalk from 'chalk';
 
 export const rule: Rule = {
     id: 'requirement-syntax',
@@ -24,20 +25,16 @@ export const rule: Rule = {
             errors.push('Requirements must use "requirementDiagram" syntax.');
         }
 
-        // 2. Traceability
-        // mustTraceTo: [PER_, REQ_]
-        // mustHaveDownlink: [FEAT_, COMP_, CTX_, BND_, REQ_]
+        // 2. Deprecation Check: 'uplink' in frontmatter
+        if (asset.data.uplink) {
+            console.warn(chalk.yellow(`\n⚠️  Deprecation Warning: Manual 'uplink' detected in ${asset.relPath}.
+   👉 Innovation: Requirements should be owned by their parents using '-contains->' in the parent's diagram.
+   Please migrate to the Ownership model to ensure architectural integrity.`));
+        }
+
+        // 3. Traceability
         if (asset.data.id && context.nodeMap.has(asset.data.id)) {
-            const node = context.nodeMap.get(asset.data.id)!;
-            
-            // Uplinks (Trace To)
-            const hasUplink = node.uplinks.some(u => u.startsWith('PER_') || u.startsWith('REQ_'));
-            if (!hasUplink) {
-               // errors.push('Requirement must trace to a Persona (PER_) or parent Requirement (REQ_).');
-            }
-            
-            // Downlinks (Implemented By)
-            // Implementation logic is complex (reverse lookups etc), keeping basic check for now.
+            // Uplinks (Trace To) logic is handled by BuildManager's graph construction
         }
 
         return errors;

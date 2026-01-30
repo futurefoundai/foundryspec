@@ -29,6 +29,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 /**
  * @foundryspec COMP_BuildManager
+ * @foundryspec COMP_Hub
  */
 
 // ...
@@ -185,6 +186,7 @@ export class BuildManager {
     // --- 4. Puppeteer Syntax Check & Caching (Moved up for AST-First Traceability) ---
     // We run this BEFORE graph construction so that we can use analysis results.
     await this.checkMermaidSyntax(assets);
+    this.repairRequirementDiagrams(assets);
 
     // --- 5. Centralized Validation ---
     const referencedIds: Set<string> = new Set();
@@ -375,6 +377,19 @@ export class BuildManager {
     console.log(chalk.gray(`Copying project documentation to internal build...`));
     await fs.copy(this.docsDir, path.join(outputDir, 'assets'));
 
+    // --- Persist Self-Healing Repairs ---
+    // Since fs.copy copies the raw source files, we must overwrite any requirement diagrams
+    // that were modified in-memory by the repair logic.
+    const repairedAssets = assets.filter(a => 
+        a.analysis?.type === 'requirement' || 
+        a.analysis?.type === 'requirementDiagram' || 
+        a.analysis?.type === 'requirementdiagram'
+    );
+    for (const asset of repairedAssets) {
+         const destPath = path.join(outputDir, 'assets', asset.relPath);
+         await fs.writeFile(destPath, asset.content, 'utf8');
+    }
+
     // --- 7. Write Synthetic Assets to Output ---
     for (const asset of syntheticAssets) {
       const destPath = path.join(outputDir, 'assets', asset.relPath);
@@ -546,6 +561,7 @@ ${standaloneAssets
         asset.analysis = {
             type: result.diagramType,
             nodes: result.nodes,
+            definedNodes: result.definedNodes,
             relationships: result.relationships
         };
       } catch (err: unknown) {
@@ -564,6 +580,53 @@ ${standaloneAssets
 
     // Save cache to disk
     await this.mermaidParser.flush();
+  }
+
+  private repairRequirementDiagrams(assets: ProjectAsset[]) {
+    const requirementAssets = assets.filter(a => 
+        a.analysis?.type === 'requirement' || 
+        a.analysis?.type === 'requirementdiagram' ||
+        a.analysis?.type === 'requirementDiagram'
+    );
+    
+    if (requirementAssets.length > 0) {
+        console.log(chalk.gray(`Checking ${requirementAssets.length} requirement diagrams for visual integrity...`));
+    }
+
+    for (const asset of requirementAssets) {
+        if (!asset.analysis || !asset.analysis.nodes) continue;
+        
+        const definedNodes = new Set(asset.analysis.definedNodes || asset.analysis.nodes);
+        const referencedNodes = new Set<string>();
+        
+        // Use regex for robust relationship participant extraction
+        const relRegex = /(\w+)\s*[-<]\s*(\w+)\s*[-<]?>\s*(\w+)/g;
+        let match;
+        while ((match = relRegex.exec(asset.content)) !== null) {
+            const [_, part1, type, part2] = match;
+            const relationshipTypes = ['contains', 'verifies', 'copies', 'derives', 'refines', 'satisfies', 'traces'];
+            if (relationshipTypes.includes(type)) {
+                referencedNodes.add(part1);
+                referencedNodes.add(part2);
+            }
+        }
+        
+        const missingNodes = Array.from(referencedNodes).filter(id => 
+            !definedNodes.has(id)
+        );
+        
+
+        if (missingNodes.length > 0) {
+            console.log(chalk.blue(`  🔧 Repairing ${asset.relPath}: Injecting ${missingNodes.length} missing element stub(s) for: ${missingNodes.join(', ')}`));
+            let repairs = '\n\n    %% --- Auto-Injected Elements (for frontend rendering stability) ---\n';
+            for (const node of missingNodes) {
+                repairs += `    element ${node} {\n        type: "External"\n    }\n`;
+                // Also update analysis so subsequent steps know about these nodes
+                asset.analysis.nodes.push(node);
+            }
+            asset.content += repairs;
+        }
+    }
   }
 
   async generateHub(

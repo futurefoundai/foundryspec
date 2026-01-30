@@ -77,6 +77,7 @@ export class MermaidParser {
             return {
                 diagramType: cached.diagramType,
                 nodes: cached.nodes || [],
+                definedNodes: cached.definedNodes || [],
                 relationships: cached.relationships || [],
                 fromCache: true,
             };
@@ -91,6 +92,7 @@ export class MermaidParser {
             timestamp: Date.now(),
             version: '2.0.0', // Ultra Sonic Version
             nodes: result.nodes,
+            definedNodes: result.definedNodes,
             relationships: result.relationships
         });
 
@@ -240,6 +242,7 @@ export class MermaidParser {
         return {
             diagramType: type,
             nodes: Array.from(nodeSet),
+            definedNodes: [], // For legacy sync, though ParserWorker handles this now
             relationships,
             ast: null 
         };

@@ -1,0 +1,18 @@
+---
+id: "JRN_DriftDetection"
+title: Automated Design Drift Detection
+description: How the Coding Agent verifies implementation alignment with specifications.
+trigger: Coding Agent runs 'foundryspec probe'.
+outcome: Implementation drift is detected or synchronization is confirmed.
+requirements: REQ_AutomatedProbing
+---
+sequenceDiagram
+    participant PER_CodingAgent as Coding Agent
+    participant COMP_CLI as FoundrySpec CLI
+    participant COMP_Engine as Build Engine
+    
+    PER_CodingAgent->>COMP_CLI: foundryspec probe
+    COMP_CLI->>COMP_Engine: runProbes()
+    COMP_Engine->>COMP_Engine: analyzeCodebase()
+    COMP_Engine->>COMP_Engine: compareTo(architectural_graph)
+    COMP_Engine-->>PER_CodingAgent: Report: Node Drift Detected

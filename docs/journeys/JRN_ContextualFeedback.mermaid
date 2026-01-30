@@ -1,0 +1,20 @@
+---
+id: "JRN_ContextualFeedback"
+title: Contextual Feedback Journey
+description: How a System Analyst providing contextual feedback on architectural nodes via the Visual Hub.
+trigger: System Analyst clicks 'Add Comment' on a diagram node.
+outcome: Feedback is persisted with a deterministic USI and a visual badge appears.
+requirements: REQ_InteractiveComments
+---
+sequenceDiagram
+    participant PER_SystemAnalyst as System Analyst
+    participant COMP_Hub as Visual Hub
+    participant COMP_Engine as FoundrySpec Engine
+    
+    PER_SystemAnalyst->>COMP_Hub: Selects node & 'Add Comment'
+    COMP_Hub->>PER_SystemAnalyst: Displays comment editor
+    PER_SystemAnalyst->>COMP_Hub: Submits feedback
+    COMP_Hub->>COMP_Engine: saveComment(nodeId, text)
+    COMP_Engine->>COMP_Engine: Generate USI (UUID)
+    COMP_Engine-->>COMP_Hub: Success: Comment recorded
+    COMP_Hub-->>PER_SystemAnalyst: Visual badge appears on node

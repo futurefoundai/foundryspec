@@ -1,0 +1,31 @@
+---
+id: "JRN_LinkValidation"
+title: Automated Link Validation
+description: Verification of internal documentation links during the build process.
+trigger: User or Agent runs 'foundryspec build'.
+outcome: All links are verified; broken links fail the build.
+requirements: REQ_PathIntegrity
+---
+sequenceDiagram
+    participant PER_SystemAnalyst as System Analyst
+    participant PER_CodingAgent as Coding Agent
+    participant COMP_CLI as FoundrySpec CLI
+    participant COMP_Engine as Build Engine
+    
+    rect rgb(240, 240, 240)
+        Note over PER_SystemAnalyst, PER_CodingAgent: Triggered by Manual Build or Agent Maintenance
+        PER_SystemAnalyst->>COMP_CLI: runs 'foundryspec build'
+        PER_CodingAgent->>COMP_CLI: runs 'foundryspec build'
+    end
+
+    COMP_CLI->>COMP_Engine: build()
+    COMP_Engine->>COMP_Engine: scanInternalLinks()
+    alt Link targets exist
+        COMP_Engine-->>COMP_CLI: Verification SUCCESS
+        COMP_CLI-->>PER_SystemAnalyst: CLI Output: Success
+        COMP_CLI-->>PER_CodingAgent: Exit Code 0 (Success)
+    else Broken link found
+        COMP_Engine-->>COMP_CLI: Error: Linkage Violation (REQ_PathIntegrity)
+        COMP_CLI-->>PER_SystemAnalyst: CLI Output: Error
+        COMP_CLI-->>PER_CodingAgent: Exit Code 1 (Fail)
+    end

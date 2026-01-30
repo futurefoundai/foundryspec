@@ -18,6 +18,9 @@ export interface ParseCacheEntry {
     /** Extracted nodes from the diagram */
     nodes: string[];
     
+    /** Nodes explicitly defined in the diagram code */
+    definedNodes?: string[];
+    
     /** Relationships/edges in the diagram */
     relationships: Array<{
         from: string;
@@ -58,6 +61,9 @@ export interface ParseResult {
     
     /** Extracted nodes */
     nodes: string[];
+    
+    /** Nodes explicitly defined in the diagram code */
+    definedNodes?: string[];
     
     /** Relationships between nodes */
     relationships: Array<{

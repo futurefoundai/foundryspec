@@ -2,7 +2,7 @@
 id: "REQ_Integrity"
 title: System Integrity & Trust
 description: Requirements for reachability, configuration safety, and deletion protection.
-classification: Non-Functional
+classification: Functional
 ---
 requirementDiagram
     requirement Integrity {
@@ -33,6 +33,7 @@ requirementDiagram
         verifymethod: Test
     }
 
-    Integrity -contains-> Safe_Removal
-    Integrity -contains-> Zero_Config
-    Integrity -contains-> PathIntegrity
+    Integrity - contains -> Safe_Removal
+    Integrity - contains -> Zero_Config
+    Integrity - contains -> PathIntegrity
+    Integrity - verifies -> JRN_ProxySync
