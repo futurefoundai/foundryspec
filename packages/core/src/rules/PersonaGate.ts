@@ -38,6 +38,21 @@ export const rule: Rule = {
              }
         }
 
+        // 3. Semantic ID Check (Enforce ID-based structure)
+        const semanticIds = ['ROLE', 'DESCRIPTION'];
+        for (const sem of semanticIds) {
+            if (!nodes.some((n: any) => (typeof n === 'string' ? n : n.id) === sem)) {
+                errors.push(`Persona Mindmap: Missing required semantic ID: "${sem}" (e.g., ${sem}["..."])`);
+            }
+        }
+
+        if (!nodes.some((n: any) => {
+            const id = typeof n === 'string' ? n : n.id;
+            return id && id.startsWith('GOAL_');
+        })) {
+            errors.push('Persona Mindmap: Missing semantic ID: "GOAL_N" (at least one goal required).');
+        }
+
         // Check for Type Node
         const typeNode = nodes.find((n: string) => {
             const low = n.toLowerCase();

@@ -2,19 +2,17 @@
 id: "PER_ExternalSystem"
 title: Legacy Mainframe Proxy
 description: Represents the external system that imposes integration constraints.
-entities:
-  - id: "PER_ExternalSystem"
 ---
 mindmap
   PER_ExternalSystem((Legacy Proxy))
     Type: Proxy
     Role
-      Upstream Data Provider
+      ROLE["Upstream Data Provider"]
     Requirements
       REQ_Integrity
     Description
-      A legacy system that requires specific XML schemas and SOAP protocols for data exchange.
+      DESCRIPTION["A legacy system that requires specific XML schemas and SOAP protocols for data exchange."]
     Goals
-      Ensure protocol compatibility
-      Maintain data synchronization
-      Minimize latency in handshakes
+      GOAL_1["Ensure protocol compatibility"]
+      GOAL_2["Maintain data synchronization"]
+      GOAL_3["Minimize latency in handshakes"]

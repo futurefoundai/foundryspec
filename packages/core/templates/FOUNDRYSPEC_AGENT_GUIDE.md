@@ -45,12 +45,19 @@ Every Persona MUST be a `mindmap` with the following branch structure:
 mindmap
     PER_PersonaID
         Type: Actor | Influencer | Guardian | Proxy
+        Requirements
+            REQ_Example
         Role
+            ROLE["The Human-readable Role"]
         Description
+            DESCRIPTION["A detailed explanation of the persona's motive and context."]
         Goals
+            GOAL_1["Direct actionable objective"]
+            GOAL_2["Another actionable objective"]
 ```
 
 - **Type**: Must be exactly one of the four types above.
+- **IDs**: Use specific IDs (`ROLE`, `DESCRIPTION`, `GOAL_N`) with `["Labels"]` for the content nodes. This enables deterministic programmatic analysis and cleaner graph visualization.
 - **Traceability (Ghost Rule)**: Every Persona MUST Drive at least one Requirement ID (`REQ_`) via Mermaid nodes or `requirements` frontmatter. A persona without requirements is a **Ghost in the System** and will cause a build failure.
 
 ## 📝 Critical Rules for Agents
