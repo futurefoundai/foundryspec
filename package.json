@@ -1,5 +1,5 @@
 {
-  "name": "@futurefoundaihq/foundryspec-monorepo",
+  "name": "@foundryspec/monorepo",
   "private": true,
   "description": "Monorepo for FoundrySpec",
   "workspaces": [

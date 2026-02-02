@@ -1,5 +1,5 @@
 {
-  "name": "@futurefoundaihq/foundryspec",
+  "name": "@foundryspec/core",
   "version": "1.0.5",
   "description": "Intent Driven Development Infrastructure for human-AI CollabOps",
   "main": "dist/index.js",

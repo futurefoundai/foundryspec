@@ -65,7 +65,7 @@ FoundrySpec is optimized for **Collaborative Engineering**:
 ### Installation
 
 ```bash
-npm install -g @futurefoundaihq/foundryspec
+npm install -g @foundryspec/core
 ```
 
 ### Initialize and Govern

@@ -21,7 +21,7 @@ export class PluginManager {
   /**
    * Discover and load all available plugins.
    * Searches for:
-   * 1. @futurefoundaihq/foundryspec-enterprise
+   * 1. @foundryspec/enterprise
    * 2. Packages matching 'foundryspec-plugin-*'
    */
   async loadPlugins(): Promise<void> {
@@ -49,7 +49,7 @@ export class PluginManager {
     const candidates: string[] = [];
     
     // Look for enterprise package
-    const enterprisePath = '@futurefoundaihq/foundryspec-enterprise';
+    const enterprisePath = '@foundryspec/enterprise';
     if (await this.packageExists(enterprisePath)) {
       candidates.push(enterprisePath);
     }
