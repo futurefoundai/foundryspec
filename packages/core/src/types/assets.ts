@@ -15,5 +15,6 @@ export interface ProjectAsset {
         nodes: string[];
         definedNodes?: string[];
         relationships: { from: string; to: string; label?: string }[];
+        mindmapMappings?: Record<string, string>;
     };
 }

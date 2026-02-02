@@ -34,6 +34,9 @@ export interface ParseCacheEntry {
     /** Internal AST from the parser (sanitized) */
     ast?: any;
     
+    /** Mindmap specific Label -> ID mappings */
+    mindmapMappings?: Record<string, string>;
+
     /** Original file path (for debugging) */
     filePath: string;
 }
@@ -80,4 +83,7 @@ export interface ParseResult {
 
     /** Internal AST from the parser (sanitized) */
     ast?: any;
+
+    /** Mindmap specific Label -> ID mappings */
+    mindmapMappings?: Record<string, string>;
 }

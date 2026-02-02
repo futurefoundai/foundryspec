@@ -131,6 +131,7 @@ class WorkerParser {
         }
 
         const definedNodeIds = Array.from(nodeSet);
+        const mindmapMappings = (mapper instanceof Mappers.MindmapMapper) ? mapper.mindmapMappings : undefined;
 
         relationships.push(...mapper.edges);
         relationships.forEach(rel => {
@@ -143,6 +144,7 @@ class WorkerParser {
             nodes: Array.from(nodeSet),
             definedNodes: definedNodeIds,
             relationships,
+            mindmapMappings,
             ast: null 
         };
     }

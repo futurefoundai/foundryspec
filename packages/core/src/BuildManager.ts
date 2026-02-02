@@ -112,6 +112,9 @@ export class BuildManager {
     // --- 1. Load All Assets & Enforce Strict Structure ---
     const assets = await this.loadAssets(this.docsDir);
 
+    // --- 1.1. Enrich Mindmap Diagrams (Auto-ID Generation) ---
+    this.enrichMindmapDiagrams(assets);
+
     // --- 1.2. Generate Synthetic Assets (Virtual Hub) ---
     const syntheticAssets = await this.generateSyntheticAssets(assets);
     assets.push(...syntheticAssets);
@@ -564,7 +567,8 @@ ${standaloneAssets
             type: result.diagramType,
             nodes: result.nodes,
             definedNodes: result.definedNodes,
-            relationships: result.relationships
+            relationships: result.relationships,
+            mindmapMappings: result.mindmapMappings
         };
       } catch (err: unknown) {
         console.error(chalk.red(`\n❌ Syntax error in ${asset.relPath}:`));
@@ -841,26 +845,9 @@ ${standaloneAssets
     // 5. Build Mindmap Registry for robust ID resolution
     const mindmapRegistry: Record<string, Record<string, string>> = {};
     for (const asset of assets) {
-      if (asset.content.includes('mindmap')) {
-        try {
-          const result = await this.mermaidParser.parseWithCache(asset.relPath, asset.content);
-          if (result.nodes && result.nodes.length > 0) {
-            const assetPath = `${assetsDir}/${asset.relPath}`;
-            mindmapRegistry[assetPath] = {};
-            
-            const nodeRegex = /^\s*([a-z0-9_]+)(?:\((?:\(|\"|\'|\[|{)(.*?)(?:\)\)|\"|\'|\]|}|(?:\)\))))/gim;
-            let match;
-            while ((match = nodeRegex.exec(asset.content)) !== null) {
-              const id = match[1];
-              const text = match[2];
-              if (id && text) {
-                mindmapRegistry[assetPath][text] = id;
-              }
-            }
-          }
-        } catch (e: any) {
-          console.warn(chalk.yellow(`⚠️  Failed to extract mindmap mapping for ${asset.relPath}: ${e.message}`));
-        }
+      if (asset.analysis?.mindmapMappings) {
+        const assetPath = `${assetsDir}/${asset.relPath}`;
+        mindmapRegistry[assetPath] = asset.analysis.mindmapMappings;
       }
     }
 
@@ -958,7 +945,42 @@ ${standaloneAssets
     return assets;
   }
 
-  // --- Validation Logic (Semantic) ---
+  private enrichMindmapDiagrams(assets: ProjectAsset[]) {
+    const mindmapAssets = assets.filter(a => a.relPath.endsWith('.mermaid') && a.content.includes('mindmap'));
+    
+    for (const asset of mindmapAssets) {
+        const lines = asset.content.split('\n');
+        let inMindmap = false;
+        const enrichedLines = lines.map(line => {
+            const trimmed = line.trim();
+            if (trimmed === 'mindmap') {
+                inMindmap = true;
+                return line;
+            }
+            if (!inMindmap || !trimmed || trimmed.startsWith('%%')) return line;
+            
+            // Matches "bare" nodes: optional leading space, then text that doesn't contain ([{"'
+            // Excluding common keywords or already bracketed nodes
+            const bareNodeRegex = /^(\s*)([^([{"']+?)$/;
+            const match = line.match(bareNodeRegex);
+            
+            if (match) {
+                const indent = match[1];
+                const text = match[2].trim();
+                // Avoid rewriting already defined keywords or empty lines
+                if (['mindmap'].includes(text.toLowerCase()) || text.length === 0) return line;
+                
+                // Create a slug ID
+                const id = text.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+                if (id) {
+                    return `${indent}${id}("${text}")`;
+                }
+            }
+            return line;
+        });
+        asset.content = enrichedLines.join('\n');
+    }
+  }
 
   // This is also key as well as other custom validators based on project roles
   private async validateMindmapLabels(

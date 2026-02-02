@@ -176,14 +176,20 @@ export class ERMapper extends BaseMapper {
 
 export class MindmapMapper extends BaseMapper {
     public nodeType = { DEFAULT: 0, ROUNDED: 1 };
+    public mindmapMappings: Record<string, string> = {};
 
     public addNode = (level: number, id: string, descr: string, type: any) => {
+        const nodeId = id;
+        const text = descr || id;
         this.nodes.push({ 
-            id: id, 
-            text: descr || id, 
+            id: nodeId, 
+            text: text, 
             type: 'mindmap_node',
             level 
         });
+        if (nodeId && text) {
+            this.mindmapMappings[text] = nodeId;
+        }
     };
 
     public getMindmap = () => ({ root: { id: 'root' } });

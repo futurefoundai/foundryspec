@@ -79,6 +79,7 @@ export class MermaidParser {
                 nodes: cached.nodes || [],
                 definedNodes: cached.definedNodes || [],
                 relationships: cached.relationships || [],
+                mindmapMappings: cached.mindmapMappings,
                 fromCache: true,
             };
         }
@@ -93,7 +94,8 @@ export class MermaidParser {
             version: '2.0.0', // Ultra Sonic Version
             nodes: result.nodes,
             definedNodes: result.definedNodes,
-            relationships: result.relationships
+            relationships: result.relationships,
+            mindmapMappings: result.mindmapMappings
         });
 
         return {
