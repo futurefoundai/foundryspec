@@ -651,17 +651,38 @@ ${standaloneAssets
       title: string;
       type: string;
     }
-    const mapObj: Record<string, NavigationTarget[]> = {};
+    const idMap: Record<string, NavigationTarget[]> = {};
+    const footnoteRegistry: Record<string, NavigationTarget[]> = {};
+    const implementationRegistry: Record<string, string[]> = {};
+    const navigationRegistry: Record<string, string> = {};
 
     const addTarget = (id: string, target: NavigationTarget) => {
-      if (!mapObj[id]) mapObj[id] = [];
-      // Avoid duplicates
-      if (!mapObj[id].some((t: NavigationTarget) => t.path === target.path)) {
-        mapObj[id].push(target);
+      // 1. Implementation (Code)
+      if (target.type === 'code') {
+          if (!implementationRegistry[id]) implementationRegistry[id] = [];
+          if (!implementationRegistry[id].includes(target.path)) {
+              implementationRegistry[id].push(target.path);
+          }
+          return;
+      }
+
+      // 2. Footnotes
+      if (target.type === 'footnote' || target.path.endsWith('.md')) {
+          if (!footnoteRegistry[id]) footnoteRegistry[id] = [];
+          if (!footnoteRegistry[id].some(t => t.path === target.path)) {
+              footnoteRegistry[id].push(target);
+          }
+          return;
+      }
+
+      // 3. Main Navigation Map (Diagrams / Hubs)
+      if (!idMap[id]) idMap[id] = [];
+      if (!idMap[id].some((t: NavigationTarget) => t.path === target.path)) {
+        idMap[id].push(target);
       }
     };
 
-    // 1. Map IDs to their primary diagrams
+    // 1. Map IDs to their primary diagrams from idToSpecFile
     idToSpecFile.forEach((v, id) => {
       const type = id.split('_')[0] || 'diagram';
       addTarget(id, {
@@ -682,13 +703,12 @@ ${standaloneAssets
       });
     });
 
-    // 3. Map additional assets (including Data, Sequences, Flows)
+    // 3. Map additional assets (including Data, Sequences, Flows, Footnotes)
     for (const asset of assets) {
       const id = asset.data?.id;
       const title = asset.data?.title || id || path.basename(asset.relPath);
       const relPath = `${assetsDir}/${asset.relPath}`;
 
-      // Determine type more robustly for context menu filtering
       const type =
         asset.relPath.includes('/footnotes/') || asset.relPath.endsWith('.md')
           ? 'footnote'
@@ -697,28 +717,35 @@ ${standaloneAssets
             : 'asset';
 
       if (id) {
-        addTarget(id, {
-          path: relPath,
-          title: title,
-          type: type,
-        });
+        addTarget(id, { path: relPath, title: title, type: type });
 
-        // Also map the title itself back to the path for searchability
         if (asset.data.title) {
-          addTarget(asset.data.title, {
-            path: relPath,
-            title: title,
-            type: type,
-          });
+          addTarget(asset.data.title, { path: relPath, title: title, type: type });
         }
       } else if (asset.data?.title) {
-        addTarget(asset.data.title, {
-          path: relPath,
-          title: title,
-          type: type,
-        });
+        addTarget(asset.data.title, { path: relPath, title: title, type: type });
       }
     }
+
+    // --- 4. Populate Navigation Registry (The single-point truth) ---
+    // This allows the NavigationInterceptor to skip logic and just jump.
+    Object.keys(idMap).forEach(id => {
+        const targets = idMap[id];
+        if (targets.length === 0) return;
+
+        // Choice heuristic:
+        // 1. If there's a target whose filename contains the ID prefix, use it.
+        // 2. If there's a diagram type matching the ID prefix, use it.
+        // 3. Use the first one.
+        const prefix = id.split('_')[0];
+        const bestTarget = targets.find(t => 
+            t.type === prefix || 
+            path.basename(t.path).includes(prefix) ||
+            path.basename(t.path).includes(id)
+        ) || targets[0];
+
+        navigationRegistry[id] = bestTarget.path;
+    });
 
     // 4. Build Metadata Registry for Navigation using INFERRED downlinks from nodeMap
     interface NodeMetadata {
@@ -821,14 +848,6 @@ ${standaloneAssets
             const assetPath = `${assetsDir}/${asset.relPath}`;
             mindmapRegistry[assetPath] = {};
             
-            // The parser Result.nodes for mindmaps is an array of ID strings, 
-            // but the AST analysis might have more info in some versions.
-            // Let's re-parse or ensure the parser returns text-to-id mapping.
-            // Based on IntentMappers.ts, mapper.nodes has {id, text, type, level}.
-            // MeriadParser.normalizeIntent returns result.nodes as IDs only.
-            // We might need to adjust MermaidParser to return full node objects if available.
-            // For now, let's assume we might need to do a quick regex extraction if MermaidParser result is too thin.
-            
             const nodeRegex = /^\s*([a-z0-9_]+)(?:\((?:\(|\"|\'|\[|{)(.*?)(?:\)\)|\"|\'|\]|}|(?:\)\))))/gim;
             let match;
             while ((match = nodeRegex.exec(asset.content)) !== null) {
@@ -845,10 +864,13 @@ ${standaloneAssets
       }
     }
 
-    // Write metadata as separate JSON files for cleaner loading
-    await fs.writeJson(path.join(outputDir, 'idMap.json'), mapObj, { spaces: 2 });
+    // Write metadata as separate JSON files
+    await fs.writeJson(path.join(outputDir, 'idMap.json'), idMap, { spaces: 2 });
     await fs.writeJson(path.join(outputDir, 'metadataRegistry.json'), metadataRegistry, { spaces: 2 });
     await fs.writeJson(path.join(outputDir, 'mindmapRegistry.json'), mindmapRegistry, { spaces: 2 });
+    await fs.writeJson(path.join(outputDir, 'footnoteRegistry.json'), footnoteRegistry, { spaces: 2 });
+    await fs.writeJson(path.join(outputDir, 'implementationRegistry.json'), implementationRegistry, { spaces: 2 });
+    await fs.writeJson(path.join(outputDir, 'navigationRegistry.json'), navigationRegistry, { spaces: 2 });
 
     const rendered = templateContent
       .replace(/{{projectName}}/g, config.projectName)
@@ -857,7 +879,10 @@ ${standaloneAssets
         (config as unknown as { projectId: string }).projectId || 'unboarded-project',
       )
       .replace(/{{version}}/g, config.version)
-      .replace(/{{mindmapRegistry}}/g, JSON.stringify(mindmapRegistry));
+      .replace(/{{mindmapRegistry}}/g, JSON.stringify(mindmapRegistry))
+      .replace(/{{footnoteRegistry}}/g, JSON.stringify(footnoteRegistry))
+      .replace(/{{implementationRegistry}}/g, JSON.stringify(implementationRegistry))
+      .replace(/{{navigationRegistry}}/g, JSON.stringify(navigationRegistry));
 
     await fs.writeFile(path.join(outputDir, 'index.html'), rendered);
   }

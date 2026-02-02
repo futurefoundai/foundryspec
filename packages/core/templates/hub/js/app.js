@@ -11,9 +11,12 @@ import { initInterceptors } from './interceptors.js';
  */
 async function loadMetadata() {
     try {
-        const [idMapResponse, metadataResponse] = await Promise.all([
+        const [idMapResponse, metadataResponse, footnoteResponse, implementationResponse, navigationResponse] = await Promise.all([
             fetch('idMap.json'),
-            fetch('metadataRegistry.json')
+            fetch('metadataRegistry.json'),
+            fetch('footnoteRegistry.json'),
+            fetch('implementationRegistry.json'),
+            fetch('navigationRegistry.json')
         ]);
         
         if (idMapResponse.ok) {
@@ -24,6 +27,21 @@ async function loadMetadata() {
         if (metadataResponse.ok) {
             globals.metadataRegistry = await metadataResponse.json();
             window.metadataRegistry = globals.metadataRegistry;
+        }
+
+        if (footnoteResponse.ok) {
+            globals.footnoteRegistry = await footnoteResponse.json();
+            window.footnoteRegistry = globals.footnoteRegistry;
+        }
+
+        if (implementationResponse.ok) {
+            globals.implementationRegistry = await implementationResponse.json();
+            window.implementationRegistry = globals.implementationRegistry;
+        }
+
+        if (navigationResponse.ok) {
+            globals.navigationRegistry = await navigationResponse.json();
+            window.navigationRegistry = globals.navigationRegistry;
         }
         
         return true;

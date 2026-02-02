@@ -154,7 +154,7 @@ export function renderSidebarContent() {
 export function handleFootnoteSelection(nodeId) {
     const contextMenu = document.getElementById('context-menu');
     if (contextMenu) contextMenu.style.display = 'none';
-    const targets = (globals.idMap[nodeId] || []).filter(t => t.type === 'footnote' || t.path.endsWith('.md'));
+    const targets = globals.footnoteRegistry[nodeId] || [];
     
     if (targets.length > 0) {
         if (targets.length === 1) {
@@ -188,9 +188,7 @@ export function openFootnoteSidebar(filePath, content) {
             globals.idMap[id].some(target => target.path === filePath)
         );
         if (possibleId) {
-            const codeFiles = globals.idMap[possibleId]
-               .filter(t => t.type === 'code')
-               .map(t => t.path);
+            const codeFiles = globals.implementationRegistry[possibleId] || [];
             if (codeFiles.length > 0) {
                html += `<div class="implementation-box" style="margin-top:2rem;padding:1.5rem;background:rgba(56,189,248,0.05);border:1px solid rgba(56,189,248,0.2);border-radius:8px;"><h3 style="margin-top:0;color:#38bdf8;font-family:'Outfit';font-size:1rem;">Implementation Traceability</h3><p style="font-size:0.9rem;color:#94a3b8;margin-bottom:1rem;">This requirement is implemented in:</p><ul style="list-style:none;padding:0;margin:0;">${codeFiles.map(f => `<li style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.5rem;font-family:monospace;font-size:0.85rem;color:var(--text-primary);"><span style="color:#38bdf8;">📁</span> ${f}</li>`).join('')}</ul></div>`;
             }

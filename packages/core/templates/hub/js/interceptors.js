@@ -32,30 +32,46 @@ class NavigationInterceptor {
         if (resolvedId) {
             console.group('%c🚀 Navigation Interceptor', 'color: #00ff00; font-weight: bold;');
             
-            // Log with clarity about resolution source
-            const entry = globals.mindmapRegistry?.[context.filePath]?.[element.textContent?.trim()];
-            if (entry) {
-                console.log('✅ Resolved via Mindmap Registry:', entry);
-            } else {
-                console.log('ℹ️ Resolved via Global idMap/Text:', resolvedId);
+            // 1. Resolve via Mindmap Registry (Explicit node-level override)
+            const registryId = globals.mindmapRegistry?.[context.filePath]?.[element.textContent?.trim()];
+            const finalId = registryId || resolvedId;
+            
+            if (registryId) {
+                console.log('✅ Resolved via Mindmap Registry:', registryId);
             }
-            
-            // For navigation views, we prioritize the primary target (idMap) over downlinks.
-            // This ensures clicking "Requirements" goes to the requirements hub, not a list of all requirements.
-            const primaryTargets = globals.idMap[resolvedId];
-            
-            if (primaryTargets) {
-                const targets = Array.isArray(primaryTargets) ? primaryTargets : [{ path: primaryTargets, title: resolvedId, type: 'diagram' }];
+
+            // 2. Resolve via Navigation Registry (Build-time best default)
+            if (globals.navigationRegistry && globals.navigationRegistry[finalId]) {
+                const targetPath = globals.navigationRegistry[finalId];
+                console.log(`🚀 Navigation Registry: Jumping to ${targetPath}`);
+                console.groupEnd();
                 
+                event.stopImmediatePropagation();
+                event.preventDefault();
+                
+                loadDiagram(targetPath);
+                return true;
+            }
+
+            // 3. Fallback to idMap (Show modal if multiple targets remain)
+            const primaryTargets = globals.idMap[finalId];
+            if (primaryTargets) {
+                let targets = Array.isArray(primaryTargets) ? primaryTargets : [{ path: primaryTargets, title: finalId, type: 'diagram' }];
+                
+                console.log(`[NavigationInterceptor] Fallback to idMap with ${targets.length} targets`);
+                
+                event.stopImmediatePropagation();
+                event.preventDefault();
+
                 if (targets.length === 1) {
-                    const target = typeof targets[0] === 'string' ? { path: targets[0] } : targets[0];
-                    console.log('Directly navigating to primary target:', target.path);
-                    loadDiagram(target.path);
+                    loadDiagram(targets[0].path);
                 } else {
-                    console.log('Multiple primary targets found, showing modal.');
-                    openNavigationModal(resolvedId, targets);
+                    openNavigationModal(finalId, targets);
                 }
-            } else {
+                console.groupEnd();
+                return true;
+            }
+ else {
                 // FALLBACK: Only check metadata if idMap is empty
                 const metadata = globals.metadataRegistry[resolvedId];
                 if (metadata) {
