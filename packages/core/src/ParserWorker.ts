@@ -3,7 +3,7 @@
  * © 2026 FutureFoundAI. All rights reserved.
  */
 
-import { parentPort, workerData } from 'worker_threads';
+import { parentPort } from 'worker_threads';
 import { createRequire } from 'module';
 import * as Mappers from './parsers/IntentMappers.js';
 
@@ -13,6 +13,7 @@ const require = createRequire(import.meta.url);
  * Lightweight Parser Runner for Worker Threads
  */
 class WorkerParser {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     private parsers: Record<string, any> = {
         flowchart: require('./parsers/generated/flowchartParser.cjs'),
         sequence: require('./parsers/generated/sequenceParser.cjs'),
@@ -49,7 +50,7 @@ class WorkerParser {
             const parseResult = parserInstance.parse(cleaned);
             const normalized = this.normalizeIntent(mapper, resolvedType, parseResult);
             return normalized;
-        } catch (e: any) {
+        } catch (e: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
             return { 
                 diagramType: resolvedType, 
                 nodes: [], 
@@ -68,11 +69,13 @@ class WorkerParser {
         return match ? match[1].toLowerCase() : 'unknown';
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     private resolveParser(type: string): any {
         const lowerType = type.toLowerCase();
         if (this.parsers[lowerType]) return this.parsers[lowerType];
         const prefixes = ['flowchart', 'sequence', 'er', 'class', 'state', 'requirement'];
         for (const p of prefixes) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             if (lowerType.startsWith(p)) return (this.parsers as any)[p];
         }
         return lowerType === 'graph' ? this.parsers.flowchart : null;
@@ -90,18 +93,19 @@ class WorkerParser {
         return new (class extends Mappers.BaseMapper {})();
     }
 
-    private normalizeIntent(mapper: Mappers.BaseMapper, type: string, ast: any) {
+    private normalizeIntent(mapper: Mappers.BaseMapper, type: string, ast: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
         const nodeSet = new Set<string>();
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const relationships: any[] = [];
 
-        mapper.nodes.forEach((n: any) => {
+        mapper.nodes.forEach((n: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
             if (n.id) nodeSet.add(String(n.id));
             if (n.name) nodeSet.add(String(n.name));
             if (n.text) nodeSet.add(String(n.text));
         });
 
 
-        const processAST = (ast: any) => {
+        const processAST = (ast: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
             if (!ast) return;
             if (Array.isArray(ast)) { ast.forEach(processAST); return; }
             if (ast.type === 'addParticipant' || ast.type === 'addActor') {
@@ -153,12 +157,12 @@ class WorkerParser {
 const parser = new WorkerParser();
 
 if (parentPort) {
-    parentPort.on('message', (data) => {
+    parentPort.on('message', (data: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
         const { content, type, requestId } = data;
         try {
             const result = parser.parse(content, type);
             parentPort?.postMessage({ ...result, requestId });
-        } catch (e: any) {
+        } catch (e: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
             parentPort?.postMessage({ 
                 validationErrors: [{ line: 0, message: e.message }],
                 requestId 

@@ -18,7 +18,7 @@ export default tseslint.config(
     },
   },
   {
-    files: ['templates/hub/**/*.js'],
+    files: ['**/templates/hub/**/*.js'],
     languageOptions: {
       globals: {
         window: 'readonly',
@@ -35,6 +35,9 @@ export default tseslint.config(
         mermaid: 'readonly',
         marked: 'readonly',
         svgPanZoom: 'readonly',
+        HTMLElement: 'readonly',
+        CustomEvent: 'readonly',
+        customElements: 'readonly',
       }
     }
   }

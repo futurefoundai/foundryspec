@@ -6,7 +6,7 @@ export interface IStorageProvider {
   read(path: string): Promise<string>;
   readJson<T>(path: string): Promise<T>;
   write(path: string, data: string): Promise<void>;
-  writeJson(path: string, data: any): Promise<void>;
+  writeJson(path: string, data: unknown): Promise<void>;
   exists(path: string): Promise<boolean>;
   delete(path: string): Promise<void>;
   ensureDir(path: string): Promise<void>;

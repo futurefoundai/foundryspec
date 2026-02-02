@@ -4,14 +4,14 @@
 export class ViewerFactory {
     /**
      * Creates the appropriate viewer element for a given diagram
-     * @param {string} filePath 
-     * @param {string} diagramType 
+     * @param {string} type 
+     * @param {string} _diagramType 
      * @returns {HTMLElement}
      */
-    static create(filePath, diagramType) {
+    static    createViewer(type, _diagramType) {
         // Detect Personas based on project structure (discovery/behavioral layer).
         // Standard Mermaid 'mindmap' type is used technically, but we override with a specialized viewer for this path.
-        if (filePath.includes('/personas/')) {
+        if (type.includes('/personas/')) {
              return document.createElement('persona-viewer');
         }
 

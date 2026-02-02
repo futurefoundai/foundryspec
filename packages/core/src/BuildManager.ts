@@ -262,14 +262,14 @@ export class BuildManager {
       const astUplinks: string[] = [];
       
       const detectedIds: string[] = [];
-      if (analysis && (analysis as any).nodes) {
-          ((analysis as any).nodes).forEach((n: any) => {
-              const nid = typeof n === 'string' ? n : n.id;
+      if (analysis && analysis.nodes) {
+          analysis.nodes.forEach((n) => {
+              const nid = n;
               if (typeof nid === 'string' && /^[A-Z]{2,}_/.test(nid)) detectedIds.push(nid);
           });
       }
-      if (analysis && (analysis as any).relationships) {
-          ((analysis as any).relationships).forEach((rel: { to: string, type?: string }) => {
+      if (analysis && analysis.relationships) {
+          analysis.relationships.forEach((rel) => {
               if (typeof rel.to === 'string') detectedIds.push(rel.to);
           });
       }
@@ -609,7 +609,7 @@ ${standaloneAssets
         const relRegex = /(\w+)\s*[-<]\s*(\w+)\s*[-<]?>\s*(\w+)/g;
         let match;
         while ((match = relRegex.exec(asset.content)) !== null) {
-            const [_, part1, type, part2] = match;
+            const [, part1, type, part2] = match;
             const relationshipTypes = ['contains', 'verifies', 'copies', 'derives', 'refines', 'satisfies', 'traces'];
             if (relationshipTypes.includes(type)) {
                 referencedNodes.add(part1);

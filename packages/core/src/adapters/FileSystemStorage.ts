@@ -27,7 +27,7 @@ export class FileSystemStorage implements IStorageProvider {
     await fs.writeFile(fullPath, data);
   }
 
-  async writeJson(relativePath: string, data: any): Promise<void> {
+  async writeJson(relativePath: string, data: unknown): Promise<void> {
     const fullPath = this.resolvePath(relativePath);
     await fs.ensureDir(path.dirname(fullPath));
     await fs.writeJson(fullPath, data, { spaces: 2 });

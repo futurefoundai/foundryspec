@@ -1,9 +1,9 @@
-import { globals, historyStack, activeNodeId, setActiveNodeId, popHistory, currentViewPath } from './state.js'; // Imports logic
+import { globals, historyStack, activeNodeId, popHistory, currentViewPath } from './state.js'; // Imports logic
 import { initTheme } from './theme.js';
 import { fetchComments, startSync, saveComment } from './comments.js';
 import { loadDiagram } from './diagram.js';
 import { resolveActiveNodeId } from './utils.js';
-import { openSidebar, openNavigationModal, handleFootnoteSelection, setLoadDiagramFn, updateUI } from './ui.js';
+import { openSidebar, openNavigationModal, handleFootnoteSelection, setLoadDiagramFn } from './ui.js';
 import { initInterceptors } from './interceptors.js';
 
 /**
@@ -61,7 +61,7 @@ export async function ioInitCustomCSS() {
                 link.rel = 'stylesheet'; link.href = file;
                 document.head.appendChild(link);
             }
-        } catch (_e) { /* empty */ }
+        } catch { /* empty */ }
     }
 }
 

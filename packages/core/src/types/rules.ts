@@ -17,7 +17,7 @@ export interface ProjectContext {
     nodeMap: Map<string, { 
         uplinks: string[], 
         downlinks: string[],
-        metadata?: Record<string, any>
+        metadata?: Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
     }>;
     /** Map of node IDs to the file path where they are defined */
     idToFileMap: Map<string, string>;

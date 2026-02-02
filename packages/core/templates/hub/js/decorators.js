@@ -30,7 +30,7 @@ export function injectCommentBadge(node, count, isLocal) {
         
         g.appendChild(circle); g.appendChild(text);
         node.appendChild(g);
-    } catch (_e) { /* empty */ }
+    } catch { /* empty */ }
 }
 
 export function applyCursors(container) {

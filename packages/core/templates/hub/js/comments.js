@@ -13,7 +13,7 @@ export async function fetchComments() {
             setCommentsRegistry(await resp.json()); 
             if (currentContainer) applyCursors(currentContainer);
         }
-    } catch (_e) { console.warn('[FoundrySpec] Could not load comments registry.'); }
+    } catch { console.warn('[FoundrySpec] Could not load comments registry.'); }
 }
 
 export async function startSync() {
@@ -27,7 +27,7 @@ export async function startSync() {
                     await fetchComments();
                 }
             }
-        } catch (_e) { /* empty */ }
+        } catch { /* empty */ }
     }, 2000);
 }
 

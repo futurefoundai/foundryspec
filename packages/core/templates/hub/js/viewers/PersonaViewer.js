@@ -1,5 +1,5 @@
 import { DiagramViewer } from './DiagramViewer.js';
-import { globals, setActiveNodeId } from '../state.js';
+import { setActiveNodeId } from '../state.js';
 import { openPersonaDrawer } from '../ui.js';
 
 /**
@@ -15,7 +15,7 @@ export class PersonaViewer extends DiagramViewer {
     /**
      * Override context menu to provide semantic actions
      */
-    handleContextMenu(event, nodeId, element) {
+    handleContextMenu(event, nodeId, _element) {
         const semanticType = this.detectSemanticNode(nodeId);
         
         // Always hide structural items in the Persona View for a clean behavioral UX
@@ -38,7 +38,7 @@ export class PersonaViewer extends DiagramViewer {
         return null;
     }
 
-    showPersonaContextMenu(event, nodeId, type) {
+    showPersonaContextMenu(event, nodeId, _type) {
         const menu = document.getElementById('context-menu');
         if (!menu) return;
 
@@ -90,7 +90,7 @@ export class PersonaViewer extends DiagramViewer {
     /**
      * Override click to open specialized drawer
      */
-    handleNodeAction(nodeId, action = 'open') {
+    handleNodeAction(nodeId, _action = 'open') {
         const type = this.detectSemanticNode(nodeId);
         if (type) {
             openPersonaDrawer(nodeId, type);

@@ -115,7 +115,7 @@ export class DiagramViewer extends HTMLElement {
      * Hook for context menus (right-click)
      * To be overridden by specialized viewers
      */
-    handleContextMenu(event, nodeId, element) {
+    handleContextMenu(_event, _nodeId, _element) {
         return false; // Not handled by default
     }
 

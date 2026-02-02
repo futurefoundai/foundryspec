@@ -3,7 +3,9 @@
  * Used to register and resolve services throughout the application.
  */
 export class ServiceContainer {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private services: Map<string, any> = new Map();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private singletons: Map<string, any> = new Map();
 
   /**

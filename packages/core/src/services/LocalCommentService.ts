@@ -71,7 +71,7 @@ export class LocalCommentSystem implements ICommentSystem {
     return all;
   }
 
-  async resolveComment(id: string, author: string): Promise<void> {
+  async resolveComment(id: string, _author: string): Promise<void> {
     const db = await this.getDB();
     for (const key in db) {
       const idx = db[key].findIndex(c => c.id === id);

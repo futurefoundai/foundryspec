@@ -1,4 +1,4 @@
-import { globals, setCurrentContainer, setCurrentViewPath, pushHistory } from './state.js';
+import { setCurrentContainer, setCurrentViewPath, pushHistory } from './state.js';
 import { updateUI, openFootnoteSidebar } from './ui.js';
 import { ViewerFactory } from './viewers/ViewerFactory.js';
 

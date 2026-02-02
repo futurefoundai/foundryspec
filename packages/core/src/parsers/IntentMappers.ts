@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
 /**
  * © 2026 FutureFoundAI. All rights reserved.
@@ -84,7 +85,7 @@ export class SequenceMapper extends BaseMapper {
     public PLACEMENT = { LEFTOF: 0, RIGHTOF: 1, OVER: 2 };
     public sequenceData: any[] = [];
 
-    public addActor = (id: string, name: string, description: string, type: string) => {
+    public addActor = (id: string, name: string, description: string, _type: string) => {
         this.nodes.push({ id: id || name, name: name || id, type: 'actor', description });
     };
 
@@ -178,7 +179,7 @@ export class MindmapMapper extends BaseMapper {
     public nodeType = { DEFAULT: 0, ROUNDED: 1 };
     public mindmapMappings: Record<string, string> = {};
 
-    public addNode = (level: number, id: string, descr: string, type: any) => {
+    public addNode = (level: number, id: string, descr: string, _type: any) => {
         const nodeId = id;
         const text = descr || id;
         this.nodes.push({ 

@@ -47,6 +47,7 @@ export function registerCoreCommands(
             } finally {
                 if (prober) {
                     // Accessing private for termination (or make it public in ProbeManager)
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     await (prober as any).mermaidParser.terminate();
                 }
             }

@@ -41,12 +41,12 @@ export const rule: Rule = {
         // 3. Semantic ID Check (Enforce ID-based structure)
         const semanticIds = ['ROLE', 'DESCRIPTION'];
         for (const sem of semanticIds) {
-            if (!nodes.some((n: any) => (typeof n === 'string' ? n : n.id) === sem)) {
+            if (!nodes.some((n: string | { id: string }) => (typeof n === 'string' ? n : n.id) === sem)) {
                 errors.push(`Persona Mindmap: Missing required semantic ID: "${sem}" (e.g., ${sem}["..."])`);
             }
         }
 
-        if (!nodes.some((n: any) => {
+        if (!nodes.some((n: string | { id: string }) => {
             const id = typeof n === 'string' ? n : n.id;
             return id && id.startsWith('GOAL_');
         })) {

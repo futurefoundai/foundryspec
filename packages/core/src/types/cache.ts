@@ -32,7 +32,7 @@ export interface ParseCacheEntry {
     validationErrors?: Array<{ line: number; message: string }>;
 
     /** Internal AST from the parser (sanitized) */
-    ast?: any;
+    ast?: any; // eslint-disable-line @typescript-eslint/no-explicit-any
     
     /** Mindmap specific Label -> ID mappings */
     mindmapMappings?: Record<string, string>;
@@ -82,7 +82,7 @@ export interface ParseResult {
     validationErrors?: Array<{ line: number; message: string }>;
 
     /** Internal AST from the parser (sanitized) */
-    ast?: any;
+    ast?: any; // eslint-disable-line @typescript-eslint/no-explicit-any
 
     /** Mindmap specific Label -> ID mappings */
     mindmapMappings?: Record<string, string>;

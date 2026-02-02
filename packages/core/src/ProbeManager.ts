@@ -139,7 +139,7 @@ export class ProbeManager {
                         }
                     });
                 }
-            } catch (err) {
+            } catch {
                 // Silently skip if diagram is too broken, as we only need IDs for probe
             }
         }
