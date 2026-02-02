@@ -27,8 +27,21 @@ entities:
     requirements:
   - id: "COMP_SidebarControllers"
     description: "Handles the logic for the context sidebar and unified ID resolution."
-  - id: "COMP_MermaidParser"
-    requirements:
+  - id: "COMP_PersonaDrawer"
+    description: "Specialized UI component for managing persona-specific metadata."
+    requirements: REQ_InteractiveComments
+  - id: "COMP_PersonaViewer"
+    description: "Web Component for interactive Persona mindmaps."
+    requirements: REQ_UX
+  - id: "COMP_DiagramViewer"
+    description: "Base Web Component class for rendering and interacting with Mermaid diagrams."
+    requirements: REQ_Discovery
+  - id: "COMP_DiagramLoader"
+    description: "Central logic for fetching and transitions between views."
+    requirements: REQ_Discovery
+  - id: "COMP_ViewerFactory"
+    description: "Strategy-based factory for instantiating specialized diagram viewers."
+    requirements: REQ_Discovery
   - id: "COMP_BrowserPool"
     requirements:
   - id: "COMP_Hub"
@@ -124,6 +137,41 @@ classDiagram
         +Scanner
     }
     
+    class COMP_SidebarControllers {
+        <<Component>>
+        +UIState
+        +Resolver
+    }
+
+    class COMP_PersonaViewer {
+        <<WebComponent>>
+        +SemanticActions
+        +MindmapHandler
+    }
+
+    class COMP_PersonaDrawer {
+        <<Component>>
+        +DrawerUI
+        +ActionHandlers
+    }
+
+    class COMP_DiagramLoader {
+        <<Logic>>
+        +loadDiagram()
+        +reload()
+    }
+
+    class COMP_DiagramViewer {
+        <<WebComponent>>
+        +PanZoom
+        +Renderer
+    }
+
+    class COMP_ViewerFactory {
+        <<Service>>
+        +create()
+    }
+    
     COMP_CLI --> COMP_BuildManager : triggers
     COMP_CLI --> COMP_ProbeManager : triggers
     COMP_CLI --> COMP_DevServer : starts
@@ -137,4 +185,10 @@ classDiagram
     COMP_BuildManager --> COMP_Group : uses template
     COMP_DevServer --> COMP_BuildManager : triggers rebuild
     COMP_InteractiveComments --> COMP_SidebarControllers : coordinates
+    COMP_SidebarControllers --> COMP_PersonaDrawer : delegates
+    COMP_SidebarControllers --> COMP_ViewerFactory : utilizes
+    COMP_ViewerFactory --> COMP_DiagramViewer : instantiates
+    COMP_ViewerFactory --> COMP_PersonaViewer : instantiates
+    COMP_DiagramLoader --> COMP_ViewerFactory : requests
+    COMP_Hub --> COMP_DiagramLoader : uses
 

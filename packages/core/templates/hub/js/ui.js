@@ -70,6 +70,12 @@ export function openSidebar(nodeId) {
     closeFootnoteSidebar();
     setActiveNodeId(nodeId);
     
+    // Redirect Persona nodes to специализирован drawer
+    if (nodeId && nodeId.startsWith('PER_')) {
+        openPersonaDrawer(nodeId, 'SUMMARY');
+        return;
+    }
+    
     const sidebar = document.getElementById('context-sidebar');
     const title = document.getElementById('sidebar-title');
     sidebar.classList.add('open');
@@ -129,6 +135,8 @@ export function renderSidebarContent() {
     aiTitle.innerText = 'AI Generation';
     aiContainer.appendChild(aiTitle);
 
+    const isPersonaView = currentViewPath && currentViewPath.includes('/personas/');
+
     const prompts = {
         DATA: `[AI PROMPT] Generate a DATA_ model for node ${activeNodeId}. Use erDiagram syntax.`,
         SEQ: `[AI PROMPT] Generate a SEQ_ diagram for node ${activeNodeId}. Use sequenceDiagram syntax.`,
@@ -137,6 +145,9 @@ export function renderSidebarContent() {
     };
 
     Object.keys(prompts).forEach(key => {
+        // Personas are behavioral layer - hide implementation-level prompts if in persona view
+        if (isPersonaView) return;
+        
         const promptBox = document.createElement('div');
         promptBox.className = 'ai-prompt-box';
         promptBox.innerHTML = `
@@ -145,8 +156,108 @@ export function renderSidebarContent() {
         `;
         aiContainer.appendChild(promptBox);
     });
-    content.appendChild(aiContainer);
+    if (!isPersonaView) {
+        content.appendChild(aiContainer);
+    }
     
+    const footer = document.getElementById('sidebar-footer');
+    if (footer) footer.style.display = 'block';
+}
+
+/**
+ * @foundryspec COMP_PersonaDrawer
+ */
+export function openPersonaDrawer(nodeId, type) {
+    const contextMenu = document.getElementById('context-menu');
+    if (contextMenu) contextMenu.style.display = 'none';
+    closeFootnoteSidebar();
+    setActiveNodeId(nodeId);
+    
+    const sidebar = document.getElementById('context-sidebar');
+    const title = document.getElementById('sidebar-title');
+    sidebar.classList.add('open');
+    sidebar.classList.add('persona-context');
+    title.innerText = nodeId;
+
+    renderPersonaDrawerContent(nodeId, type);
+}
+
+function renderPersonaDrawerContent(nodeId, type) {
+    const content = document.getElementById('sidebar-content');
+    content.innerHTML = '';
+    
+    const container = document.createElement('div');
+    container.className = 'persona-semantic-container';
+    
+    let html = '';
+    const icon = type === 'DESCRIPTION' ? '📝' : (type === 'GOAL' ? '🎯' : (type === 'ROLE' ? '👤' : (type === 'SUMMARY' ? '🆔' : '🔗')));
+    
+    html += `<div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:1rem; padding:0.75rem; background:var(--accent-glow); border-radius:8px; border:1px solid var(--accent);">
+                <span style="font-size:1.5rem;">${icon}</span>
+                <div>
+                    <strong style="display:block; font-size:0.8rem; text-transform:uppercase; color:var(--accent);">${type} ACTION</strong>
+                    <span style="font-size:0.9rem;">Semantic node detected</span>
+                </div>
+             </div>`;
+
+    if (type === 'DESCRIPTION') {
+        html += `
+            <p style="font-size:0.85rem; color:var(--text-secondary); margin-bottom:1rem;">You are modifying the core bio description for this persona.</p>
+            <div class="field-group">
+                <label style="display:block; font-size:0.7rem; font-weight:bold; margin-bottom:0.4rem;">Current Content</label>
+                <textarea id="persona-bio-edit" style="width:100%; min-height:120px; background:var(--bg-primary); border:1px solid var(--border); border-radius:4px; color:var(--text-primary); padding:8px; font-family:inherit;"></textarea>
+            </div>
+            <button class="action-btn" style="width:100%; margin-top:1rem; padding:10px; background:var(--accent); color:white; border:none; border-radius:4px; font-weight:bold; cursor:pointer;">Save Bio Update</button>
+        `;
+    } else if (type === 'GOAL') {
+        html += `
+            <p style="font-size:0.85rem; color:var(--text-secondary); margin-bottom:1rem;">Manage goals for this persona.</p>
+            <div id="goal-items" style="margin-bottom:1.5rem;">
+                <div style="padding:8px; border:1px solid var(--border); border-radius:4px; margin-bottom:4px; font-size:0.85rem; display:flex; justify-content:space-between;">
+                    <span>Goal entry 1</span>
+                    <button style="background:none; border:none; color:#ef4444; cursor:pointer;">&times;</button>
+                </div>
+            </div>
+            <div class="field-group">
+                <input type="text" placeholder="Add new goal..." style="width:100%; padding:8px; background:var(--bg-primary); border:1px solid var(--border); border-radius:4px; color:var(--text-primary);">
+            </div>
+            <button class="action-btn" style="width:100%; margin-top:0.5rem; padding:10px; background:var(--accent); color:white; border:none; border-radius:4px; font-weight:bold; cursor:pointer;">Add New Goal</button>
+        `;
+    } else if (type === 'REQUIREMENT' || type === 'JOURNEY') {
+        html += `
+            <p style="font-size:0.85rem; color:var(--text-secondary); margin-bottom:1rem;">Link this persona to ${type.toLowerCase()}s.</p>
+            <button class="action-btn" style="width:100%; padding:10px; background:var(--bg-secondary); border:1px solid var(--accent); color:var(--accent); border-radius:4px; font-weight:bold; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:0.5rem;">
+               <span>🔍</span> Open Traceability Linker
+            </button>
+        `;
+    } else if (type === 'SUMMARY' || type === 'PERSONA') {
+        html += `
+            <div style="background:var(--bg-secondary); padding:1rem; border-radius:8px; border:1px solid var(--border);">
+                <h4 style="margin:0 0 0.5rem 0; font-size:0.9rem;">${nodeId} Profile</h4>
+                <p style="font-size:0.8rem; color:var(--text-secondary); line-height:1.4;">
+                    This actor represents an ecosystem participant. You can explore their goals, roles, and journeys using the mindmap nodes or directly via semantic actions below.
+                </p>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.5rem; margin-top:1rem;">
+                    <button class="action-btn" onclick="openPersonaDrawer('${nodeId}', 'DESCRIPTION')" style="padding:6px; font-size:0.75rem; background:var(--bg-primary); border:1px solid var(--accent); color:var(--accent); border-radius:4px; cursor:pointer;">Edit Bio</button>
+                    <button class="action-btn" onclick="openPersonaDrawer('${nodeId}', 'GOAL')" style="padding:6px; font-size:0.75rem; background:var(--bg-primary); border:1px solid var(--accent); color:var(--accent); border-radius:4px; cursor:pointer;">Manage Goals</button>
+                </div>
+            </div>
+        `;
+    }
+    
+    // Add standard comment section below
+    html += `<hr style="margin:2rem 0; border:0; border-top:1px solid var(--border); opacity:0.3;">`;
+    html += `<h4 style="font-size:0.75rem; text-transform:uppercase; color:var(--text-secondary); margin-bottom:1rem;">Discussion</h4>`;
+    
+    container.innerHTML = html;
+    content.appendChild(container);
+    
+    // Resume standard comment rendering for the bottom half
+    const commentSection = document.createElement('div');
+    commentSection.id = 'persona-comment-section';
+    container.appendChild(commentSection);
+    
+    // Note: We need a way to reuse renderBatch logic or just rely on the standard sidebar footer for new comments
     const footer = document.getElementById('sidebar-footer');
     if (footer) footer.style.display = 'block';
 }
@@ -315,6 +426,34 @@ export function updateUI() {
     }
 }
 
+export function resetContextMenu() {
+    const isPersonaView = currentViewPath && currentViewPath.includes('/personas/');
+    
+    const menuComments = document.getElementById('menu-comments');
+    const menuFootnotes = document.getElementById('menu-footnotes');
+    const structuralIds = ['menu-data', 'menu-sequence', 'menu-flow', 'menu-state'];
+    
+    const items = [
+        menuComments,
+        menuFootnotes,
+        ...structuralIds.map(id => document.getElementById(id))
+    ];
+
+    items.forEach(item => {
+        if (item) {
+            // Hide structural items if we are in a persona view
+            if (isPersonaView && structuralIds.includes(item.id)) {
+                item.style.display = 'none';
+            } else {
+                item.style.display = 'block';
+            }
+        }
+    });
+
+    if (menuComments) menuComments.innerText = 'Comments';
+    if (menuFootnotes) menuFootnotes.innerText = 'Footnotes';
+}
+
 // Expose globals for HTML handlers
 window.closeModal = closeModal;
 window.closeNavModal = closeNavModal;
@@ -326,6 +465,7 @@ window.renderSidebarContent = renderSidebarContent;
 window.openNavigationModal = openNavigationModal;
 window.openCommentOverlay = openCommentOverlay;
 window.closeCommentOverlay = closeCommentOverlay;
+window.resetContextMenu = resetContextMenu;
 
 export function appendPrompt(text) {
     const input = document.getElementById('sidebar-comment-input');

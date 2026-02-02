@@ -2,9 +2,10 @@
 import { currentViewPath, globals } from './state.js';
 import { resolveActiveNodeId } from './utils.js';
 import { loadDiagram } from './diagram.js';
-import { openNavigationModal } from './ui.js';
+import { openNavigationModal, resetContextMenu } from './ui.js';
 
 /**
+ * @foundryspec COMP_ClickInterceptor
  * @interface ClickInterceptor
  * @method handle(event, element, context)
  */
@@ -210,7 +211,46 @@ export function initInterceptors() {
     };
 
     viewer.addEventListener('click', unifiedHandler);
-    viewer.addEventListener('contextmenu', unifiedHandler);
+    
+    // Delegation for Context Menu
+    viewer.addEventListener('contextmenu', (e) => {
+        const target = e.target;
+        const nodeContainer = target.closest('.node, .mindmap-node, .cluster, .requirementBox, text, .edgeLabel, .actor, g[name], g[id*="actor"]');
+        if (!nodeContainer) return;
 
-    console.log('[FoundrySpec] Interceptors Initialized with Dual Event Handling');
+        const resolvedId = resolveActiveNodeId(nodeContainer, viewer, globals.idMap, currentViewPath);
+        if (!resolvedId) return;
+
+        // Try delegating to specialized viewer first
+        const viewerElement = viewer.querySelector('diagram-viewer, persona-viewer');
+        
+        if (viewerElement && typeof viewerElement.handleContextMenu === 'function') {
+            if (viewerElement.handleContextMenu(e, resolvedId, nodeContainer)) {
+                e.preventDefault();
+                return;
+            }
+        }
+
+        // Default Context Menu Fallback
+        setActiveNodeId(resolvedId);
+        const contextMenu = document.getElementById('context-menu');
+        if (contextMenu) {
+            e.preventDefault();
+            resetContextMenu(); // Restore defaults before showing
+            
+            // Apply specialized labels if it's a Persona node
+            if (resolvedId.startsWith('PER_')) {
+                 const menuComments = document.getElementById('menu-comments');
+                 if (menuComments) menuComments.innerText = 'View Persona Profile';
+            }
+
+            contextMenu.style.display = 'block';
+            contextMenu.style.left = `${e.pageX}px`;
+            contextMenu.style.top = `${e.pageY}px`;
+        }
+    });
+
+    console.log('[FoundrySpec] Interceptors Initialized with Specialized Viewer Support');
 }
+
+import { setActiveNodeId } from './state.js';

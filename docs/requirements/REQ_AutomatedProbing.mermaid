@@ -20,5 +20,9 @@ requirementDiagram
         verifymethod: Test
     }
 
+    element JRN_DriftDetection {
+        type: "Journey"
+    }
+
     AutomatedProbing - contains -> GranularTraceability
     AutomatedProbing - verifies -> JRN_DriftDetection

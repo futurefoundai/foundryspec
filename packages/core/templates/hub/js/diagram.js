@@ -1,59 +1,61 @@
 import { globals, setCurrentContainer, setCurrentViewPath, pushHistory } from './state.js';
-import { resolvePath } from './utils.js';
-import { applyCursors } from './decorators.js';
 import { updateUI, openFootnoteSidebar } from './ui.js';
+import { ViewerFactory } from './viewers/ViewerFactory.js';
 
 /**
- * @foundryspec COMP_ClickInterceptor
+ * @foundryspec COMP_DiagramLoader
+ * Central loading logic for diagrams and documents.
  */
 export async function loadDiagram(filePath, isBack = false) {
     const viewer = document.getElementById('viewer');
-    // We use local var for current container in logic basically. 
 
     try {
-        const response = await fetch(filePath); if (!response.ok) throw new Error(`File not found: ${filePath}`);
-        let content = await response.text(); 
-        setCurrentViewPath(filePath.replace(/\\/g, '/'));
+        const response = await fetch(filePath); 
+        if (!response.ok) throw new Error(`File not found: ${filePath}`);
         
-        content = content.replace(/^---[\s\S]*?---\s*/, '');
+        let content = await response.text(); 
+        const normalizedPath = filePath.replace(/\\/g, '/');
+        setCurrentViewPath(normalizedPath);
+        
+        // Handle Markdown Documents (Footnotes)
         if (filePath.endsWith('.md')) {
-            openFootnoteSidebar(filePath, content);
+            const cleanContent = content.replace(/^---[\s\S]*?---\s*/, '');
+            openFootnoteSidebar(filePath, cleanContent);
             return;
         }
         
-        const { svg } = await globals.mermaid.render('mermaid-svg-' + Date.now(), content);
-        const newContainer = document.createElement('div'); 
-        newContainer.className = 'diagram-container ' + (isBack ? 'initial-reverse' : 'initial'); 
-        newContainer.innerHTML = svg;
-        
-        const svgEl = newContainer.querySelector('svg'); 
-        if (svgEl) { svgEl.style.width = '100%'; svgEl.style.height = '100%'; svgEl.style.maxWidth = 'none'; }
+        // Detect diagram type for factory
+        let diagramType = 'mermaid';
+        if (content.includes('mindmap')) diagramType = 'mindmap';
+        if (content.includes('sequenceDiagram')) diagramType = 'sequence';
+        if (normalizedPath.includes('/personas/')) diagramType = 'persona';
+
+        // Create specialized viewer via Factory
+        const newViewer = ViewerFactory.create(normalizedPath, diagramType);
+        newViewer.className = 'diagram-container ' + (isBack ? 'initial-reverse' : 'initial'); 
         
         const stateContainer = (await import('./state.js')).currentContainer;
         
-        const showNewDiagram = () => {
-            viewer.appendChild(newContainer); 
-            applyCursors(newContainer);
+        const showNewDiagram = async () => {
+            viewer.appendChild(newViewer); 
+            
+            // Initialize the web component
+            if (typeof newViewer.init === 'function') {
+                await newViewer.init(normalizedPath, content, diagramType);
+            }
             
             requestAnimationFrame(() => {
                 requestAnimationFrame(() => {
-                    newContainer.classList.remove(isBack ? 'initial-reverse' : 'initial'); 
-                    newContainer.classList.add('fade-in');
-                    if (svgEl) { 
-                        try { 
-                            window.panZoomInstance = globals.svgPanZoom(svgEl, { zoomEnabled: true, controlIconsEnabled: true, fit: true, center: true, minZoom: 0.1 }); 
-                        } catch (_e) { /* empty */ } 
-                    }
+                    newViewer.classList.remove(isBack ? 'initial-reverse' : 'initial'); 
+                    newViewer.classList.add('fade-in');
                 });
             });
-            setCurrentContainer(newContainer);
+            setCurrentContainer(newViewer);
         };
 
+        // Transition Logic
         if (stateContainer) { 
-             // Faster exit
              stateContainer.classList.add(isBack ? 'fade-out-reverse' : 'fade-out'); 
-             
-             // Wait for opacity transition (defined in CSS as 0.2s or similar)
              setTimeout(() => { 
                  if (stateContainer.parentNode) stateContainer.parentNode.removeChild(stateContainer);
                  showNewDiagram();
@@ -62,35 +64,30 @@ export async function loadDiagram(filePath, isBack = false) {
              showNewDiagram();
         }
         
-        // History Logic
+        // History Tracking
         const stack = (await import('./state.js')).historyStack;
-        if (stack.length === 0 || stack[stack.length - 1] !== filePath) {
-            pushHistory(filePath);
+        if (stack.length === 0 || stack[stack.length - 1] !== normalizedPath) {
+            pushHistory(normalizedPath);
         }
         updateUI(); // Breadcrumbs
 
-        if (svgEl) {
-            const links = svgEl.querySelectorAll('a');
-            links.forEach(link => { 
-                link.addEventListener('click', (e) => { 
-                    e.preventDefault(); 
-                    const href = link.getAttribute('href') || link.getAttribute('xlink:href'); 
-                    if (href) { 
-                        if (href.startsWith('http') || href.startsWith('mailto')) { 
-                            window.open(href, '_blank'); 
-                        } else { 
-                            const resolved = resolvePath(filePath, href); 
-                            loadDiagram(resolved); 
-                        } 
-                    } 
-                }); 
-            });
-        }
+        // Listen for internal navigation events from viewers
+        newViewer.addEventListener('diagram-navigate', (e) => {
+            loadDiagram(e.detail.href);
+        });
+
     } catch (error) {
         console.error('[FoundrySpec] Error loading diagram:', error);
-        const errDiv = document.createElement('div'); errDiv.style.color = '#ef4444'; errDiv.style.padding = '2rem';
-        errDiv.style.fontWeight = 'bold'; errDiv.innerText = `Error loading diagram: ${filePath}\n${error.message}`;
-        if (viewer) { viewer.innerHTML = ''; viewer.appendChild(errDiv); }
+        const errDiv = document.createElement('div'); 
+        errDiv.style.color = '#ef4444'; 
+        errDiv.style.padding = '2rem';
+        errDiv.style.fontWeight = 'bold'; 
+        errDiv.style.fontFamily = "'Outfit', sans-serif";
+        errDiv.innerText = `Error loading diagram: ${filePath}\n${error.message}`;
+        if (viewer) { 
+            viewer.innerHTML = ''; 
+            viewer.appendChild(errDiv); 
+        }
     }
 }
 
@@ -102,57 +99,8 @@ window.loadDiagram = loadDiagram;
  */
 export async function reloadCurrentDiagram() {
     const currentPath = (await import('./state.js')).currentViewPath;
-    if (currentPath && currentPath !== 'root.mermaid') {
-        // Reload without adding to history
-        const viewer = document.getElementById('viewer');
-        const stateContainer = (await import('./state.js')).currentContainer;
-        
-        try {
-            const response = await fetch(currentPath);
-            if (!response.ok) return;
-            
-            let content = await response.text();
-            content = content.replace(/^---[\s\S]*?---\s*/, '');
-            
-            if (currentPath.endsWith('.md')) return; // Don't reload markdown
-            
-            const { svg } = await globals.mermaid.render('mermaid-svg-' + Date.now(), content);
-            const newContainer = document.createElement('div');
-            newContainer.className = 'diagram-container fade-in';
-            newContainer.innerHTML = svg;
-            
-            const svgEl = newContainer.querySelector('svg');
-            if (svgEl) {
-                svgEl.style.width = '100%';
-                svgEl.style.height = '100%';
-                svgEl.style.maxWidth = 'none';
-            }
-            
-            // Remove old container
-            if (stateContainer && stateContainer.parentNode) {
-                stateContainer.parentNode.removeChild(stateContainer);
-            }
-            
-            // Add new container
-            viewer.appendChild(newContainer);
-            applyCursors(newContainer);
-            
-            if (svgEl) {
-                try {
-                    window.panZoomInstance = globals.svgPanZoom(svgEl, {
-                        zoomEnabled: true,
-                        controlIconsEnabled: true,
-                        fit: true,
-                        center: true,
-                        minZoom: 0.1
-                    });
-                } catch (_e) { /* empty */ }
-            }
-            
-            setCurrentContainer(newContainer);
-        } catch (error) {
-            console.error('[FoundrySpec] Error reloading diagram:', error);
-        }
+    if (currentPath && !currentPath.endsWith('.md')) {
+        loadDiagram(currentPath, false); // Simplest way to reload with new theme/factory logic
     }
 }
 

@@ -671,6 +671,35 @@ g[class*="mindmap-node-l3"] > text,
     scroll-behavior: smooth;
 }
 
+/* --- Persona Specialized Drawer --- */
+.persona-semantic-container {
+    animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.persona-semantic-container .field-group {
+    margin-bottom: 1.25rem;
+}
+
+.persona-semantic-container .action-btn {
+    transition: var(--transition);
+}
+
+.persona-semantic-container .action-btn:hover {
+    filter: brightness(1.1);
+    transform: translateY(-1px);
+}
+
+.persona-semantic-container textarea:focus,
+.persona-semantic-container input:focus {
+    outline: 2px solid var(--accent);
+    border-color: transparent;
+}
+
 .design-item {
     display: flex;
     align-items: center;

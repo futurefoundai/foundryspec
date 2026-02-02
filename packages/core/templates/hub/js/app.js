@@ -169,24 +169,7 @@ export async function initApp() {
     initInterceptors();
 
     // Event Listeners
-    viewer.addEventListener('contextmenu', (e) => {
-        const node = e.target.closest('.node, .mindmap-node, .cluster, .requirementBox, text, .edgeLabel, .actor, g[name], g[id*="actor"]');
-        if (!node) return;
-        
-        // Use imported util
-        const resolvedId = resolveActiveNodeId(node, viewer, globals.idMap, currentViewPath);
-        if (resolvedId) {
-            // Update state? ui.openSidebar does it.
-            // But context menu just shows up.
-            // We need to set activeNodeId in state?
-            // Actually, context menu click handlers use 'activeNodeId'.
-            // So we must set it.
-            setActiveNodeId(resolvedId);
-
-            contextMenu.style.display = 'block';
-            contextMenu.style.left = `${e.clientX}px`; contextMenu.style.top = `${e.clientY}px`;
-        }
-    });
+    // Node interaction is now handled by Interceptors and Specialized Viewers
 
     document.addEventListener('click', (e) => { 
         if (contextMenu && !contextMenu.contains(e.target)) contextMenu.style.display = 'none'; 
