@@ -33,54 +33,57 @@ class NavigationInterceptor {
             console.group('%c🚀 Navigation Interceptor', 'color: #00ff00; font-weight: bold;');
             
             // Log with clarity about resolution source
-            const entry = globals.mindmapRegistry[context.filePath]?.[element.textContent?.trim()];
+            const entry = globals.mindmapRegistry?.[context.filePath]?.[element.textContent?.trim()];
             if (entry) {
                 console.log('✅ Resolved via Mindmap Registry:', entry);
             } else {
                 console.log('ℹ️ Resolved via Global idMap/Text:', resolvedId);
             }
             
-            // Check if node has metadata (downlinks or references)
-            const metadata = globals.metadataRegistry[resolvedId];
+            // For navigation views, we prioritize the primary target (idMap) over downlinks.
+            // This ensures clicking "Requirements" goes to the requirements hub, not a list of all requirements.
+            const primaryTargets = globals.idMap[resolvedId];
             
-            if (metadata) {
-                const navigationTargets = [];
-                const toArray = (val) => val ? (Array.isArray(val) ? val : [val]) : [];
+            if (primaryTargets) {
+                const targets = Array.isArray(primaryTargets) ? primaryTargets : [{ path: primaryTargets, title: resolvedId, type: 'diagram' }];
                 
-                // Add downlinks
-                toArray(metadata.downlinks).forEach(dlId => {
-                    if (globals.idMap[dlId]) {
-                        const target = Array.isArray(globals.idMap[dlId]) ? globals.idMap[dlId][0] : globals.idMap[dlId];
-                        navigationTargets.push({ ...target, title: `${dlId} (downlink)`, id: dlId, category: 'downlink' });
-                    }
-                });
-                
-                // Add references (backlinks)
-                toArray(metadata.referencedBy).forEach(refId => {
-                    if (globals.idMap[refId]) {
-                        const target = Array.isArray(globals.idMap[refId]) ? globals.idMap[refId][0] : globals.idMap[refId];
-                        navigationTargets.push({ ...target, title: `${refId} (references this)`, id: refId, category: 'reference' });
-                    }
-                });
-                
-                if (navigationTargets.length === 1) {
-                    loadDiagram(navigationTargets[0].path);
-                    console.log('Navigating to:', navigationTargets[0].path);
-                } else if (navigationTargets.length > 1) {
-                    openNavigationModal(resolvedId, navigationTargets);
-                    console.log('Opening Navigation Modal for:', resolvedId);
-                } else if (globals.idMap[resolvedId]) {
-                    // Fallback to idMap
-                    const rawTargets = globals.idMap[resolvedId];
-                    const targets = Array.isArray(rawTargets) ? rawTargets : [{ path: rawTargets, title: resolvedId, type: 'diagram' }];
-                    if (targets.length === 1) loadDiagram(targets[0].path);
-                    else openNavigationModal(resolvedId, targets);
+                if (targets.length === 1) {
+                    const target = typeof targets[0] === 'string' ? { path: targets[0] } : targets[0];
+                    console.log('Directly navigating to primary target:', target.path);
+                    loadDiagram(target.path);
+                } else {
+                    console.log('Multiple primary targets found, showing modal.');
+                    openNavigationModal(resolvedId, targets);
                 }
-            } else if (globals.idMap[resolvedId]) {
-                const rawTargets = globals.idMap[resolvedId];
-                const targets = Array.isArray(rawTargets) ? rawTargets : [{ path: rawTargets, title: resolvedId, type: 'diagram' }];
-                if (targets.length === 1) loadDiagram(targets[0].path);
-                else openNavigationModal(resolvedId, targets);
+            } else {
+                // FALLBACK: Only check metadata if idMap is empty
+                const metadata = globals.metadataRegistry[resolvedId];
+                if (metadata) {
+                    const navigationTargets = [];
+                    const toArray = (val) => val ? (Array.isArray(val) ? val : [val]) : [];
+                    
+                    // Add downlinks
+                    toArray(metadata.downlinks).forEach(dlId => {
+                        if (globals.idMap[dlId]) {
+                            const target = Array.isArray(globals.idMap[dlId]) ? globals.idMap[dlId][0] : globals.idMap[dlId];
+                            navigationTargets.push({ ...target, title: `${dlId} (downlink)`, id: dlId, category: 'downlink' });
+                        }
+                    });
+                    
+                    // Add references (backlinks)
+                    toArray(metadata.referencedBy).forEach(refId => {
+                        if (globals.idMap[refId]) {
+                            const target = Array.isArray(globals.idMap[refId]) ? globals.idMap[refId][0] : globals.idMap[refId];
+                            navigationTargets.push({ ...target, title: `${refId} (references this)`, id: refId, category: 'reference' });
+                        }
+                    });
+                    
+                    if (navigationTargets.length === 1) {
+                        loadDiagram(navigationTargets[0].path);
+                    } else if (navigationTargets.length > 1) {
+                        openNavigationModal(resolvedId, navigationTargets);
+                    }
+                }
             }
             console.groupEnd();
         }
