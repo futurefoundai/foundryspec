@@ -134,7 +134,9 @@ class MindmapInterceptor {
         console.log('File Content Context:', context.filePath);
         console.groupEnd();
 
-        return false; // Let it bubble if we want standard context menus for non-navigation
+        event.stopImmediatePropagation();
+        event.preventDefault();
+        return true; 
     }
 }
 
