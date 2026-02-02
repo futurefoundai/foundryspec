@@ -20,13 +20,21 @@ export function getIconForType(type) {
     return icons[type] || '📄';
 }
 
-export function resolveActiveNodeId(el, viewerElement, idMap) {
+export function resolveActiveNodeId(el, viewerElement, idMap, viewPath) {
     let current = el;
     while (current && current !== viewerElement && current.tagName !== 'svg') {
         const targetId = current.id || current.getAttribute('id') || current.getAttribute('name');
         const text = current.textContent?.trim() || "";
         const cleanText = text.replace(/^["([{|]+|[")\]}]+$/g, '').trim();
         
+        // 1. Precise Mindmap Lookup (Build-time mapping of Text -> ID)
+        if (viewPath && globals.mindmapRegistry && globals.mindmapRegistry[viewPath]) {
+            const pathMap = globals.mindmapRegistry[viewPath];
+            if (pathMap[cleanText]) return pathMap[cleanText];
+            if (pathMap[text]) return pathMap[text];
+        }
+
+        // 2. Global idMap (IDs or Title matches)
         const key = (targetId && idMap[targetId] ? targetId : null) || 
                     (idMap[text] ? text : null) || 
                     (idMap[cleanText] ? cleanText : null) ||

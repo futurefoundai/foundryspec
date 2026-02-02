@@ -1,9 +1,10 @@
-import { globals, historyStack, activeNodeId, setActiveNodeId, popHistory } from './state.js'; // Imports logic
+import { globals, historyStack, activeNodeId, setActiveNodeId, popHistory, currentViewPath } from './state.js'; // Imports logic
 import { initTheme } from './theme.js';
 import { fetchComments, startSync, saveComment } from './comments.js';
 import { loadDiagram } from './diagram.js';
 import { resolveActiveNodeId } from './utils.js';
 import { openSidebar, openNavigationModal, handleFootnoteSelection, setLoadDiagramFn, updateUI } from './ui.js';
+import { initInterceptors } from './interceptors.js';
 
 /**
  * Load metadata from JSON files
@@ -146,13 +147,16 @@ export async function initApp() {
     // Initialize Mermaid with theme based on current mode
     updateMermaidTheme();
 
+    // Initialize Click Interceptors
+    initInterceptors();
+
     // Event Listeners
     viewer.addEventListener('contextmenu', (e) => {
         const node = e.target.closest('.node, .mindmap-node, .cluster, .requirementBox, text, .edgeLabel, .actor, g[name], g[id*="actor"]');
         if (!node) return;
-        e.preventDefault();
+        
         // Use imported util
-        const resolvedId = resolveActiveNodeId(node, viewer, globals.idMap);
+        const resolvedId = resolveActiveNodeId(node, viewer, globals.idMap, currentViewPath);
         if (resolvedId) {
             // Update state? ui.openSidebar does it.
             // But context menu just shows up.
@@ -187,7 +191,7 @@ export async function initApp() {
         const nodeContainer = target.closest('.node, .mindmap-node, .cluster, .requirementBox, text, .edgeLabel, .actor, g[name], g[id*="actor"]');
         if (!nodeContainer) return;
 
-        const key = resolveActiveNodeId(nodeContainer, viewer, globals.idMap);
+        const key = resolveActiveNodeId(nodeContainer, viewer, globals.idMap, currentViewPath);
 
         if (key) {
             // Check if node has metadata (downlinks or references)

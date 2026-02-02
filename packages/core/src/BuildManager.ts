@@ -460,7 +460,8 @@ entities:
 ${items.map((i) => `      - "${i.id}"`).join('\n')}
 ---
 mindmap
-  root(("${catTitle}"))
+%% foundryspec-type: navigation
+root(("${catTitle}"))
 ${items.map((i) => `    ${i.id}("${i.title.replace(/"/g, "'")}")`).join('\n')}
 `;
         synthetic.push({
@@ -502,7 +503,8 @@ entities:
 ${rootDownlinks.map((id) => `      - "${id}"`).join('\n')}
 ---
 mindmap
-  ROOT((${this.projectName}))
+%% foundryspec-type: navigation
+ROOT((${this.projectName}))
 ${sortedCats.map((cat) => `    ${cat.id}("${cat.title.replace(/"/g, "'")}")`).join('\n')}
 ${standaloneAssets
   .map((asset) => {
@@ -809,9 +811,44 @@ ${standaloneAssets
       }
     }
 
+    // 5. Build Mindmap Registry for robust ID resolution
+    const mindmapRegistry: Record<string, Record<string, string>> = {};
+    for (const asset of assets) {
+      if (asset.content.includes('mindmap')) {
+        try {
+          const result = await this.mermaidParser.parseWithCache(asset.relPath, asset.content);
+          if (result.nodes && result.nodes.length > 0) {
+            const assetPath = `${assetsDir}/${asset.relPath}`;
+            mindmapRegistry[assetPath] = {};
+            
+            // The parser Result.nodes for mindmaps is an array of ID strings, 
+            // but the AST analysis might have more info in some versions.
+            // Let's re-parse or ensure the parser returns text-to-id mapping.
+            // Based on IntentMappers.ts, mapper.nodes has {id, text, type, level}.
+            // MeriadParser.normalizeIntent returns result.nodes as IDs only.
+            // We might need to adjust MermaidParser to return full node objects if available.
+            // For now, let's assume we might need to do a quick regex extraction if MermaidParser result is too thin.
+            
+            const nodeRegex = /^\s*([a-z0-9_]+)(?:\((?:\(|\"|\'|\[|{)(.*?)(?:\)\)|\"|\'|\]|}|(?:\)\))))/gim;
+            let match;
+            while ((match = nodeRegex.exec(asset.content)) !== null) {
+              const id = match[1];
+              const text = match[2];
+              if (id && text) {
+                mindmapRegistry[assetPath][text] = id;
+              }
+            }
+          }
+        } catch (e: any) {
+          console.warn(chalk.yellow(`⚠️  Failed to extract mindmap mapping for ${asset.relPath}: ${e.message}`));
+        }
+      }
+    }
+
     // Write metadata as separate JSON files for cleaner loading
     await fs.writeJson(path.join(outputDir, 'idMap.json'), mapObj, { spaces: 2 });
     await fs.writeJson(path.join(outputDir, 'metadataRegistry.json'), metadataRegistry, { spaces: 2 });
+    await fs.writeJson(path.join(outputDir, 'mindmapRegistry.json'), mindmapRegistry, { spaces: 2 });
 
     const rendered = templateContent
       .replace(/{{projectName}}/g, config.projectName)
@@ -819,7 +856,8 @@ ${standaloneAssets
         /{{projectId}}/g,
         (config as unknown as { projectId: string }).projectId || 'unboarded-project',
       )
-      .replace(/{{version}}/g, config.version);
+      .replace(/{{version}}/g, config.version)
+      .replace(/{{mindmapRegistry}}/g, JSON.stringify(mindmapRegistry));
 
     await fs.writeFile(path.join(outputDir, 'index.html'), rendered);
   }
