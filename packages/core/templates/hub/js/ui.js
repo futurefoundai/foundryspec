@@ -110,7 +110,11 @@ export function renderSidebarContent() {
             card.className = 'comment-text';
             card.innerHTML = `
                 <div class="comment-header">
-                    <span class="comment-author">${c.author}</span>
+                    <div>
+                        <span class="comment-author">${c.author}</span>
+                        ${!isLocal && c.context?.viewTitle ? `<span style="display:block; font-size:0.7rem; color:var(--text-secondary); font-weight:normal;">from ${c.context.viewTitle}</span>` : ''}
+                        ${!isLocal && !c.context?.viewTitle ? `<span style="display:block; font-size:0.7rem; color:var(--text-secondary); font-weight:normal;">from ${c.viewPath.split('/').pop()}</span>` : ''}
+                    </div>
                     <div style="display:flex; align-items:center; gap:0.5rem;">
                         <span style="font-size:0.65rem; color:var(--text-secondary)">${new Date(c.timestamp).toLocaleDateString()}</span>
                         ${isLocal ? `<button onclick="resolveComment('${u}', '${c.id}')" style="background:none; border:none; color:#10b981; cursor:pointer; font-size:1rem; padding:0; display:flex;">✓</button>` : ''}

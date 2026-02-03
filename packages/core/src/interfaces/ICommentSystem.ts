@@ -5,6 +5,7 @@ export interface Comment {
   author: string;
   content: string;
   status: 'open' | 'resolved';
+  context?: { viewTitle?: string; [key: string]: any };
   createdAt: string;
   updatedAt: string;
 }

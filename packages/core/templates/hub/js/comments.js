@@ -37,7 +37,28 @@ export async function saveComment(fromSidebar = false) {
     if (!content || !activeNodeId || activeNodeId === 'undefined') return;
     const usi = getUSI(activeNodeId, currentViewPath);
     if (!usi) return;
-    const newComment = { id: Math.random().toString(36).substr(2, 9), targetId: activeNodeId, viewPath: currentViewPath, author: 'Reviewer', content, timestamp: new Date().toISOString(), status: 'open' };
+
+    // Capture readable view title
+    let viewTitle = currentViewPath.split('/').pop().replace(/\.(mermaid|md)$/, "");
+    if (window.idMap) {
+         const key = Object.keys(window.idMap).find(k => {
+             const targets = window.idMap[k];
+             if (Array.isArray(targets)) return targets.some(t => t.path === currentViewPath);
+             return targets === currentViewPath || (targets.path && targets.path === currentViewPath);
+         });
+         if (key) viewTitle = key;
+    }
+
+    const newComment = { 
+        id: Math.random().toString(36).substr(2, 9), 
+        targetId: activeNodeId, 
+        viewPath: currentViewPath, 
+        author: 'Reviewer', 
+        content, 
+        timestamp: new Date().toISOString(), 
+        status: 'open',
+        context: { viewTitle }
+    };
     
     // Update local state temporarily
     if (!commentsRegistry[usi]) commentsRegistry[usi] = [];

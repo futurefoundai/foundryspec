@@ -26,7 +26,7 @@ export class LocalCommentSystem implements ICommentSystem {
   }
 
   // Note: The params usually come from the frontend which includes compositeKey
-  async addComment(params: Omit<Comment, 'id' | 'createdAt' | 'updatedAt' | 'status'> & { compositeKey?: string }): Promise<Comment> {
+  async addComment(params: Omit<Comment, 'id' | 'createdAt' | 'updatedAt' | 'status'> & { compositeKey?: string, context?: any }): Promise<Comment> {
     const db = await this.getDB();
     const id = randomUUID();
     const now = new Date().toISOString();
@@ -46,6 +46,7 @@ export class LocalCommentSystem implements ICommentSystem {
     const newComment: Comment = {
       id,
       ...params,
+      context: params.context,
       status: 'open',
       createdAt: now,
       updatedAt: now

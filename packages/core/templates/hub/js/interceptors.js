@@ -120,6 +120,24 @@ class MindmapInterceptor {
         const nodeGroup = element.closest('.mindmap-node, .node');
         if (!nodeGroup) return false;
 
+        // CHECK FOR BADGE CLICK
+        if (element.classList.contains('clickable-badge')) {
+           const viewer = document.getElementById('viewer');
+           const resolvedId = resolveActiveNodeId(nodeGroup, viewer, globals.idMap, context.filePath);
+           
+           console.log('🔘 Comment Badge Clicked on:', resolvedId);
+           event.stopImmediatePropagation();
+           event.preventDefault();
+           
+           if (resolvedId) {
+               // Open sidebar directly
+               import('./ui.js').then(module => {
+                   module.openSidebar(resolvedId);
+               });
+           }
+           return true; 
+        }
+
         const viewer = document.getElementById('viewer');
         const resolvedId = resolveActiveNodeId(nodeGroup, viewer, globals.idMap, context.filePath);
 
@@ -147,6 +165,24 @@ class DefaultInterceptor {
     }
 
     handle(event, element, context) {
+        // CHECK FOR BADGE CLICK
+        if (element.classList.contains('clickable-badge')) {
+           const nodeGroup = element.closest('.node, .cluster, .actor, .requirementBox') || element.parentElement; // Fallback
+           const viewer = document.getElementById('viewer');
+           const resolvedId = resolveActiveNodeId(nodeGroup, viewer, globals.idMap, context.filePath);
+           
+           console.log('🔘 Comment Badge Clicked (Default) on:', resolvedId);
+           event.stopImmediatePropagation();
+           event.preventDefault();
+           
+           if (resolvedId) {
+               import('./ui.js').then(module => {
+                   module.openSidebar(resolvedId);
+               });
+           }
+           return true; 
+        }
+
         const nodeGroup = element.closest('.node, .cluster, .actor, .requirementBox');
         if (!nodeGroup) return false;
 

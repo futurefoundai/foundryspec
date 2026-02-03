@@ -15,17 +15,19 @@ export function injectCommentBadge(node, count, isLocal) {
         
         const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
         circle.setAttribute("cx", x); circle.setAttribute("cy", y); circle.setAttribute("r", "8");
-        circle.setAttribute("class", isLocal ? "comment-badge local" : "comment-badge");
+        circle.setAttribute("class", isLocal ? "comment-badge local clickable-badge" : "comment-badge clickable-badge");
+        circle.setAttribute("data-node-id", node.id || node.getAttribute('id') || node.getAttribute('name') || "unknown");
         circle.style.fill = isLocal ? "#38bdf8" : "#64748b";
         circle.style.stroke = "#0f172a";
-        circle.style.pointerEvents = "none";
+        circle.style.cursor = "pointer";
+        circle.style.pointerEvents = "all";
         
         const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
         text.setAttribute("x", x); text.setAttribute("y", y + 3);
         text.setAttribute("text-anchor", "middle");
         text.setAttribute("class", "comment-count");
         text.style.fill = "#0f172a"; text.style.fontSize = "10px"; text.style.fontWeight = "bold";
-        text.style.pointerEvents = "none";
+        text.style.pointerEvents = "none"; // Clicks go through to circle
         text.textContent = count;
         
         g.appendChild(circle); g.appendChild(text);
