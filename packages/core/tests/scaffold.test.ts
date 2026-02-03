@@ -88,8 +88,8 @@ describe('Scaffold & Build Verification', () => {
         expect(indexHtml).toContain('id="menu-state"');       // State support
         
         // Verify index.js contains key functions
-        const indexJs = await fs.readFile(path.join(buildOutputDir, 'index.js'), 'utf8');
-        expect(indexJs).toContain('function openFootnoteSidebar');
-        expect(indexJs).toContain('function appendPrompt');
+        const uiJs = await fs.readFile(path.join(buildOutputDir, 'js/ui.js'), 'utf8');
+        expect(uiJs).toContain('function openFootnoteSidebar');
+        expect(uiJs).toContain('function appendPrompt');
     }, 60000); // Increased timeout for build
 });

@@ -1,0 +1,16 @@
+---
+title: Core Requirement
+description: Core system requirements for intent driven development
+id: REQ_Core
+---
+requirementDiagram
+
+    requirement CoreRequirement {
+        id: REQ_Core
+        text: "The system must support the core intent driven development flow."
+        risk: medium
+        verifymethod: test
+    }
+
+    CoreRequirement - verifies -> JRN_UserWorkflow
+    CoreRequirement - verifies -> JRN_AdminWorkflow

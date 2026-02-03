@@ -18,10 +18,15 @@ export const rule: Rule = {
             if (id.startsWith('PER_')) {
                 const relatedReqs = node.downlinks.filter(d => d.startsWith('REQ_'));
                 
-                if (relatedReqs.length === 0) {
+                    if (relatedReqs.length === 0) {
                     errors.push(
                         `Ghost in the System: Persona "${id}" HAS NO ASSOCIATED REQUIREMENTS.\n` +
-                        `   👉 Every persona must drive at least one high-level REQ_ node.`
+                        `   👉 Requirements are supposed to be linked from the persona view using the node check and see.\n` +
+                        `   Example:\n` +
+                        `     mindmap\n` +
+                        `       ${id}\n` +
+                        `         Requirements\n` +
+                        `           REQ_Core`
                     );
                     continue;
                 }
@@ -49,7 +54,8 @@ export const rule: Rule = {
                     if (linkedPersonas.length === 0) {
                         errors.push(
                             `Abandoned Requirement: Main Requirement "${id}" HAS NO LINKED PERSONAS.\n` +
-                            `   👉 Every high-level requirement must be driven by at least one stakeholder (Persona).`
+                            `   👉 Every high-level requirement must be driven by at least one stakeholder (Persona).\n` +
+                            `   Add a link in the Persona's mindmap to this Requirement ID.`
                         );
                     }
                 }

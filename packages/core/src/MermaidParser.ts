@@ -4,6 +4,7 @@
  */
 
 import crypto from 'crypto';
+import fs from 'fs';
 import { CacheManager } from './CacheManager.js';
 import { ParseResult } from './types/cache.js';
 import { RuleEngine } from './RuleEngine.js';
@@ -28,7 +29,13 @@ export class MermaidParser {
     private ruleEngine: RuleEngine;
     private workers: Worker[] = [];
     private maxWorkers = Math.max(1, os.cpus().length - 1);
-    private workerPath = path.join(__dirname, 'ParserWorker.js');
+    private workerPath = (() => {
+        const localPath = path.join(__dirname, 'ParserWorker.js');
+        if (fs.existsSync(localPath)) return localPath;
+        // Fallback for Vitest/Dev execution (src -> dist)
+        const distPath = path.resolve(__dirname, '../dist/ParserWorker.js');
+        return fs.existsSync(distPath) ? distPath : localPath;
+    })();
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     private pendingRequests: Map<string, (data: any) => void> = new Map();
 

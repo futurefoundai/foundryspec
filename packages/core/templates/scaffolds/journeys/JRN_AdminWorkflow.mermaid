@@ -1,0 +1,16 @@
+---
+title: Admin Workflow
+description: System administration and configuration flow.
+id: "JRN_AdminWorkflow"
+---
+sequenceDiagram
+    autonumber
+    actor PER_Admin as System Admin
+    participant CTX_Main as CDS Platform
+
+    Note right of PER_Admin: Trigger: System requires configuration update.
+
+    PER_Admin->>CTX_Main: UpdateConfig(config)
+    CTX_Main-->>PER_Admin: 200 OK (Updated)
+
+    Note right of CTX_Main: Outcome: System configuration applied successfully.

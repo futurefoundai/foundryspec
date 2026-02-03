@@ -55,7 +55,15 @@ export const rule: Rule = {
             const isBehavioral = ['actor', 'proxy'].includes(pType.toLowerCase());
 
             if (isBehavioral && !personasWithJourneys.has(p)) {
-                errors.push(`Orphaned Behavioral Stakeholder: ${pType.charAt(0).toUpperCase() + pType.slice(1)} "${p}" has no associated Journeys. Every active stakeholder's path should be documented.`);
+                errors.push(
+                    `Orphaned Behavioral Stakeholder: ${pType.charAt(0).toUpperCase() + pType.slice(1)} "${p}" has no associated Journeys.\n` +
+                    `   👉 Journeys are supposed to be linked from the persona view using the node check and see.\n` +
+                    `   Example:\n` +
+                    `     mindmap\n` +
+                    `       ${p}\n` +
+                    `         Journeys\n` +
+                    `           JRN_UserWorkflow`
+                );
             }
         });
 
