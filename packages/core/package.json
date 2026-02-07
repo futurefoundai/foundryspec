@@ -1,6 +1,6 @@
 {
   "name": "@foundryspec/core",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "description": "Intent Driven Development Infrastructure for human-AI CollabOps",
   "main": "dist/index.js",
   "type": "module",
@@ -89,7 +89,6 @@
   "author": "FutureFoundAI",
   "license": "AGPL-3.0-only",
   "dependencies": {
-    "@foundryspec/mcp-server": "^0.0.1",
     "@mermaid-js/parser": "^0.6.3",
     "@types/dompurify": "^3.0.5",
     "@types/inquirer": "^9.0.9",

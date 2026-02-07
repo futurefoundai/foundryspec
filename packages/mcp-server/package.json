@@ -17,7 +17,7 @@
     "dev": "tsc -w"
   },
   "dependencies": {
-    "@foundryspec/mcp-server": "^0.0.1",
+    "@foundryspec/core": "^1.0.6",
     "@modelcontextprotocol/sdk": "^1.0.1",
     "commander": "^12.1.0",
     "fs-extra": "^11.2.0",
