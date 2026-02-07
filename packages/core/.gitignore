@@ -1,2 +1,4 @@
 node_modules
 dist
+.foundryspec/dist
+foundryspec-debug.log
