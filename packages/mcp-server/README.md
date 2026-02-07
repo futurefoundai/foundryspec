@@ -27,14 +27,13 @@ Add this to your `claude_desktop_config.json`:
 {
   "mcpServers": {
     "foundryspec": {
-      "command": "foundryspec-mcp-server",
-      "args": ["/absolute/path/to/your/project"]
+      "command": "foundryspec-mcp-server"
     }
   }
 }
 ```
 
-_Note: The `args` array is optional but recommended. If omitted, the server will default to the directory where it was launched._
+_Note: By default, the server runs in the current directory. To specify a project root, add `"args": ["/path/to/project"]`._
 
 ### 2. Local Installation
 
