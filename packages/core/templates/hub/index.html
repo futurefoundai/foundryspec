@@ -9,6 +9,7 @@
       rel="stylesheet"
     />
     <link rel="stylesheet" href="index.css">
+    <link rel="stylesheet" href="works.css">
     <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/svg-pan-zoom@3.6.1/dist/svg-pan-zoom.min.js"></script>
@@ -28,6 +29,17 @@
     <div id="viewer">
       <!-- Diagram Viewers will be injected here -->
     </div>
+
+    <!-- Works Floating Action Button -->
+    <button id="works-fab" onclick="openWorksSidebar()" title="Open Works">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+            <polyline points="14 2 14 8 20 8"></polyline>
+            <line x1="16" y1="13" x2="8" y2="13"></line>
+            <line x1="16" y1="17" x2="8" y2="17"></line>
+            <polyline points="10 9 9 9 8 9"></polyline>
+        </svg>
+    </button>
 
     <div id="modal-backdrop" onclick="closeModal(event)">
       <div id="modal-content" onclick="event.stopPropagation()">
@@ -74,6 +86,17 @@
         </div>
     </div>
 
+    <!-- Works Sidebar -->
+    <div id="works-sidebar" class="sidebar">
+        <div class="sidebar-header">
+            <h3 id="works-sidebar-title">Works</h3>
+            <button class="close-btn" onclick="closeWorksSidebar()">&times;</button>
+        </div>
+        <div id="works-sidebar-content" class="sidebar-body" style="padding: 0;">
+            <!-- Dynamic Content -->
+        </div>
+    </div>
+
     <!-- Footnote Sidebar -->
     <div id="footnote-sidebar" class="sidebar">
         <div class="sidebar-header">
@@ -115,10 +138,14 @@
       window.projectName = "{{projectName}}";
       window.projectId = "{{projectId}}";
       window.projectVersion = "{{version}}";
-      window.mindmapRegistry = {{mindmapRegistry}};
-      window.footnoteRegistry = {{footnoteRegistry}};
-      window.implementationRegistry = {{implementationRegistry}};
-      window.navigationRegistry = {{navigationRegistry}};
+      window.mindmapRegistry = /*{{mindmapRegistry}}*/null;
+      window.footnoteRegistry = /*{{footnoteRegistry}}*/null;
+      window.implementationRegistry = /*{{implementationRegistry}}*/null;
+      window.navigationRegistry = /*{{navigationRegistry}}*/null;
+
+      // Placeholder for Works globals (loaded by works.js)
+      window.openWorksSidebar = null; 
+      window.closeWorksSidebar = null;
     </script>
     <script type="module" src="index.js"></script>
   </body>

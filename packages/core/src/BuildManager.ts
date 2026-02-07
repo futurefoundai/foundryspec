@@ -866,10 +866,10 @@ ${standaloneAssets
         (config as unknown as { projectId: string }).projectId || 'unboarded-project',
       )
       .replace(/{{version}}/g, config.version)
-      .replace(/{{mindmapRegistry}}/g, JSON.stringify(mindmapRegistry))
-      .replace(/{{footnoteRegistry}}/g, JSON.stringify(footnoteRegistry))
-      .replace(/{{implementationRegistry}}/g, JSON.stringify(implementationRegistry))
-      .replace(/{{navigationRegistry}}/g, JSON.stringify(navigationRegistry));
+      .replace(/\/\*{{mindmapRegistry}}\*\/null/g, JSON.stringify(mindmapRegistry))
+      .replace(/\/\*{{footnoteRegistry}}\*\/null/g, JSON.stringify(footnoteRegistry))
+      .replace(/\/\*{{implementationRegistry}}\*\/null/g, JSON.stringify(implementationRegistry))
+      .replace(/\/\*{{navigationRegistry}}\*\/null/g, JSON.stringify(navigationRegistry));
 
     await fs.writeFile(path.join(outputDir, 'index.html'), rendered);
   }
