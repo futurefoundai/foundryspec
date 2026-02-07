@@ -1,0 +1,22 @@
+---
+id: "REQ_Persistence"
+title: View State Persistence
+description: Requirements for maintaining the Hub's visual state across sessions and reloads.
+classification: Functional
+---
+requirementDiagram
+    requirement Persistent_View {
+        id: "REQ_Persistence"
+        text: "The Hub shall maintain the current diagram view state across browser reloads via URL synchronization."
+        risk: Low
+        verifymethod: Demonstration
+    }
+
+    requirement History_Support {
+        id: "REQ_HistorySupport"
+        text: "The system shall integrate with the browser History API to support standard back/forward navigation."
+        risk: Low
+        verifymethod: Test
+    }
+
+    Persistent_View - contains -> History_Support

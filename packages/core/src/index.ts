@@ -25,6 +25,8 @@ import { registerGovernanceCommands } from './commands/GovernanceCommands.js';
 import { registerConfigCommands } from './commands/ConfigCommands.js';
 import { registerWorkCommands } from './commands/WorkCommand.js';
 
+// @foundryspec/start COMP_Interface
+// @foundryspec/start COMP_CLI
 /**
  * @foundryspec COMP_CLI
  * Finds the project root by searching for .foundryid or legacy foundry.config.json.
@@ -33,6 +35,9 @@ async function findProjectRoot(startDir: string): Promise<string> {
     // Naive check for now: assumes command running in root
     return startDir; 
 }
+// ... (rest of main function)
+// @foundryspec/end COMP_CLI
+// @foundryspec/end COMP_Interface
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const packageJson = fs.readJsonSync(path.join(__dirname, '../package.json'));

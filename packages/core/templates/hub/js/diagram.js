@@ -68,6 +68,12 @@ export async function loadDiagram(filePath, isBack = false) {
         const stack = (await import('./state.js')).historyStack;
         if (stack.length === 0 || stack[stack.length - 1] !== normalizedPath) {
             pushHistory(normalizedPath);
+            
+            if (!isBack) {
+                const url = new URL(window.location);
+                url.searchParams.set('view', normalizedPath);
+                window.history.pushState({ path: normalizedPath }, '', url);
+            }
         }
         updateUI(); // Breadcrumbs
 

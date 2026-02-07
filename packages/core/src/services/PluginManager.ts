@@ -8,6 +8,9 @@ import path from 'path';
 /**
  * Discovers and loads FoundrySpec plugins.
  */
+/**
+ * @foundryspec COMP_PluginManager
+ */
 export class PluginManager {
   private container: ServiceContainer;
   private config: ConfigStore;
@@ -48,12 +51,6 @@ export class PluginManager {
   private async discoverPlugins(): Promise<string[]> {
     const candidates: string[] = [];
     
-    // Look for enterprise package
-    const enterprisePath = '@foundryspec/enterprise';
-    if (await this.packageExists(enterprisePath)) {
-      candidates.push(enterprisePath);
-    }
-
     // Look for plugin-* packages
     const nodeModulesPath = path.join(process.cwd(), 'node_modules');
     if (await fs.pathExists(nodeModulesPath)) {

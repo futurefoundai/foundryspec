@@ -1,0 +1,91 @@
+---
+id: "COMP_Engine"
+title: Engine Component Architecture
+description: Detailed decomposition of the FoundrySpec Build and Rule Engine.
+entities:
+  - id: "COMP_Engine"
+    requirements: REQ_Integrity
+  - id: "COMP_BuildManager"
+    requirements: REQ_Integrity
+  - id: "COMP_RuleEngine"
+    requirements: REQ_Integrity
+  - id: "COMP_ProbeManager"
+    requirements: REQ_AutomatedProbing
+  - id: "COMP_MermaidParser"
+    requirements: REQ_Performance
+  - id: "COMP_GitManager"
+    requirements: REQ_Integrity
+  - id: "COMP_ConfigStore"
+    requirements: REQ_Integrity
+  - id: "COMP_ScaffoldManager"
+    requirements: REQ_Discovery
+  - id: "COMP_PluginManager"
+    requirements: REQ_Extensibility
+  - id: "COMP_IntentMappers"
+    requirements: REQ_Integrity
+---
+classDiagram
+    class COMP_Engine {
+        <<Aggregate>>
+        +RuleEngine
+        +BuildManager
+        +ProbeManager
+    }
+
+    class COMP_BuildManager {
+        <<Component>>
+        +orchestrateBuild()
+    }
+
+    class COMP_RuleEngine {
+        <<Component>>
+        +loadRules()
+        +validateAsset()
+    }
+
+    class COMP_ProbeManager {
+        <<Component>>
+        +scanCode()
+        +detectDrift()
+    }
+
+    class COMP_MermaidParser {
+        <<Service>>
+        +parseWithCache()
+    }
+
+    class COMP_GitManager {
+        <<Component>>
+        +syncRepo()
+    }
+
+    class COMP_ConfigStore {
+        <<Component>>
+        +getStorageDir()
+    }
+
+    class COMP_ScaffoldManager {
+        <<Component>>
+        +generate()
+    }
+
+    class COMP_PluginManager {
+        <<Component>>
+        +loadPlugins()
+    }
+
+    class COMP_IntentMappers {
+        <<Logic>>
+        +mapIntent()
+    }
+
+    COMP_Engine --> COMP_BuildManager
+    COMP_Engine --> COMP_RuleEngine
+    COMP_Engine --> COMP_ProbeManager
+    
+    COMP_BuildManager --> COMP_MermaidParser
+    COMP_BuildManager --> COMP_ConfigStore
+    COMP_BuildManager --> COMP_GitManager
+    COMP_BuildManager --> COMP_ScaffoldManager
+    COMP_BuildManager --> COMP_PluginManager
+    COMP_MermaidParser --> COMP_IntentMappers

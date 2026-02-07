@@ -1,0 +1,123 @@
+---
+id: "COMP_Hub"
+title: Hub Component Architecture
+description: Detailed decomposition of the Visual Documentation Hub.
+entities:
+  - id: "COMP_Hub"
+    requirements: 
+      - REQ_UX
+      - REQ_Persistence
+  - id: "COMP_ClickInterceptor"
+    requirements: REQ_Automation
+  - id: "COMP_InteractiveComments"
+    requirements: REQ_InteractiveComments
+  - id: "COMP_SidebarControllers"
+    requirements: REQ_UX
+  - id: "COMP_PersonaDrawer"
+    requirements: REQ_InteractiveComments
+  - id: "COMP_PersonaViewer"
+    requirements: REQ_UX
+  - id: "COMP_BoundaryViewer"
+    requirements: REQ_UX
+  - id: "COMP_ComponentViewer"
+    requirements: REQ_UX
+  - id: "COMP_ContextViewer"
+    requirements: REQ_UX
+  - id: "COMP_DataViewer"
+    requirements: REQ_UX
+  - id: "COMP_FlowViewer"
+    requirements: REQ_UX
+  - id: "COMP_JourneyViewer"
+    requirements: REQ_UX
+  - id: "COMP_RequirementViewer"
+    requirements: REQ_UX
+  - id: "COMP_SequenceViewer"
+    requirements: REQ_UX
+  - id: "COMP_StateViewer"
+    requirements: REQ_UX
+  - id: "COMP_RootViewer"
+    requirements: REQ_UX
+  - id: "COMP_DiagramViewer"
+    requirements: REQ_Discovery
+  - id: "COMP_DiagramLoader"
+    requirements: REQ_Discovery
+  - id: "COMP_ViewerFactory"
+    requirements: REQ_Discovery
+---
+classDiagram
+    class COMP_Hub {
+        <<Component>>
+        +Visualizer
+        +Editor
+    }
+
+    class COMP_ClickInterceptor {
+        <<Component>>
+        +SmartInterceptor
+        +IdMapResolver
+    }
+
+    class COMP_InteractiveComments {
+        <<Component>>
+        +CommentManager
+        +SidebarUI
+    }
+
+    class COMP_SidebarControllers {
+        <<Component>>
+        +UIState
+        +Resolver
+    }
+
+    class COMP_PersonaDrawer {
+        <<Component>>
+        +DrawerUI
+        +ActionHandlers
+    }
+
+    class COMP_DiagramLoader {
+        <<Logic>>
+        +loadDiagram()
+        +reload()
+    }
+
+    class COMP_DiagramViewer {
+        <<WebComponent>>
+        +PanZoom
+        +Renderer
+    }
+
+    class COMP_ViewerFactory {
+        <<Service>>
+        +create()
+    }
+
+    class COMP_PersonaViewer { <<WebComponent>> }
+    class COMP_BoundaryViewer { <<WebComponent>> }
+    class COMP_ComponentViewer { <<WebComponent>> }
+    class COMP_ContextViewer { <<WebComponent>> }
+    class COMP_DataViewer { <<WebComponent>> }
+    class COMP_FlowViewer { <<WebComponent>> }
+    class COMP_JourneyViewer { <<WebComponent>> }
+    class COMP_RequirementViewer { <<WebComponent>> }
+    class COMP_SequenceViewer { <<WebComponent>> }
+    class COMP_StateViewer { <<WebComponent>> }
+    class COMP_RootViewer { <<WebComponent>> }
+
+    COMP_Hub --> COMP_DiagramLoader : uses
+    COMP_DiagramLoader --> COMP_ViewerFactory : requests
+    COMP_ViewerFactory --> COMP_DiagramViewer : instantiates
+    COMP_ViewerFactory --> COMP_PersonaViewer : instantiates
+    COMP_ViewerFactory --> COMP_BoundaryViewer : instantiates
+    COMP_ViewerFactory --> COMP_ComponentViewer : instantiates
+    COMP_ViewerFactory --> COMP_ContextViewer : instantiates
+    COMP_ViewerFactory --> COMP_DataViewer : instantiates
+    COMP_ViewerFactory --> COMP_FlowViewer : instantiates
+    COMP_ViewerFactory --> COMP_JourneyViewer : instantiates
+    COMP_ViewerFactory --> COMP_RequirementViewer : instantiates
+    COMP_ViewerFactory --> COMP_SequenceViewer : instantiates
+    COMP_ViewerFactory --> COMP_StateViewer : instantiates
+    COMP_ViewerFactory --> COMP_RootViewer : instantiates
+    COMP_InteractiveComments --> COMP_SidebarControllers : coordinates
+    COMP_SidebarControllers --> COMP_PersonaDrawer : delegates
+    COMP_SidebarControllers --> COMP_ViewerFactory : utilizes

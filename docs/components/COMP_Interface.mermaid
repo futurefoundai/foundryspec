@@ -1,0 +1,36 @@
+---
+id: "COMP_Interface"
+title: Interface Component Architecture
+description: Detailed decomposition of the interaction layers including CLI, MCP, and Dev Server.
+entities:
+  - id: "COMP_CLI"
+    requirements: REQ_Automation
+  - id: "COMP_DevServer"
+    requirements: REQ_UX
+  - id: "COMP_MCP_Server"
+    requirements: REQ_Automation
+---
+classDiagram
+    class COMP_CLI {
+        <<Component>>
+        +CommandRegistry
+        +Entrypoint
+    }
+
+    class COMP_DevServer {
+        <<Component>>
+        +FileWatcher
+        +ApiHandler
+        +StaticServer
+    }
+
+    class COMP_MCP_Server {
+        <<Component>>
+        +ToolRegistry
+        +ProtocolHandler
+        +AgentBridge
+    }
+
+    COMP_CLI --> COMP_DevServer : spawns
+    COMP_DevServer --> COMP_CLI : reports status
+    COMP_MCP_Server --> COMP_CLI : leverages commands

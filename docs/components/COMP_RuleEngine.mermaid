@@ -1,25 +1,41 @@
 ---
 id: "COMP_RuleEngine"
-title: Rule Engine
-description: Core validation engine that enforces structural and semantic integrity.
-requirements:
+title: Rule Engine Component
+description: Advanced validation engine supporting dynamic JS rules and hierarchical graph integrity.
+requirements: REQ_Integrity
 ---
-
 classDiagram
     class COMP_RuleEngine {
         <<Component>>
-        +loadRules(path)
-        +validateAsset(asset)
-        +getHubCategories()
+        -rules: Rule[]
+        +loadRules(dir) : Promise
+        +validateAsset(asset, context) : Promise
+        +validateProject(context) : Promise
+        +getHubCategories() : HubCategory[]
     }
-    
-    class Analyzers {
+
+    class RuleTypes {
         <<Module>>
-        +MindmapAnalyzer
-        +SequenceAnalyzer
-        +RequirementAnalyzer
-        +FlowchartAnalyzer
-        +ClassAnalyzer
+        +SyntaxRule
+        +StructuralRule
+        +GovernanceRule
+        +TraceabilityRule
     }
-    
-    COMP_RuleEngine --> Analyzers : uses
+
+    class TraceabilityChecks {
+        <<Internal>>
+        +mustBeLinked()
+        +mustTraceTo(prefixes)
+        +mustHaveDownlink(prefixes)
+    }
+
+    class GovernanceValidators {
+        <<Internal>>
+        +IDPrefixGuard
+        +FilenameConsistencyGuard
+    }
+
+    COMP_RuleEngine --> RuleTypes : executes
+    COMP_RuleEngine --> TraceabilityChecks : verifies graph
+    COMP_RuleEngine --> GovernanceValidators : enforces naming
+    COMP_RuleEngine ..> COMP_IntentMappers : consumes analysis

@@ -348,7 +348,22 @@ export async function initApp() {
     await fetchComments(); 
     await fetchWorks(); // Initialize Works
     startSync(); 
-    loadDiagram('assets/root.mermaid');
+    
+    // URL-based view persistence
+    const urlParams = new URLSearchParams(window.location.search);
+    const initialView = urlParams.get('view') || 'assets/root.mermaid';
+    
+    // Set initial state for popstate
+    window.history.replaceState({ path: initialView }, '', window.location.href);
+    
+    loadDiagram(initialView);
+
+    window.addEventListener('popstate', (e) => {
+        if (e.state && e.state.path) {
+            loadDiagram(e.state.path, true);
+        }
+    });
+
     initTheme();
 }
 

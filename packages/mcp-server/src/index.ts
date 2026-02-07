@@ -141,10 +141,13 @@ async function discoverTools(): Promise<DiscoveredCommand[]> {
 
 // --- Server Setup ---
 
+// @foundryspec/start COMP_MCP_Server
 const server = new McpServer({
   name: 'foundryspec-mcp-server',
   version: '0.0.1',
 });
+// ... rest of implementation (using simplified markers for the probe)
+// @foundryspec/end COMP_MCP_Server
 
 // --- Dynamic Tool Registration ---
 

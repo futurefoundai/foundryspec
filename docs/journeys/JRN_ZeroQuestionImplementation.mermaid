@@ -1,0 +1,23 @@
+---
+id: "JRN_ZeroQuestionImplementation"
+title: Zero-Question Implementation Flow
+description: How a Software Implementer uses the Hub to build features without design ambiguity.
+trigger: System Analyst finalizes Intent and Requirements.
+outcome: Implementer delivers code that perfectly matches architectural intent.
+requirements:
+  - REQ_Core
+  - REQ_UX
+  - REQ_Persistence
+---
+sequenceDiagram
+    participant PER_SystemAnalyst as Analyst
+    participant PER_Implementer as Implementer
+    participant COMP_Hub as FoundrySpec Hub
+    participant COMP_ProbeManager as Probe Manager
+
+    PER_SystemAnalyst->>COMP_Hub: Publishes Intent & Requirements
+    PER_Implementer->>COMP_Hub: Navigates to Component blueprint
+    COMP_Hub-->>PER_Implementer: Displays State, Sequence, and ERD
+    PER_Implementer->>PER_Implementer: Implements Code matching spec
+    PER_Implementer->>COMP_ProbeManager: foundryspec probe
+    COMP_ProbeManager-->>PER_Implementer: Check: ✅ No Drift

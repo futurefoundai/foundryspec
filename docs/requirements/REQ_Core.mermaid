@@ -1,0 +1,30 @@
+---
+id: "REQ_Core"
+title: Intent-Driven Development Core
+description: High-level requirements for the core IDD methodology.
+classification: Functional
+---
+requirementDiagram
+    requirement Core_IDD {
+        id: "REQ_Core"
+        text: "The system shall enforce a strict derivation of implementation from intent and identity."
+        risk: High
+        verifymethod: Test
+    }
+
+    requirement Zero_Latency {
+        id: "REQ_ZeroLatency"
+        text: "The system shall provide near-instant feedback for architectural changes."
+        risk: Medium
+        verifymethod: Test
+    }
+
+    requirement Collaborative_Engineering {
+        id: "REQ_CollaborativeEngineering"
+        text: "The system shall support seamless collaboration between AI Agents and Human Analysts."
+        risk: Medium
+        verifymethod: Test
+    }
+
+    Core_IDD - contains -> Zero_Latency
+    Core_IDD - contains -> Collaborative_Engineering

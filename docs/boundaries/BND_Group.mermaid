@@ -1,15 +1,29 @@
 ---
 id: "BND_Group"
 title: Technical Boundaries
-description: Boundary decomposition.
+description: Logical divisions of the FoundrySpec system, explicitly driving the implementation clusters.
 entities:
-  - id: "BND_Group"
-  - id: "BND_App"
+  - id: "BND_Backend"
+    description: "The core analytical engine and build system."
+    downlinks: COMP_Engine
+  - id: "BND_Frontend"
+    description: "The interactive Hub and visualization layer."
+    downlinks: COMP_Hub
+  - id: "BND_Agentic"
+    description: "The CLI and MCP server interface suite."
+    downlinks: COMP_Interface
 ---
 graph TD
-    subgraph System[FoundrySpec Engine]
-        BND_App[Main Application]
-        DB[(Data Store)]
+    subgraph System[FoundrySpec Ecosystem]
+        BND_Agentic[Agentic Interface]
+        BND_Backend[Analytical Core]
+        BND_Frontend[Visual Experience]
+
+        BND_Agentic -- drives --> BND_Backend
+        BND_Backend -- generates --> BND_Frontend
     end
-    
-    BND_App --> DB
+
+    %% Mapping L2 -> L3
+    BND_Agentic -.-> COMP_Interface
+    BND_Backend -.-> COMP_Engine
+    BND_Frontend -.-> COMP_Hub

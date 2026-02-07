@@ -1,0 +1,21 @@
+---
+id: "JRN_PluginDiscovery"
+title: Core Plugin Discovery
+description: How the Platform Operator verifies the automatic discovery and loading of community or local plugins.
+trigger: System startup or explicit plugin scan.
+outcome: Available plugins are registered and ready for execution.
+requirements:
+  - REQ_Extensibility
+---
+sequenceDiagram
+    participant PER_Operator as Operator
+    participant COMP_Engine as Build Engine
+    participant COMP_PluginManager as Plugin Manager
+    participant FS as File System
+    
+    PER_Operator->>COMP_Engine: foundryspec build
+    COMP_Engine->>COMP_PluginManager: discoverPlugins()
+    COMP_PluginManager->>FS: readdir(node_modules)
+    FS-->>COMP_PluginManager: [foundryspec-plugin-x, ...]
+    COMP_PluginManager-->>COMP_Engine: [PluginX registered]
+    COMP_Engine-->>PER_Operator: Build Success (with Plugins)

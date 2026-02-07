@@ -1,245 +1,41 @@
 ---
 id: "COMP_Overview"
-title: Component Architecture
-description: Detailed decomposition of the FoundrySpec engine components.
+title: System Architecture Overview
+description: High-level aggregates of the FoundrySpec system, divided into Command, Engine, and Experience clusters.
 entities:
-  - id: "COMP_Group"
-    requirements:
-  - id: "COMP_ClickInterceptor"
-    requirements:
-  - id: "COMP_InteractiveComments"
-    requirements:
-  - id: "COMP_BuildManager"
-    requirements:
-  - id: "COMP_MermaidParser"
-    requirements:
-  - id: "COMP_ProbeManager"
-    requirements:
-  - id: "COMP_ConfigStore"
-    requirements:
-  - id: "COMP_GitManager"
-    requirements:
-  - id: "COMP_CLI"
-    requirements:
-  - id: "COMP_DevServer"
-    requirements:
-  - id: "COMP_RuleEngine"
-    requirements:
-  - id: "COMP_SidebarControllers"
-    description: "Handles the logic for the context sidebar and unified ID resolution."
-  - id: "COMP_PersonaDrawer"
-    description: "Specialized UI component for managing persona-specific metadata."
-    requirements: REQ_InteractiveComments
-  - id: "COMP_PersonaViewer"
-    description: "Web Component for interactive Persona mindmaps."
-    requirements: REQ_UX
-  - id: "COMP_BoundaryViewer"
-    description: "Web Component for Boundary diagrams."
-    requirements: REQ_UX
-  - id: "COMP_ComponentViewer"
-    description: "Web Component for Component diagrams."
-    requirements: REQ_UX
-  - id: "COMP_ContextViewer"
-    description: "Web Component for Context diagrams."
-    requirements: REQ_UX
-  - id: "COMP_DataViewer"
-    description: "Web Component for Data diagrams."
-    requirements: REQ_UX
-  - id: "COMP_FlowViewer"
-    description: "Web Component for Flow diagrams."
-    requirements: REQ_UX
-  - id: "COMP_JourneyViewer"
-    description: "Web Component for Journey diagrams."
-    requirements: REQ_UX
-  - id: "COMP_RequirementViewer"
-    description: "Web Component for Requirement diagrams."
-    requirements: REQ_UX
-  - id: "COMP_SequenceViewer"
-    description: "Web Component for Sequence diagrams."
-    requirements: REQ_UX
-  - id: "COMP_StateViewer"
-    description: "Web Component for State diagrams."
-    requirements: REQ_UX
-  - id: "COMP_RootViewer"
-    description: "Web Component for navigation/root diagrams."
-    requirements: REQ_UX
-  - id: "COMP_DiagramViewer"
-    description: "Base Web Component class for rendering and interacting with Mermaid diagrams."
-    requirements: REQ_Discovery
-  - id: "COMP_DiagramLoader"
-    description: "Central logic for fetching and transitions between views."
-    requirements: REQ_Discovery
-  - id: "COMP_ViewerFactory"
-    description: "Strategy-based factory for instantiating specialized diagram viewers."
-    requirements: REQ_Discovery
-  - id: "COMP_BrowserPool"
-    requirements:
-  - id: "COMP_Hub"
-    requirements:
+  - id: "COMP_Interface"
+    description: "The primary interaction portals for the system (CLI, MCP Server, Dev Server)."
+    requirements: REQ_Automation
   - id: "COMP_Engine"
-    requirements:
+    description: "The analytical core that processes specs and code."
+    requirements: REQ_Integrity
+    downlinks: COMP_Engine
+  - id: "COMP_Hub"
+    description: "The visual experience layer for interactive documentation."
+    requirements: REQ_UX
+    downlinks: COMP_Hub
 ---
-
 classDiagram
-    class COMP_Hub {
-        <<Component>>
-        +Visualizer
-        +Editor
+    class COMP_Interface {
+        <<Aggregate>>
+        +CLI
+        +MCPServer
+        +DevServer
     }
 
     class COMP_Engine {
-        <<Component>>
-        +RuleEngine
+        <<Aggregate>>
         +BuildManager
+        +RuleEngine
+        +ProbeManager
     }
 
-    class COMP_Group {
-        <<Component>>
-        +ScaffoldManager
-        +TemplateRegistry
+    class COMP_Hub {
+        <<Aggregate>>
+        +VisualizerSuite
+        +InteractionInterceptors
     }
 
-    class COMP_BuildManager {
-        <<Component>>
-        +ValidationEngine
-        +AssetLoader
-        +SyntheticGenerator
-    }
-
-    class MermaidParser {
-        <<Service>>
-        +parseWithCache(file, content)
-        +flush()
-    }
-
-    class BrowserPool {
-        <<Singleton>>
-        +getBrowser()
-        +close()
-    }
-
-    class COMP_ProbeManager {
-        <<Component>>
-        +CodeScanner
-        +DriftDetector
-    }
-
-    class COMP_ClickInterceptor {
-        <<Component>>
-        +SmartInterceptor
-        +IdMapResolver
-    }
-
-    class COMP_InteractiveComments {
-        <<Component>>
-        +CommentManager
-        +SidebarUI
-    }
-
-    class COMP_DevServer {
-        <<Component>>
-        +FileWatcher
-        +ApiHandler
-        +StaticServer
-    }
-
-    class COMP_ConfigStore {
-        <<Component>>
-        +GlobalState
-        +IdentityManager
-    }
-
-    class COMP_GitManager {
-        <<Component>>
-        +RepoSync
-        +SpecPuller
-    }
-
-    class COMP_CLI {
-        <<Component>>
-        +CommandRegistry
-        +Entrypoint
-    }
-
-    class COMP_RuleEngine {
-        <<Component>>
-        +ValidationEngine
-        +Scanner
-    }
-    
-    class COMP_SidebarControllers {
-        <<Component>>
-        +UIState
-        +Resolver
-    }
-
-    class COMP_PersonaViewer {
-        <<WebComponent>>
-        +SemanticActions
-        +MindmapHandler
-    }
-
-    class COMP_BoundaryViewer { <<WebComponent>> }
-    class COMP_ComponentViewer { <<WebComponent>> }
-    class COMP_ContextViewer { <<WebComponent>> }
-    class COMP_DataViewer { <<WebComponent>> }
-    class COMP_FlowViewer { <<WebComponent>> }
-    class COMP_JourneyViewer { <<WebComponent>> }
-    class COMP_RequirementViewer { <<WebComponent>> }
-    class COMP_SequenceViewer { <<WebComponent>> }
-    class COMP_StateViewer { <<WebComponent>> }
-    class COMP_RootViewer { <<WebComponent>> }
-
-    class COMP_PersonaDrawer {
-        <<Component>>
-        +DrawerUI
-        +ActionHandlers
-    }
-
-    class COMP_DiagramLoader {
-        <<Logic>>
-        +loadDiagram()
-        +reload()
-    }
-
-    class COMP_DiagramViewer {
-        <<WebComponent>>
-        +PanZoom
-        +Renderer
-    }
-
-    class COMP_ViewerFactory {
-        <<Service>>
-        +create()
-    }
-    
-    COMP_CLI --> COMP_BuildManager : triggers
-    COMP_CLI --> COMP_ProbeManager : triggers
-    COMP_CLI --> COMP_DevServer : starts
-    COMP_CLI --> COMP_GitManager : uses
-    COMP_BuildManager --> COMP_ConfigStore : uses
-    COMP_BuildManager --> COMP_RuleEngine : orchestrates
-    COMP_BuildManager --> MermaidParser : uses
-    MermaidParser --> BrowserPool : leverages
-    MermaidParser --> COMP_RuleEngine : uses analyzers
-    COMP_ProbeManager --> COMP_BuildManager : uses
-    COMP_BuildManager --> COMP_Group : uses template
-    COMP_DevServer --> COMP_BuildManager : triggers rebuild
-    COMP_InteractiveComments --> COMP_SidebarControllers : coordinates
-    COMP_SidebarControllers --> COMP_PersonaDrawer : delegates
-    COMP_SidebarControllers --> COMP_ViewerFactory : utilizes
-    COMP_ViewerFactory --> COMP_DiagramViewer : instantiates
-    COMP_ViewerFactory --> COMP_PersonaViewer : instantiates
-    COMP_ViewerFactory --> COMP_BoundaryViewer : instantiates
-    COMP_ViewerFactory --> COMP_ComponentViewer : instantiates
-    COMP_ViewerFactory --> COMP_ContextViewer : instantiates
-    COMP_ViewerFactory --> COMP_DataViewer : instantiates
-    COMP_ViewerFactory --> COMP_FlowViewer : instantiates
-    COMP_ViewerFactory --> COMP_JourneyViewer : instantiates
-    COMP_ViewerFactory --> COMP_RequirementViewer : instantiates
-    COMP_ViewerFactory --> COMP_SequenceViewer : instantiates
-    COMP_ViewerFactory --> COMP_StateViewer : instantiates
-    COMP_ViewerFactory --> COMP_RootViewer : instantiates
-    COMP_DiagramLoader --> COMP_ViewerFactory : requests
-    COMP_Hub --> COMP_DiagramLoader : uses
-
+    COMP_Interface --> COMP_Engine : drives
+    COMP_Engine --> COMP_Hub : generates
+    COMP_Hub --> COMP_Interface : requests (API)

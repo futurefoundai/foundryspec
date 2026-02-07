@@ -5,6 +5,7 @@
  */
 
 /**
+ * @foundryspec COMP_IntentMappers
  * Base Intent Mapper representing the 'yy' context for Jison parsers.
  * 
  * IMPORTANT: We use arrow functions for all methods to ensure they are 

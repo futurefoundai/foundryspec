@@ -22,7 +22,7 @@ import { CategoryTemplate } from './types/scaffold.js';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 /**
- * @foundryspec COMP_Group
+ * @foundryspec COMP_ScaffoldManager
  */
 export class ScaffoldManager {
     private projectName: string;

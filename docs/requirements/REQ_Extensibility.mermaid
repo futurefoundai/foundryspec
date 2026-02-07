@@ -1,0 +1,22 @@
+---
+id: "REQ_Extensibility"
+title: System Extensibility
+description: Requirements for the pluggable architecture and third-party extensions.
+classification: Functional
+---
+requirementDiagram
+    requirement Extensibility {
+        id: "REQ_Extensibility"
+        text: "The system shall support a pluggable architecture for core services."
+        risk: Low
+        verifymethod: Demonstration
+    }
+
+    requirement Plugin_Loading {
+        id: "REQ_PluginLoading"
+        text: "The system shall dynamically load plugins from specified directories or packages."
+        risk: Medium
+        verifymethod: Test
+    }
+
+    Extensibility - contains -> Plugin_Loading
