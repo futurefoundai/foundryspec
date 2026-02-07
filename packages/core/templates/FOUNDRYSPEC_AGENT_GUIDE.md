@@ -1,89 +1,51 @@
 # FoundrySpec AI Agent Guide 🤖
 
-## Introduction
+## Intent Driven Development (IDD) with FoundrySpec
 
-**FoundrySpec** is a documentation engine designed for **Human-AI Collaborative System Analysis & Design**. Whether working on **Greenfield** (new) or **Brownfield** (existing) projects, your goal is to achieve **Zero-Question Implementation readiness**. This means the documentation you generate or read should be so exhaustive that a developer (or another agent) can implement the system without needing to ask for further clarification.
+FoundrySpec is an infrastructure for **Intent Driven Development (IDD)**. In IDD, every line of code, interaction, and system behavior must be traceable back to a specific **Intent** derived from a verified **Identity**.
 
-## Core Concepts
+Your goal as an agent is to construct and validate the system through four distinct layers of abstraction.
 
-- **Graph-Based Documentation**: The documentation is a directed graph. The **Root Hub** is **automatically generated** by scanning the `docs/` directory.
-- **Frontmatter Enforcement**: All `.mermaid` files MUST include a YAML frontmatter block with `id`, `title` and `description` fields.
-- **Zero-Question Implementation**: Strive for maximum detail in your specs.
+### 1. The Identity Layer (Who & Why)
 
-### The Four Persona Types
+The foundation of the system. Code cannot exist without a specialized Persona driving its necessity.
 
-To achieve complete system understanding, you must identify four distinct types of personas. Each drives specific layers of the system design:
+*   **Personas**: The roots of the graph, residing in `docs/personas/`.
+    *   **The Actor**: End-users. Drives UX and features.
+    *   **The Influencer**: Business stakeholders. Drives constraints.
+    *   **The Guardian**: Regulators/Security. Drives compliance.
+    *   **The Proxy**: External systems. Drives interface contracts.
+*   **Artifacts**: `mindmap` files defining Role, Description, and Goals.
 
-1.  **The End-User Persona ("The Actor")**
+### 2. The Intent Layer (What)
 
-    - **Definition**: Traditional personas who interact with the UI or API to achieve goals.
-    - **Examples**: The Shopper, The Data Scientist, The IoT Device Owner.
-    - **Traceability Impact**: Drives **L3 Component** design (UX, Latency, Accessibility).
+The translation of Identity into actionable requirements and user journeys.
 
-2.  **The Stakeholder Persona ("The Influencer")**
+*   **Journeys**: High-level sequences in `docs/journeys/` showing how Personas interact with the system to achieve Goals.
+*   **Requirements (REQ)**: Atomic, testable statements of need in `docs/requirements/`.
+*   **Traceability**: Every Structural element must trace back to a `REQ_ID`.
 
-    - **Definition**: People who don't use the software but define its success constraints.
-    - **Examples**: The CTO (cost), The Product Manager (time-to-market).
-    - **Traceability Impact**: Drives **L1 Context** (e.g., "Serverless to minimize overhead").
+### 3. The Structural Layer (Where)
 
-3.  **The Regulatory Persona ("The Guardian")**
+The architecture that fulfills the Intent.
 
-    - **Definition**: External bodies or legal frameworks that "act" through audits and compliance.
-    - **Examples**: GDPR/CCPA, SOC2 Auditor, HIPAA.
-    - **Traceability Impact**: Drives **L2 Boundaries** (e.g., "Database isolation in EU region").
+*   **Context (L1)**: Where the system lives. It defines the system's interaction with the external environment (Users and External Systems). Resides in `docs/context/`.
+*   **Boundaries (L2)**: The system's internal world. These are the logical divisions of software (e.g., Frontend, Backend, Database) that accommodate specific responsibilities. Resides in `docs/boundaries/`.
+*   **Components (L3)**: The implementation units within boundaries (e.g., Services, Controllers, Stores). Resides in `docs/components/`.
+*   **Artifacts**: 
+    *   L1 (Context) & L2 (Boundaries): `flowchart` (e.g., `graph TD`)
+    *   L3 (Components): STRICTLY `classDiagram`
 
-4.  **The System Persona ("The Proxy")**
-    - **Definition**: External systems that impose requirements on your system.
-    - **Examples**: Legacy Mainframes, Payment Gateways.
-    - **Traceability Impact**: Drives **L3 Interfaces** (e.g., "Must support XML for legacy compat").
+### 4. The Behavioral and Information Layer (How)
 
-### 📐 Persona Mindmap Structure
+The dynamic interactions and data structure.
 
-Every Persona MUST be a `mindmap` with the following branch structure:
-
-```mermaid
-mindmap
-    PER_PersonaID
-        Type: Actor | Influencer | Guardian | Proxy
-        Requirements
-            REQ_Example
-        Role
-            ROLE["The Human-readable Role"]
-        Description
-            DESCRIPTION["A detailed explanation of the persona's motive and context."]
-        Goals
-            GOAL_1["Direct actionable objective"]
-            GOAL_2["Another actionable objective"]
-```
-
-- **Type**: Must be exactly one of the four types above.
-- **IDs**: Use specific IDs (`ROLE`, `DESCRIPTION`, `GOAL_N`) with `["Labels"]` for the content nodes. This enables deterministic programmatic analysis and cleaner graph visualization.
-- **Traceability (Ghost Rule)**: Every Persona MUST Drive at least one Requirement ID (`REQ_`) via Mermaid nodes or `requirements` frontmatter. A persona without requirements is a **Ghost in the System** and will cause a build failure.
+*   **Behavior**: Detailed Sequence Diagrams and State Charts showing *how* a Component executes Intent.
+*   **Information**: Entity Relationship Diagrams (ERD) defining the data models.
+*   **Artifacts**: `sequenceDiagram`, `stateDiagram`, `erDiagram` (often linked as footnotes or support files).
 
 ## 📝 Critical Rules for Agents
 
-### 1. Frontmatter is Mandatory
-To be written properly
-
-### 2. No orphan policy
-To be written properly
-
-## Command Reference
-
-You can invoke the FoundrySpec CLI using `foundryspec` (if installed globally) or via the locally scaffolded scripts. To see the list of available foundryspec command run `foundryspec --help`
-
-## 📐 Mandatory Spec Metadata
-
-To maintain architectural integrity, every spec file MUST include these top-level frontmatter fields:
-
-1.  **`id`**: A unique stable identifier (e.g., `PER_User`, `REQ_Login`, `COMP_Auth`).
-2.  **`requirements`**: An array of granular `REQ_` IDs associated with this asset. (Mandatory for Personas and Components).
-3.  **`entities`**: (Optional) A list of internal IDs defined within this file.
-
-### 📝 Footnote Policy (Markdown Rules)
-
-Markdown files (`.md`) are NOT first-class architectural citizens. They serve exclusively as **Footnotes** to diagrams.
-
-1.  **Directory**: All `.md` files must live in a `footnotes/` subdirectory relative to the diagram they supplement.
-2.  **Surgical Addressing**: A footnote's `id` MUST match an existing node ID defined OR linked in a `.mermaid` blueprint.
-3.  **Directory Isolation**: A footnote can ONLY target IDs referenced in blueprints within its own parent directory.
+1.  **Traceability is Law**: You cannot implement a Component (Structural) without a Requirement (Intent) driven by a Persona (Identity).
+2.  **Zero-Question Readiness**: Specs must be exhaustive.
+3.  **Frontmatter Enforcement**: All spec files MUST have `id`, `title`, and `description`.
