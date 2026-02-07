@@ -1,22 +1,14 @@
-# FoundrySpec MCP Server
+# @foundryspec/mcp-server
 
-## Overview
+**FoundrySpec MCP Server**
 
-This is the official Model Context Protocol (MCP) server for FoundrySpec. It acts as a **dynamic discoverability layer** for the FoundrySpec CLI.
+This package provides a compliant Model Context Protocol (MCP) server for FoundrySpec, enabling AI agents and other tools to dynamically discover and execute FoundrySpec CLI commands.
 
-Instead of having a hardcoded list of tools, this server:
+## 🚀 Features
 
-1.  **Discovers**: Runs `foundryspec --help` at startup to find available commands.
-2.  **Recurses**: Inspects subcommands (like `work`, `gitops`) to find all leaf actions.
-3.  **Exposes**: Dynamically registers an MCP tool for every discovered CLI command.
-4.  **Executes**: When a tool is called, it executes the underlying CLI command in your project.
-
-This ensures that the AI agent always has access to the full capabilities of your installed `foundryspec` CLI version, with zero additional maintenance.
-
-## Prerequisites
-
-- **FoundrySpec CLI**: Must be installed and available in your environment (`npm install -g @foundryspec/core`).
-- **Node.js**: Version 18+ recommended.
+- **Dynamic Discovery**: Automatically inspects the installed `foundryspec` CLI to expose available commands as MCP tools.
+- **Seamless Integration**: Allows any MCP-compliant client (like Claude Desktop or IDE extensions) to interact with your FoundrySpec projects.
+- **Zero Configuration**: Works out of the box by leveraging your existing FoundrySpec installation.
 
 ## Usage
 
@@ -65,14 +57,10 @@ npm install --save-dev @foundryspec/mcp-server
 }
 ```
 
-## Available Tools
+## 📚 Documentation
 
-The tools exposed to the agent depend on your CLI version. Common tools include:
+For full documentation, please visit the [FoundrySpec Documentation Hub](https://foundryspec.com).
 
-- `foundry_init`: Initialize a new project.
-- `foundry_build`: Build the documentation site.
-- `foundry_probe`: Check for architectural drift.
-- `foundry_work_list`: List work items.
-- `foundry_work_reply`: Reply to a work item.
-- `foundry_work_resolve`: Resolve a work item.
-- ...and any other command listed in `foundryspec --help`!
+## 📄 License
+
+AGPL-3.0-only

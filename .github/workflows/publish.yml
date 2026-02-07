@@ -18,3 +18,7 @@ jobs:
       - run: npm publish -w packages/core --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - run: npm run build -w packages/mcp-server
+      - run: npm publish -w packages/mcp-server --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
