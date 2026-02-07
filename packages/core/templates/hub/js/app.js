@@ -1,10 +1,15 @@
 import { globals, historyStack, activeNodeId, popHistory, currentViewPath } from './state.js'; // Imports logic
 import { initTheme } from './theme.js';
 import { fetchComments, startSync, saveComment } from './comments.js';
+import { fetchWorks, openWorksSidebar, closeWorksSidebar } from './works.js';
 import { loadDiagram } from './diagram.js';
 import { resolveActiveNodeId } from './utils.js';
 import { openSidebar, openNavigationModal, handleFootnoteSelection, setLoadDiagramFn } from './ui.js';
 import { initInterceptors } from './interceptors.js';
+
+// Expose Works functions to window
+window.openWorksSidebar = openWorksSidebar;
+window.closeWorksSidebar = closeWorksSidebar;
 
 /**
  * Load metadata from JSON files
@@ -341,6 +346,7 @@ export async function initApp() {
 
     ioInitCustomCSS(); // Using local module function
     await fetchComments(); 
+    await fetchWorks(); // Initialize Works
     startSync(); 
     loadDiagram('assets/root.mermaid');
     initTheme();

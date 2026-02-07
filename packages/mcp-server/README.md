@@ -15,7 +15,7 @@ This ensures that the AI agent always has access to the full capabilities of you
 
 ## Prerequisites
 
-- **FoundrySpec CLI**: Must be installed and available in your environment (`npm install -g @foundryspec/cli` or `@foundryspec/core`).
+- **FoundrySpec CLI**: Must be installed and available in your environment (`npm install -g @foundryspec/core`).
 - **Node.js**: Version 18+ recommended.
 
 ## Usage

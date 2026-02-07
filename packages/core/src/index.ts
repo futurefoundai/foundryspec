@@ -23,6 +23,7 @@ import { registerCoreCommands } from './commands/CoreCommands.js';
 import { registerGitOpsCommands } from './commands/GitOpsCommands.js';
 import { registerGovernanceCommands } from './commands/GovernanceCommands.js';
 import { registerConfigCommands } from './commands/ConfigCommands.js';
+import { registerWorkCommands } from './commands/WorkCommand.js';
 
 /**
  * @foundryspec COMP_CLI
@@ -54,6 +55,7 @@ async function main() {
     registerGitOpsCommands(program, findProjectRoot);
     registerGovernanceCommands(program, store);
     registerConfigCommands(program, store);
+    registerWorkCommands(program, store);
 
     program.parse();
 }

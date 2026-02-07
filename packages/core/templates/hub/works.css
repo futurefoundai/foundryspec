@@ -1,0 +1,76 @@
+
+/* Works Sidebar specific styles */
+#works-sidebar .sidebar-body {
+    padding: 0;
+}
+
+.works-list {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.works-controls {
+    background: var(--bg-secondary);
+}
+
+.work-item:hover {
+    background: var(--bg-secondary);
+}
+
+.work-detail {
+    background: var(--bg-primary);
+}
+
+#works-toggle {
+    transition: opacity 0.2s;
+}
+
+#works-toggle:hover {
+    opacity: 0.8;
+}
+
+/* Status colors */
+.status-badge.done {
+    background: var(--green-bg, #dcfce7);
+    color: var(--green-text, #166534);
+}
+
+.status-badge.open {
+    background: var(--blue-bg, #dbeafe);
+    color: var(--blue-text, #1e40af);
+}
+
+/* Chat bubbles */
+.work-messages {
+    background: var(--bg-primary);
+}
+
+/* Floating Action Button */
+#works-fab {
+    position: fixed;
+    bottom: 20px;
+    left: 20px;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: white;
+    border: none;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 900;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+#works-fab:hover {
+    transform: scale(1.05);
+    box-shadow: 0 6px 16px rgba(0,0,0,0.3);
+}
+
+#works-fab:active {
+    transform: scale(0.95);
+}

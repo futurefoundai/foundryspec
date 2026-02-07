@@ -89,6 +89,7 @@
   "author": "FutureFoundAI",
   "license": "AGPL-3.0-only",
   "dependencies": {
+    "@foundryspec/mcp-server": "^0.0.1",
     "@mermaid-js/parser": "^0.6.3",
     "@types/dompurify": "^3.0.5",
     "@types/inquirer": "^9.0.9",

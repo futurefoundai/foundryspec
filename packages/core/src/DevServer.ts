@@ -136,17 +136,87 @@ export class DevServer {
 
             // API: Sync Check
             if (req.url === '/api/sync' && req.method === 'GET') {
-                 // Sync check might need 'last updated' from storage?
-                 // Simple hack: check file stats if local
-                 // If cloud, might need distinct API
-                 // For now, keep local specific or add lastUpdated to IStorageProvider?
-                 // IStorageProvider has exists/read.
-                 // let's try to get file info if possible or just skip sync check logic refinement for now
                  const commentsPath = path.join(storageDir, 'comments.json');
-                 const stats = await fs.pathExists(commentsPath) ? await fs.stat(commentsPath) : { mtimeMs: 0 };
+                 const worksPath = path.join(storageDir, 'works.json');
+                 const commentStats = await fs.pathExists(commentsPath) ? await fs.stat(commentsPath) : { mtimeMs: 0 };
+                 const workStats = await fs.pathExists(worksPath) ? await fs.stat(worksPath) : { mtimeMs: 0 };
+                 // Return the latest modification time of either file
+                 const lastModified = Math.max(commentStats.mtimeMs, workStats.mtimeMs);
+
                  res.writeHead(200, { 'Content-Type': 'application/json' });
-                 res.end(JSON.stringify({ lastModified: stats.mtimeMs }));
+                 res.end(JSON.stringify({ lastModified }));
                  return;
+            }
+
+            // API: Works (Get JSON)
+            if (req.url && req.url.includes('foundry.works.json')) {
+                try {
+                    const raw = await storage.readJson('works.json').catch(() => []);
+                    res.writeHead(200, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify(raw));
+                } catch {
+                    res.writeHead(200, { 'Content-Type': 'application/json' });
+                    res.end('[]');
+                }
+                return;
+            }
+
+            // API: Works (Create/Update)
+            if (req.url === '/api/works' && req.method === 'POST') {
+                let body = '';
+                req.on('data', chunk => body += chunk.toString());
+                req.on('end', async () => {
+                    try {
+                        const payload = JSON.parse(body);
+                        const works = await storage.readJson('works.json').catch(() => []) as any[];
+                        
+                        // Check if it's a new work or a reply
+                        if (payload.compositeKey) { // It's a reply or update to existing work logic if we follow comment pattern, but here payload is likely the work item itself or a message
+                             // Simplified logic: If payload has 'taskId' it's a reply/update? 
+                             // Let's assume payload is the Work Item or Message.
+                             // Actually, let's align with the frontend implementation plan.
+                             // Frontend will send the updated work item or a new work item?
+                             // Let's assume implementation will Append to a list.
+                        }
+                        
+                        // Simple Logic: Read, Find/Replace or Push, Write.
+                        // If payload has an ID that exists, update it. Else push.
+                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                        const index = works.findIndex((w: any) => w.id === payload.id);
+                        if (index !== -1) {
+                            works[index] = payload;
+                        } else {
+                            works.push(payload);
+                        }
+                        
+                        await storage.writeJson('works.json', works);
+                        res.writeHead(200); res.end(JSON.stringify({ status: 'ok' }));
+                    } catch (err) { 
+                        console.error(err);
+                        res.writeHead(500); res.end('Error'); 
+                    }
+                });
+                return;
+            }
+
+             // API: Works (Resolve)
+            if (req.url === '/api/works/resolve' && req.method === 'POST') {
+                let body = '';
+                req.on('data', chunk => body += chunk.toString());
+                req.on('end', async () => {
+                    try {
+                        const { id } = JSON.parse(body);
+                        const works = await storage.readJson('works.json').catch(() => []) as any[];
+                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                        const work = works.find((w: any) => w.id === id);
+                        if (work) {
+                            work.status = 'done';
+                            await storage.writeJson('works.json', works);
+                        }
+                        res.writeHead(200); res.end(JSON.stringify({ status: 'ok' }));
+                    } catch { res.writeHead(500); res.end('Error'); }
+                });
+                return;
             }
 
             return serveHandler(req, res, { public: outputDir });
